@@ -1,0 +1,13 @@
+*.pdf
+*.xls
+*.hdf
+.ipynb_checkpoints
+__pycache__
+.DS_Store
+
+message.txt
+
+# LaTeX
+*.log
+*.aux
+*.synctex.gz
