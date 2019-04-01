@@ -20,3 +20,10 @@ query_url =  'http://cdec.water.ca.gov/dynamicapp/wsSensorData'
 # http://cdec.water.ca.gov/queryTools.html
 # http://cdec.water.ca.gov/reservoir.html
 # http://cdec.water.ca.gov/snow/current/snow/index.html
+# https://136.200.243.159/cgi-progs/previous/B120
+
+
+
+
+# alt CDEC hosted at: https://136.200.243.159/
+# - is this staging or production?
