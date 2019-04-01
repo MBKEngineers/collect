@@ -6,8 +6,8 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import requests
 
-from mbklab_scrapers.dwr import errors
-from mbklab_scrapers.utils import get_web_status
+from collect.dwr import errors
+from collect.utils import get_web_status
 
 
 def get_b120_data(date_suffix=''):
