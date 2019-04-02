@@ -4,3 +4,4 @@ from .b120 import *
 from .casgem import *
 from .cawdl import *
 from .cdec import *
+from .wsi import *
