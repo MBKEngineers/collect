@@ -7,7 +7,7 @@ import pandas as pd
 import requests
 
 from collect.dwr import errors
-from collect.utils import get_web_status
+from collect.utils import get_web_status, clean_fixed_width_headers
 
 
 def get_b120_data(date_suffix=''):
@@ -192,14 +192,7 @@ def get_120_archived_reports(year, month):
     wy_df.dropna(inplace=True)
 
     # clean columns
-    headers = []
-    for column in wy_df.columns:
-        column = list(column)
-        for i in range(len(column)):
-            if 'Unnamed' in column[i]:
-                column[i] = ''
-        headers.append(' '.join(column).strip())
-
+    headers = clean_fixed_width_headers(wy_df.columns)
     headers[0] = 'Hydrologic Region'
     wy_df.columns = headers
 

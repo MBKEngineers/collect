@@ -6,7 +6,7 @@ import requests
 from six import string_types
 
 
-def get_station_url(station, start, end, data_format='CSV', duration=''):
+def get_station_url(station, start, end, data_format='CSV', sensors=[], duration=''):
     """ 
     Generate URL for CDEC station query for CSV- or JSON-formatted data 
     
@@ -34,7 +34,7 @@ def get_station_url(station, start, end, data_format='CSV', duration=''):
         raise ValueError('data_format must be one of (\'JSON\', \'CSV\').')
 
     # validate duration
-    if not duration.upper() in [None, '', 'E', 'H', 'D', 'M', 'Y']:
+    if not (duration is None or duration.upper() in ['', 'E', 'H', 'D', 'M', 'Y']):
         raise ValueError('duration must be one of (None, \'\', \'H\', \'D\', \'M\', \'Y\').')
 
     # validate start and end arguments
@@ -42,19 +42,31 @@ def get_station_url(station, start, end, data_format='CSV', duration=''):
             or not (isinstance(end, dt.datetime) or isinstance(end, dt.date))):
         raise TypeError('start and end must be datetime.datetime or datetime.date objects.')
 
+    # # ensure data through the midnight of the calendar day is retrieved
+    # today = dt.datetime.now().strftime('%Y-%m-%d')
+    # if isinstance(end, str):
+    #     if end == today:
+    #         end = dt.datetime.strptime(end, '%Y-%m-%d') + dt.timedelta(days=1)
+    # elif isinstance(end, dt.datetime):
+    #     if end.strftime('%Y-%m-%d') == today:
+    #         end = end + dt.timedelta(days=1)
+
     # construct URL
     url_base = 'http://cdec.water.ca.gov/dynamicapp/req/{data_format}DataServlet'
     url_args = ['Stations={station}', 'Start={start:%Y-%m-%d}', 'End={end:%Y-%m-%d}']
 
+    # optional sensors filter
+    if bool(sensors):
+        url_args.insert(1, 'SensorNums={0}'.format(','.join([str(x) for x in sensors])))
+
     # optional duration filter
     if bool(duration):
-        url_args = [url_args[0], 'dur_code={duration}'] + url_args[1:]
+        url_args.insert(1, 'dur_code={0}'.format(duration))
 
-    # resulting URL
+    # construct CDEC url with query parameters
     url = '?'.join([url_base, 
                     '&'.join(url_args)]).format(data_format=data_format.upper(),
                                                 station=station.upper(), 
-                                                duration=duration, 
                                                 start=start, 
                                                 end=end)
     return url
@@ -68,30 +80,48 @@ def get_station_sensors(station, start, end):
     sensors = {}
     for duration in ['E', 'H', 'D', 'M']:
         url = get_station_url(station, start, end, duration=duration)
-        df = pd.read_csv(url, header=0, na_values=['m', '---', ' ', 'ART', 'BRT'])
+        df = pd.read_csv(url, header=0, na_values=['m', '---', ' ', 'ART', 'BRT'], usecols=[0, 1, 2, 3])
         sensors.update({duration: list(df['SENSOR_TYPE'].unique())})
     return sensors
 
 
-def get_station_data(station, start, end, duration=''):
+def get_station_data(station, start, end, sensors=[], duration=''):
     """
     General purpose function for returning a pandas DataFrame for all available
     data for CDEC `station` in the given time window, with optional `duration` argument.
     """
-    return get_raw_station_csv(station, start, end, duration)
+    return get_raw_station_csv(station, start, end, sensors, duration)
 
 
-def get_raw_station_csv(station, start, end, duration='', filename=''):
+def get_raw_station_csv(station, start, end, sensors=[], duration='', filename=''):
     """
     Use CDEC CSV query URL to download available data.  Optional `filename` argument
     specifies custom file location for download of CSV records.
     """
+    # CDEC url with query parameters
     url = get_station_url(station, start, end, data_format='CSV', duration=duration)
+
+    # suppress low memory error due to guessing d-types
+    default_data_types = {
+        'STATION_ID': str,
+        'DURATION': str,
+        'SENSOR_NUMBER': int,
+        'SENSOR_TYPE': str,
+        'DATE TIME': str,
+        'OBS DATE': str,
+        'VALUE': float,
+        'DATA_FLAG': str,
+        'UNITS': str,
+    }
+
+    # fetch data from CDEC
     df = pd.read_csv(url, 
                      header=0, 
                      parse_dates=True, 
                      index_col=4, 
-                     na_values=['m', '---', ' ', 'ART', 'BRT'])
+                     na_values=['m', '---', ' ', 'ART', 'BRT', -9999],
+                     float_precision='high',
+                     dtype=default_data_types)
 
     if bool(filename):
         df.to_csv(filename)
@@ -99,15 +129,15 @@ def get_raw_station_csv(station, start, end, duration='', filename=''):
     return df
 
 
-def get_raw_station_json(station, start, end, duration='', filename=''):
+def get_raw_station_json(station, start, end, sensors=[], duration='', filename=''):
     """
     Use CDEC JSON query URL to download available data.  Optional `filename` argument
     specifies custom file location for download of validated JSON records.
     """
 
-    url = get_station_url(station, start, end, data_format='JSON', duration=duration)
+    url = get_station_url(station, start, end, data_format='JSON', sensors=sensors, duration=duration)
     response = requests.get(url, stream=True)
-    result = json.loads(response.text.replace('\r\n', ', ').replace('}, ], ', '}]'))
+    result = json.loads(response.text)
 
     if bool(filename):
         with open(filename, 'w') as f:
@@ -124,11 +154,10 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
     raw = get_station_data(station, start, end, duration)
 
     if bool(sensor) and bool(duration):
-        df = raw.loc[raw['SENSOR_TYPE']==sensor].loc[raw['DUR_CODE']==duration]
+        df = raw.loc[(raw['SENSOR_NUMBER']==sensor) & (raw['DURATION']==duration)]
     elif bool(sensor):
         df = raw.loc[raw['SENSOR_TYPE']==sensor]
     else:
         raise ValueError('sensor `{}` is not valid for station `{}`'.format(sensor, station))
-    df.index = pd.to_datetime(df['ACTUAL_DATE'])
     
     return df

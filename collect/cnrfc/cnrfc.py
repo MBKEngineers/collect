@@ -5,6 +5,7 @@ import os
 from bs4 import BeautifulSoup
 import pandas as pd
 import requests
+from collect.utils import clean_fixed_width_headers
 
 
 def get_seasonal_trend_tabular(cnrfc_id, water_year):
@@ -58,21 +59,6 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
                                  'summary': summary,
                                  'units': 'TAF',
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
-
-
-def clean_fixed_width_headers(columns):
-    """ 
-    for dataframe column headers defined as multi-level index,
-    collapsed headers into human-readable names 
-    """
-    headers = []
-    for column in columns:
-        column = list(column)
-        for i in range(len(column)):
-            if 'Unnamed' in column[i]:
-                column[i] = ''
-        headers.append(' '.join(column).strip())
-    return headers
 
 
 if __name__ == '__main__':

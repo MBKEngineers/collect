@@ -22,3 +22,18 @@ def get_web_status(url):
     # site is up and working
     else:
         return True
+
+
+def clean_fixed_width_headers(columns):
+    """ 
+    for dataframe column headers defined as multi-level index,
+    collapsed headers into human-readable names 
+    """
+    headers = []
+    for column in columns:
+        column = list(column)
+        for i in range(len(column)):
+            if 'Unnamed' in column[i]:
+                column[i] = ''
+        headers.append(' '.join(column).strip())
+    return headers
