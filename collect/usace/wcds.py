@@ -4,6 +4,7 @@ import datetime as dt
 from bs4 import BeautifulSoup
 import pandas as pd
 import requests
+from dateutil.parser import parse
 
 
 def format_float(value):
@@ -40,6 +41,9 @@ def get_water_year_data(reservoir, water_year, interval='d'):
         water_year   |  int          |  2017
         interval     |  str          |  'd'
     -----------------|---------------|----------------------------
+    
+
+    Note: times formatted as 2400 are assigned to 0000 of the next date. (hourly and daily)
     """
     result = []
 
@@ -51,24 +55,32 @@ def get_water_year_data(reservoir, water_year, interval='d'):
                                        water_year=water_year,
                                        interval=interval)
     
+    # reservoir data series
+    series_map = get_data_columns(reservoir, water_year)
+
     # Download url content and parse HTML
     soup = BeautifulSoup(requests.get(url).content , 'lxml')
 
+    header = []
+
     # Parse Folsom reservoir page for date/time of interest
-    for line in soup.find('pre').text.splitlines():
-        try:
-            row = line.split()
-            if row[0] == '2400':
-                result.append({
-                    'datestring': ' '.join([row[0], row[1]]), 
-                    'storage': format_float(row[6]), 
-                    'release': format_float(row[2]),
-                    'inflow': format_float(row[3]),
-                    'usace top-con': format_float(row[4]),
-                    'safca top-con': format_float(row[5]),
-                    'precip-basin': format_float(row[7])
-                })
-        except IndexError:
+    for i, line in enumerate(soup.find('pre').text.splitlines()):
+        
+        if 3 <= i <= 5:
+            header.append(parse_header(line, reservoir))
+
+        row = line.split()
+        if check_date_row(row):
+
+            entry = {
+                'datestring': parse_date(row[0], row[1]), 
+            }
+
+            for key, value in series_map.items():
+                entry.update({key: format_float(row[value])})
+
+            result.append(entry)
+        else:
             pass
 
     df = pd.DataFrame.from_records(result, index='datestring')
@@ -76,6 +88,114 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     return {'data': df, 'info': {'reservoir': reservoir, 
                                  'interval': interval, 
                                  'water year': water_year}}
+
+
+def parse_date(time_string, date_string):
+    """
+    Python hours are indexed 0-23, but WCDS posts 0100-2400
+    """
+    hours = time_string[:2]
+    minutes = time_string[2:]
+    return parse(date_string) + dt.timedelta(hours=int(hours)) + dt.timedelta(minutes=int(minutes))
+
+
+def parse_header(line, reservoir):
+
+    for breaker in ['FLOW', 'TOP', 'PRECIP', 'STOR-RES', '@', reservoir.upper()]:
+        line = line.replace(breaker, '|'+breaker)
+
+    return [x.strip() for x in line.split('|')]
+
+
+def check_date_row(row):
+    if not bool(row):
+        return False
+    elif len(row) < 2:
+        return False
+    try:
+        dt.datetime.strptime(row[1], '%d%b%Y')
+        return True
+    except:
+        return False
+
+
+def get_data_columns(reservoir, water_year=None):
+    """
+    TO DO: add columns mapping for non San Joaquin basin reservoirs
+    """
+
+    result = {'FLOW-RES IN': 2, 
+              'FLOW-RES OUT': 3}
+
+    if reservoir.lower() in ['bucq', 'hidq', 'exc', 'mil', 'dnp', 'lbn', 'sha', 'bul']:
+        result.update({'TOP CON STOR': 4, 
+                       'STOR-RES EOP': 5})
+
+    if reservoir.lower() in ['bucq', 'hidq', 'exc', 'mil', 'dnp', 'sha', 'bul']:
+        result.update({'PRECIP-INC': 6})
+
+    if reservoir.lower() == 'hidq':
+        result.update({'ABV HENSLEY FLOW': 7})
+
+    if reservoir.lower() in ['burq', 'ownq', 'barq', 'marq', 'bdc']:
+        result.update({'STOR-RES EOP': 4, 
+                       'PRECIP-INC': 5})
+
+    if reservoir.lower() == 'barq':
+        result.update({'AT MCKEE RD FLOW': 6, 
+                       'BLK RASCAL D FLOW': 7})
+   
+    if reservoir.lower() == 'nml': 
+        result.update({'FLOW-RES OUT': 2, 
+                       'FLOW-RES IN': 3, 
+                       'NMLLATE TOP CON STOR': 4, 
+                       'STOR-RES EOP': 6, 
+                       'TOP CON STOR': 5, 
+                       'PRECIP-INC': 7})
+
+    if reservoir.lower() == 'bdc': 
+        result.update({'BIG DRY CR FLOW': 6, 
+                       'LITTLE @BDC FLOW': 7,
+                       'WASTEWAY FLOW': 8})
+
+    if reservoir.lower() == 'pnfq':
+        result.update({'BLW NF KINGS FLOW': 4, 
+                       'NR PIEDRA FLOW': 5,
+                       'TOP CON STOR': 6, 
+                       'STOR-RES EOP': 7, 
+                       'PRECIP-INC': 8})
+
+    if reservoir.lower() == 'oro':
+        if water_year >= 2016:
+            result.update({'THERMOLITO FLOW': 4, 
+                           'TOP CON STOR': 5,
+                           'STOR-RES EOP': 6, 
+                           'PRECIP-BASIN': 7})
+        else:
+            result.update({'TOP CON STOR': 4,
+                           'STOR-RES EOP': 5, 
+                           'PRECIP-BASIN': 6})
+
+    if reservoir.lower() == 'fol':
+        result.update({'FLOW-RES OUT': 2, 
+                       'FLOW-RES IN': 3, 
+                       'TOP CON STOR': 4, 
+                       'SAFCA TOP CON STOR': 5, 
+                       'STOR-RES EOP': 6, 
+                       'PRECIP-BASIN': 7})
+
+    if reservoir.lower() == 'folq':
+        result.update({'FLOW-RES OUT': 2, 
+                       'FLOW-RES IN': 3, 
+                       '@LAKE NATOMA FLOW-RESOUT': 4,
+                       '@FAIR OAKS MISSING FLOW': 5,
+                       'TOP CON STOR': 6, 
+                       'SAFCA TOP CON STOR': 7, 
+                       'FBO TOP CON STOR': 8, 
+                       'STOR-RES EOP': 9, 
+                       'PRECIP-BASIN': 10})
+
+    return result
 
 
 def get_wcds_data(reservoir, start_time, end_time, interval='d'):
