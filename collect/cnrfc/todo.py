@@ -129,57 +129,6 @@ def cnrfc_hourly_forecast_issue_time(deterministic=True, first_ordinate=False, c
     return issue_time
 
 
-def download_cnrfc_deterministic_forecast(station_id, truncate_historical=False):
-    """
-    reads the url and returns a pandas dataframe from a file or the cnrfc url
-    station_id:  CNRFC station id (5 letter id) (e.g. FOLC1)
-    convert CSV data to DataFrame, separating historical from forecast inflow series
-
-    """
-    
-    # get issue time of most recent hourly inflow forecast
-    time_issued, first_ordinate = cnrfc_hourly_forecast_issue_time(deterministic=True, first_ordinate=True)   
-    date_string = time_issued.strftime('%Y%m%d_%H%M')
-
-    # forecast information
-    units = 'cfs'
-    
-    # get forecast file from csv url
-    url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id={0}'.format(station_id)
-    basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
-    content = requests.get(url, auth=basic_auth).content
-    csvdata = StringIO()
-    csvdata.write(content)
-    csvdata.seek(0)
-
-    df = pd.read_csv(csvdata, 
-                     header=0, 
-                     parse_dates=[0],
-                     index_col=0,
-                     float_precision='high',
-                     dtype={'Date/Time (Pacific Time)': str, 
-                            'Flow (CFS)': float, 
-                            'Trend': str})
-    df.index = [PACIFIC.localize(x) for x in df.index]
-    df = df[[u'Flow (CFS)']]
-    
-    # deterministic forecast inflow series
-    df['forecast'] = df.loc[(df.index >= self.first_forecast_ordinate)]
-
-    # optional limit for start of historical data (2 days before start of forecast)
-    if truncate_historical:
-        start = self.first_forecast_ordinate - dt.timedelta(hours=49)
-        mask = (df.index > start)
-    else:
-        mask = True
-
-    # historical inflow series
-    df['historical'] = df.loc[(df['forecast'].isnull()) & mask]['Flow (CFS)']
-
-    csvdata.close()
-    return time_issued, df
-
-
 def get_ensemble_first_forecast_ordinate(url):
     """
     return the first date of the forecast (GMT) as datetime object
@@ -201,6 +150,7 @@ def get_watershed_ensemble_issue_time(duration, date_string=None):
     get "last modified" date/time stamp from CNRFC watershed ensemble product table
     """
     if duration[0].upper() == 'D':
+        #" only on the 12"
         url = 'https://www.cnrfc.noaa.gov/ensembleProductCSV.php'
         duration = 'daily'
     elif duration[0].upper() == 'H':
@@ -215,7 +165,7 @@ def get_watershed_ensemble_issue_time(duration, date_string=None):
             return issue_time
 
 
-def get_watershed_ensemble_daily(date_string=None):
+def get_watershed_ensemble_daily(watershed, date_string=None):
     """ 
     download seasonal outlook for the American River Watershed as zipped file, unzip...
     """
@@ -226,7 +176,7 @@ def get_watershed_ensemble_daily(date_string=None):
         raise ValueError('date_string must be of form %Y%m%d12.')
 
     # data source
-    url = 'http://www.cnrfc.noaa.gov/csv/{0}_american_hefs_csv_daily.zip'.format(date_string)
+    url = 'http://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_daily.zip'.format(date_string, watershed)
     filename = url.split('/')[-1].replace('.zip', '.csv')
 
     session = requests.Session()
@@ -257,7 +207,6 @@ def get_watershed_ensemble_daily(date_string=None):
     ensemble = True
     deterministic = False
     units = 'kcfs'
-    watershed = 'american'
 
     # clean up
     zipdata.close()
