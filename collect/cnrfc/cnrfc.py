@@ -11,7 +11,7 @@ import pytz
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-from collect.utils import clean_fixed_width_headers
+from collect.utils import clean_fixed_width_headers, get_web_status
 
 UTC = pytz.timezone('UTC')
 PACIFIC = pytz.timezone('America/Los_Angeles')
@@ -28,8 +28,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def get_seasonal_trend_tabular(cnrfc_id, water_year):
     """
-    adapted from data accessed in py_water_supply_reporter.py
     CNRFC Ensemble Product 7
+    adapted from data accessed in py_water_supply_reporter.py
     """
 
     url = '?'.join(['http://www.cnrfc.noaa.gov/ensembleProductTabular.php', 
@@ -206,12 +206,13 @@ def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False):
 
 def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False, as_pdt=False):
     """
-    from: cnrfc_hourly_forecast_issue_time
-          get_station_hourly_ensemble
-          get_ensemble_first_forecast_ordinate
-
     ported from SAFCA Portal project
-    possibly CNRFC is labeling GMT when it's actually already in PDT/PST??? - 13Feb2019
+
+    The hourly ensemble traces (product 4) are available at this URL pattern for certain forecast points
+    http://www.cnrfc.noaa.gov/ensembleProduct.php?id=XXXC1&prodID=4
+
+    The csv is directly available at 
+    https://www.cnrfc.noaa.gov/csv/XXXC1_hefs_csv_XXXXX.csv
     """
 
     # default ensemble forecast units    
@@ -375,6 +376,114 @@ def get_ensemble_first_forecast_ordinate(url=None, df=None):
     return df.index.tolist()[0].to_pydatetime()
 
 
+def get_ensemble_product_1(cnrfc_id):
+    """
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=1'.format(cnrfc_id)
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': '10-Day Probability Plot',
+                                   'units': 'TAF'}}
+
+
+def get_ensemble_product_2(cnrfc_id):
+    """
+    http://www.cnrfc.noaa.gov/ensembleProduct.php?id=ORDC1&prodID=2
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=2'.format(cnrfc_id)
+    get_web_status(url)
+
+    # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'Tabular 10-Day Streamflow Volume Accumulation',
+                                   'units': 'TAF'}}
+
+
+def get_ensemble_product_3(cnrfc_id):
+    """
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=3'.format(cnrfc_id)
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': '5-Day Peaks Plot',
+                                   'units': 'TAF'}}
+
+
+def get_ensemble_product_5(cnrfc_id):
+    """
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=5'.format(cnrfc_id)
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'Tabular 5-Day Volume Accumulations',
+                                   'units': 'TAF'}}
+
+
+def get_ensemble_product_6(cnrfc_id):
+    """
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=6'.format(cnrfc_id)
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'Monthly Probability Plot',
+                                   'units': 'TAF'}}
+
+
+def get_ensemble_product_9(cnrfc_id):
+    """
+    
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=9'.format(cnrfc_id)
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'Water Year Trend Plot',
+                                   'units': 'TAF'}}
+
+
+def get_ensemble_product_10(cnrfc_id):
+    """
+    Water Year Accumulated Volume Plot - chart data available through highchart download CSV api
+    Tabular Monthly Volume Accumulation
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=10'.format(cnrfc_id)
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'Water Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation',
+                                   'units': 'TAF'}}
+
+
+def get_ensemble_product_11(cnrfc_id):
+    """
+    Multi-Year Accumulated Volume Plot - chart data available through highchart download CSV api
+    Tabular Monthly Volume Accumulation
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=11'.format(cnrfc_id)
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'Multi-Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation',
+                                   'units': 'TAF'}}
+
+
+def get_ensemble_product_12(cnrfc_id):
+    """
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=12'.format(cnrfc_id)
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'Historical Flows (Water Year & Seasonal (Apr-Jul)',
+                                   'units': 'TAF'}}
+
+
+def get_ensemble_product_13(cnrfc_id):
+    """
+    """
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=13'.format(cnrfc_id)
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'Water Resources Verification',
+                                   'units': 'TAF'}}
+
+
 def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
 
     # convert kcfs/day to cfs/day
@@ -473,6 +582,8 @@ if __name__ == '__main__':
     # Oroville         | ORDC1
     # Pine Flat        | PNFC1
     # Shasta           | SHDC1
+
+    print(get_ensemble_product_1('FOLC1'))
 
     print(get_deterministic_forecast('SHDC1', truncate_historical=False)['data'].head())
     print(get_ensemble_forecast('SHDC1', 'h')['data'].head())
