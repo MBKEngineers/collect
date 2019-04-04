@@ -7,14 +7,14 @@ from bs4 import BeautifulSoup
 from dateutil import parser
 from dotenv import load_dotenv
 import pandas as pd
-from pytz import timezone
+import pytz
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from collect.utils import clean_fixed_width_headers
 
-UTC = timezone('UTC')
-PACIFIC = timezone('America/Los_Angeles')
+UTC = pytz.timezone('UTC')
+PACIFIC = pytz.timezone('America/Los_Angeles')
 TODAY = dt.datetime.now().strftime('%Y%m%d')
 
 
@@ -22,7 +22,8 @@ TODAY = dt.datetime.now().strftime('%Y%m%d')
 load_dotenv()
 
 # disable warnings in crontab logs
-# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def get_seasonal_trend_tabular(cnrfc_id, water_year):
@@ -35,8 +36,7 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
                     'id={}&prodID=7&year={}'.format(cnrfc_id, water_year)])
    
     # retrieve from public CNRFC webpage
-    result = requests.get(url).content
-    result = BeautifulSoup(result, 'lxml').find('pre').text.replace('#', '')
+    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml').find('pre').text.replace('#', '')
 
     # in-memory file buffer
     with io.StringIO(result) as buf:
@@ -85,22 +85,20 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
 
     # get forecast file from csv url
     url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id={0}'.format(cnrfc_id)
-    basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
-    content = requests.get(url, auth=basic_auth).content
-    
+    csvdata = _get_forecast_csv(url)
+
     # read historical and forecast series from CSV
-    with io.BytesIO(content) as csvdata:
-        df = pd.read_csv(csvdata, 
-                         header=0, 
-                         parse_dates=[0],
-                         index_col=0,
-                         float_precision='high',
-                         dtype={'Date/Time (Pacific Time)': str, 
-                                'Flow (CFS)': float, 
-                                'Trend': str})
+    df = pd.read_csv(csvdata, 
+                     header=0, 
+                     parse_dates=True,
+                     index_col=0,
+                     float_precision='high',
+                     dtype={'Date/Time (Pacific Time)': str, 
+                            'Flow (CFS)': float, 
+                            'Trend': str})
         
     # add timezone info
-    df.index = [PACIFIC.localize(x) for x in df.index]
+    df.index.name = 'PDT/PST'
     
     # Trend value is null for first historical and first forecast entry; select forecast entry
     first_ordinate = df.where(df['Trend'].isnull()).dropna(subset=['Flow (CFS)']).last_valid_index()
@@ -118,60 +116,41 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
     # historical inflow series
     df['historical'] = df.loc[(df['forecast'].isnull()) & mask]['Flow (CFS)']
 
-    # forecast metadata
-    info = {'url': url,
-            'type': 'Deterministic Forecast',
-            'first ordinate': first_ordinate.strftime('%Y-%m-%d %H:%M'),
-            'units': 'cfs',
-            'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}
-
     # additional issuance, plot-type information
-    # get issue time of most recent hourly inflow forecast
-    # time_issued, next_issue_time, title, plot_type = get_forecast_meta_deterministic(cnrfc_id)
-    # info.update({'issuance time': time_issued.strftime('%Y-%m-%d %H:%M'),
-    #              'next forecast': next_issue_time.strftime('%Y-%m-%d %H:%M'),
-    #              'title': title,
-    #              'plot_type': plot_type})
+    time_issued, next_issue_time, title, plot_type = get_forecast_meta_deterministic(cnrfc_id)
 
-    return {'data': df, 'info': info}
+    return {'data': df, 'info': {'url': url,
+                                 'type': 'Deterministic Forecast',
+                                 'title': title,
+                                 'plot_type': plot_type,                                 
+                                 'first_ordinate': first_ordinate.strftime('%Y-%m-%d %H:%M'),
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
+                                 'next_issue': next_issue_time.strftime('%Y-%m-%d %H:%M'),
+                                 'units': 'cfs',
+                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False, cnrfc_id=None):
+def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False, pdt_convert=False, as_pdt=False, cnrfc_id=None):
     """
     from: https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
     https://www.cnrfc.noaa.gov/csv/2019040318_american_csv_export.zip
 
     """
     units = 'kcfs'
-    date_string = default_date_string(date_string)
 
-    if date_string[-2:] not in ['00', '06', '12', '18']:
-        raise ValueError('date_string must be of form %Y%m%d12.')
+    # forecast datestamp prefix
+    date_string = _default_date_string(date_string)
 
     # data source
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_csv_export.zip'.format(date_string, watershed)
-    filename = url.split('/')[-1].replace('.zip', '.csv')
-
-    session = requests.Session()
-    retries = Retry(total=5,
-                    backoff_factor=0.1,
-                    status_forcelist=[500, 502, 503, 504])
-    session.mount('https://', HTTPAdapter(max_retries=retries))
-    content = session.get(url, verify=False).content
-
-    # store content in memory and parse zipped file
-    zipdata = io.BytesIO(content)
-    zip_ref = zipfile.ZipFile(zipdata)
 
     # extract CSV from zip object
-    csvdata = io.BytesIO(zip_ref.read(filename.replace('.zip', '.csv')))       
-    zip_ref.close()
+    csvdata = _get_forecast_csv(url)
 
     # parse forecast data from CSV
     df = pd.read_csv(csvdata, 
                      header=0, 
                      skiprows=[1,], 
-                     nrows=60, 
                      parse_dates=True, 
                      index_col=0,
                      float_precision='high',
@@ -183,22 +162,14 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
     else:
         columns = df.columns
     
-    # convert kcfs to cfs
-    df = df[columns] * 1000.0
-    units = 'cfs'
-
-    # convert cfs/hour to acre-feet
-    if acre_feet:
-        if duration == 'hourly':
-            df = df * ( 3600 / 43560.0 )
-        units = 'acre-feet'
+    # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
+    df, units = _apply_conversions(df, 'hourly', acre_feet, pdt_convert, as_pdt)
 
     # clean up
-    zipdata.close()
     csvdata.close()
 
     # forecast issue time
-    time_issued = get_watershed_forecast_issue_time('H', watershed, date_string, deterministic=True)
+    time_issued = get_watershed_forecast_issue_time('hourly', watershed, date_string, deterministic=True)
 
     return {'data': df, 'info': {'url': url, 
                                  'type': 'Deterministic Forecast', 
@@ -212,16 +183,9 @@ def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False):
     Get issuance time from the deterministic inflow forecast page
     """
     
-    # request page with CNRFC credentials
+    # request page with CNRFC credentials and parse HTML content
     url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_tabular.php?id={0}'.format(cnrfc_id)
-    basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
-    content = requests.get(url, auth=basic_auth).content
-
-    print(url)
-    print('%')
-
-    # parse HTML content
-    soup = BeautifulSoup(content, 'lxml')
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
     for td in soup.find_all('td', {'class': 'smallhead'}):
@@ -254,63 +218,41 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     units = 'kcfs'
 
     # validate duration
-    duration = validate_duration(duration)
+    duration = _validate_duration(duration)
     
     # get issue time of most recent hourly inflow forecast (no support for daily yet)
-    date_string = default_date_string(None)
+    date_string = _default_date_string(None)
     time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
 
     # forecast data url
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_hefs_csv_{1}.csv'.format(cnrfc_id, duration)
-
-    # fetch hourly ensemble forecast data
-    basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
-    session = requests.Session()
-    retries = Retry(total=5,
-                    backoff_factor=0.1,
-                    status_forcelist=[500, 502, 503, 504])
-    session.mount('https://', HTTPAdapter(max_retries=retries))
-    content = session.get(url, auth=basic_auth, verify=False).text
-    
+   
     # read forecast ensemble series from CSV
-    with io.StringIO(content) as csvdata:
-        df = pd.read_csv(csvdata, 
-                         header=0, 
-                         skiprows=[1], 
-                         parse_dates=[0], 
-                         index_col=0, 
-                         float_precision='high', 
-                         dtype={'GMT': str, cnrfc_id: float})
+    csvdata = _get_forecast_csv(url)
+    df = pd.read_csv(csvdata, 
+                     header=0, 
+                     skiprows=[1], 
+                     parse_dates=True, 
+                     index_col=0, 
+                     float_precision='high', 
+                     dtype={'GMT': str, cnrfc_id: float})
 
     # rename columns for ensemble member IDs starting at 1950
     df.columns = [str(x) for x in range(1950, 1950 + len(df.columns))]
     
-    # convert kcfs/day to cfs/day
-    df = df * 1000.0
-    units = 'cfs'
-
-    if acre_feet:
-        if duration == 'hourly':
-            df = df * ( 3600 / 43560.0 )
-        elif duration == 'daily':
-            df = df * (24 * 3600 / 43560.0 )
-        units = 'acre-feet'
-
-    if pdt_convert:
-        df.index = df.index.tz_localize('UTC').tz_convert('America/Los_Angeles')
-        df.index.name = 'America/Los_Angeles'
-    
-    elif as_pdt:
-        df.index = [PACIFIC.localize(x) for x in df.index]
-        df.index.name = 'America/Los_Angeles'
+    # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
+    df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
 
     return {'data': df, 'info': {'url': url, 
+                                 'watershed': get_watershed(cnrfc_id), 
                                  'type': '{0} Ensemble Forecast'.format(duration.title()),
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
+                                 'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M')}}
+                                 'duration': duration}}
 
 
-def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=False, cnrfc_id=None):
+def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=False, pdt_convert=False, as_pdt=False, cnrfc_id=None):
     """
     from: get_watershed_ensemble_issue_time
           get_watershed_ensemble_daily
@@ -319,39 +261,22 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
 
     """
     units = 'kcfs'
-    date_string = default_date_string(date_string)
 
-    if date_string[-2:] != '12':
-        raise ValueError('date_string must be of form %Y%m%d12.')
+    # forecast datestamp prefix
+    date_string = _default_date_string(date_string)
 
     # data source
     url = 'http://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
-    filename = url.split('/')[-1].replace('.zip', '.csv')
+    csvdata = _get_forecast_csv(url)
 
-    session = requests.Session()
-    retries = Retry(total=5,
-                    backoff_factor=0.1,
-                    status_forcelist=[500, 502, 503, 504])
-    session.mount('https://', HTTPAdapter(max_retries=retries))
-    content = session.get(url, verify=False).content
-
-    # store content in memory and parse zipped file
-    with io.BytesIO(content) as zipdata:
-
-        with zipfile.ZipFile(zipdata) as zip_ref:
-
-            # extract CSV from zip object
-            with io.BytesIO(zip_ref.read(filename.replace('.zip', '.csv'))) as csvdata:
-
-                # parse forecast data from CSV
-                df = pd.read_csv(csvdata, 
-                                 header=0, 
-                                 skiprows=[1,], 
-                                 nrows=60, 
-                                 parse_dates=True, 
-                                 index_col=0,
-                                 float_precision='high',
-                                 dtype={'GMT': str})
+    # parse forecast data from CSV
+    df = pd.read_csv(csvdata, 
+                     header=0, 
+                     skiprows=[1,], 
+                     parse_dates=True, 
+                     index_col=0,
+                     float_precision='high',
+                     dtype={'GMT': str})
 
     # filter watershed for single forecast point ensemble
     if cnrfc_id is not None:
@@ -359,27 +284,16 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     else:
         columns = df.columns
     
-    # convert kcfs to cfs
-    df = df[columns] * 1000.0
-    units = 'cfs'
-
-    # convert cfs to acre-feet
-    if acre_feet:
-        if duration == 'hourly':
-            df = df * ( 3600 / 43560.0 )
-        elif duration == 'daily':
-            df = df * (24 * 3600 / 43560.0 )
-        units = 'acre-feet'
+    # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
+    df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
 
     # get date/time stamp from ensemble download page
-    try:
-        time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
-    except:
-        time_issued = UTC.localize(dt.datetime.strptime(date_string, '%Y%m%d12')).strftime('%Y-%m-%d 12:00')
-
+    time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
+    
     return {'data': df, 'info': {'url': url, 
                                  'watershed': watershed, 
                                  'issue_time': time_issued,
+                                 'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
                                  'duration': duration}}
 
@@ -388,7 +302,7 @@ def get_watershed_forecast_issue_time(duration, watershed, date_string=None, det
     """
     get "last modified" date/time stamp from CNRFC watershed ensemble product table
     """
-    duration = validate_duration(duration)
+    duration = _validate_duration(duration)
 
     if duration == 'daily':
         #" only on the 12"
@@ -404,14 +318,17 @@ def get_watershed_forecast_issue_time(duration, watershed, date_string=None, det
         url = 'https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php'
         file_name = '{0}_{1}_csv_export.zip'
 
-    date_string = default_date_string(date_string) 
-    content = requests.get(url, verify=False).content
-    soup = BeautifulSoup(content, 'lxml')
+    # forecast datestamp prefix
+    date_string = _default_date_string(date_string)
     
+    # request table from ensemble product page and parse HTML
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
     for td in soup.find_all('td', {'class': 'table-listing-content'}):
         if file_name.format(date_string, watershed, duration) in td.text:
             issue_time = parser.parse(td.next_sibling.text).astimezone(PACIFIC)
             return issue_time
+    else:
+        raise ValueError('No valid issue time for URL.')
 
 
 def get_watershed(cnrfc_id):
@@ -441,30 +358,106 @@ def get_watershed(cnrfc_id):
         raise ValueError('cnrfc_id not recognized.')
 
 
-def default_date_string(date_string):
-    if date_string is None:
-        now = dt.datetime.today()
-        date_string = now.strftime('%Y%m%d{0}'.format(6 * round(now.hour//6)))
-    return date_string
-
-
-def get_ensemble_first_forecast_ordinate(url):
+def get_ensemble_first_forecast_ordinate(url=None, df=None):
     """
     return the first date of the forecast (GMT) as datetime object
     """
-    df = pd.read_csv(url, 
-                     nrows=1, 
-                     header=0, 
-                     skiprows=[1], 
-                     parse_dates=[0], 
-                     index_col=0, 
-                     float_precision='high',
-                     dtype={'GMT': str, 'FOLC1': float})
+    if url is not None and df is None:
+        df = pd.read_csv(url, 
+                         nrows=1, 
+                         header=0, 
+                         skiprows=[1], 
+                         parse_dates=[0], 
+                         index_col=0, 
+                         float_precision='high',
+                         dtype={'GMT': str, 'FOLC1': float})
 
     return df.index.tolist()[0].to_pydatetime()
 
 
-def validate_duration(duration):
+def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
+
+    # convert kcfs/day to cfs/day
+    df = df * 1000.0
+    units = 'cfs'
+
+    if acre_feet:
+        if duration == 'hourly':
+            df = df * (3600 / 43560.0)
+        elif duration == 'daily':
+            df = df * (24 * 3600 / 43560.0)
+        units = 'acre-feet'
+
+    if pdt_convert:
+        df.index = df.index.tz_localize('UTC').tz_convert('America/Los_Angeles')
+        df.index.name = 'America/Los_Angeles'
+    
+    elif as_pdt:
+        df.index = [PACIFIC.localize(x) for x in df.index]
+        df.index.name = 'America/Los_Angeles'
+
+    return df, units
+
+
+def _get_cnrfc_restricted_content(url):
+    """
+    request page from CNRFC restricted site
+    """
+    basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
+    content = requests.get(url, auth=basic_auth).content
+    return content
+
+
+def _get_forecast_csv(url):
+
+    # data source
+    filename = url.split('/')[-1]
+
+    # cnrfc authorization header
+    basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
+
+    # initialize requests session with retries
+    session = requests.Session()
+    retries = Retry(total=5,
+                    backoff_factor=0.1,
+                    status_forcelist=[500, 502, 503, 504])
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+    content = session.get(url, auth=basic_auth, verify=False).content
+
+    # handle zipfiles
+    if '.zip' in filename:
+
+        # store content in memory and parse zipped file
+        zipdata = io.BytesIO(content)
+        zip_ref = zipfile.ZipFile(zipdata)
+
+        # extract CSV from zip object
+        csvdata = io.BytesIO(zip_ref.read(filename.replace('.zip', '.csv')))       
+        zip_ref.close()
+        zipdata.close()
+
+    elif '.csv' in filename or '_csv' in filename:
+        csvdata = io.BytesIO(content)
+
+    return csvdata
+
+
+def _default_date_string(date_string):
+    """
+    supply expected latest forecast datestamp or use defined date_string argument
+    """
+    if date_string is None:
+        now = dt.datetime.now().astimezone(UTC)
+        date_string = now.strftime('%Y%m%d{0}'.format(6 * round(now.hour//6)))
+    
+    # hour validation
+    if date_string[-2:] not in ['00', '06', '12', '18']:
+        raise ValueError('date_string must be of form %Y%m%dXX, where XX is one of 00, 06, 12, 18.')
+    
+    return date_string
+
+
+def _validate_duration(duration):
     if duration[0].upper() == 'D':
         return 'daily'
     elif duration[0].upper() == 'H':
@@ -475,24 +468,16 @@ def validate_duration(duration):
 
 if __name__ == '__main__':
 
-    from pprint import pprint
-    RESERVOIRS = {'Folsom': 'FOLC1',
-                  'New Bullards Bar': 'NBBC1',
-                  'Oroville': 'ORDC1',
-                  'Pine Flat': 'PNFC1',
-                  'Shasta': 'SHDC1'}
+    # Folsom           | FOLC1
+    # New Bullards Bar | NBBC1
+    # Oroville         | ORDC1
+    # Pine Flat        | PNFC1
+    # Shasta           | SHDC1
 
-    # for watershed in ['klamath']:
-    #     print('*'*88)
-    #     print(watershed)
-        # print(get_deterministic_forecast_watershed(watershed, '2019040412', 'LLLL')['data'].head())
+    print(get_deterministic_forecast('SHDC1', truncate_historical=False)['data'].head())
+    print(get_ensemble_forecast('SHDC1', 'h')['data'].head())
+    print(get_deterministic_forecast_watershed('UpperSacramento', None)['data'].head())
+    print(get_ensemble_forecast_watershed('UpperSacramento', 'hourly', None)['data'].head())
+    print(get_seasonal_trend_tabular('SHDC1', 2018)['data'].head())
 
-    pprint(get_deterministic_forecast('FOLC1', truncate_historical=False)['data'])
 
-    # pprint(get_ensemble_forecast('SHDC1', 'h')['data'].head())
-
-    # print(get_deterministic_forecast_watershed('american', None)['info'])
-
-    # print(get_ensemble_forecast_watershed('american', 'hourly', None)['data'].head())
-
-    # print(get_seasonal_trend_tabular('SHDC1', 2018)['data'])
