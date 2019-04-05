@@ -175,7 +175,8 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
                                  'type': 'Deterministic Forecast', 
                                  'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
                                  'watershed': watershed, 
-                                 'units': units}}
+                                 'units': units,
+                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
 def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False):
@@ -250,7 +251,8 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
                                  'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
-                                 'duration': duration}}
+                                 'duration': duration,
+                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
 def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=False, pdt_convert=False, as_pdt=False, cnrfc_id=None):
@@ -296,7 +298,8 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
                                  'issue_time': time_issued,
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
-                                 'duration': duration}}
+                                 'duration': duration,
+                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
 def get_watershed_forecast_issue_time(duration, watershed, date_string=None, deterministic=False):
@@ -399,37 +402,20 @@ def get_ensemble_product_2(cnrfc_id):
     soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
+    # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
+    df, notes = _parse_blue_table(data_table)
+    df.set_index('Probability', inplace=True)
+
     # parse title and date updated from table
     for td in data_table.find_all('td', {'class': 'medBlue-background'}):
         title, time_issued = str(td.find('strong')).split('<br/>')
         time_issued = time_issued.rstrip('</strong>').lstrip('Data Updated: ')
 
-    # parse header names from table
-    columns = []
-    for td in data_table.find_all('td', {'class': 'blue-background'}):
-        columns.append(td.text.strip())
-
-    # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
-    rows = []
-    for tr in data_table.find_all('tr'):
-        data_cells = tr.find_all('td', {'class': 'normalText'})
-        if len(data_cells) > 1:
-            row = []
-            for td in data_cells:
-                try:
-                    row.append(float(td.text))
-                except ValueError:
-                    row.append(td.text)
-            rows.append(row)
-
-    # format as dataframe
-    df = pd.DataFrame(rows, columns=columns)
-    df.set_index('Probability', inplace=True)
-
     return {'data': df, 'info': {'url': url, 
                                  'type': 'Tabular 10-Day Streamflow Volume Accumulation',
                                  'issue_time': time_issued,
-                                 'units': 'TAF'}}
+                                 'units': 'TAF',
+                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
 def get_ensemble_product_3(cnrfc_id):
@@ -454,12 +440,32 @@ def get_ensemble_product_5(cnrfc_id):
 
 def get_ensemble_product_6(cnrfc_id):
     """
+    Monthly exceedance volume data is presented in tabular format or plotted as a barchart at
+    the ensemble product page
     """
     url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=6'.format(cnrfc_id)
     get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
-                                   'type': 'Monthly Probability Plot',
-                                   'units': 'TAF'}}
+
+    # request Ensemble Product 6 page content
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    data_table = soup.find_all('table', {'style': 'standardTable'})[0]
+
+    # parse Monthly Volume Exceedance Values from table
+    df, notes = _parse_blue_table(data_table)
+    df.set_index('Prob', inplace=True)
+
+    # parse title and date updated from table
+    for td in data_table.find_all('td', {'class': 'medBlue-background'}):
+        title, time_issued = str(td.find('strong')).split('<br/>')
+        time_issued = time_issued.rstrip('</strong>').lstrip('Data Updated: ')
+        title = title.lstrip('<strong>')
+
+    return {'data': df, 'info': {'url': url, 
+                                 'type': title,
+                                 'issue_time': time_issued,
+                                 'units': 'TAF',
+                                 'notes': notes,
+                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
 def get_ensemble_product_9(cnrfc_id):
@@ -477,12 +483,25 @@ def get_ensemble_product_10(cnrfc_id):
     """
     Water Year Accumulated Volume Plot - chart data available through highchart download CSV api
     Tabular Monthly Volume Accumulation
+
+    @narlesky TO DO - recreate graphic
     """
     url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=10'.format(cnrfc_id)
     get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
-                                   'type': 'Water Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation',
-                                   'units': 'TAF'}}
+
+    # request Ensemble Product 10 page content
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    data_table = soup.find_all('table', {'style': 'standardTable'})[0]
+
+    # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
+    df, notes = _parse_blue_table(data_table)
+    df.set_index('Probability', inplace=True)
+
+    return {'data': df, 'info': {'url': url, 
+                                 'note': '@narlesky TO DO - recreate graphic', 
+                                 'type': 'Water Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation',
+                                 'units': 'TAF',
+                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
 def get_ensemble_product_11(cnrfc_id):
@@ -608,6 +627,40 @@ def _validate_duration(duration):
         raise ValueError('<duration> must be one of daily, hourly')
 
 
+def _parse_blue_table(table_soup):
+    """
+    many CNRFC ensemble data products are stored in similarly-formatted tables
+    """
+
+    # parse header names from table
+    columns = []
+    for td in table_soup.find_all('td', {'class': 'blue-background'}):
+        if bool(td.text.strip()):
+            columns.append(td.text.strip())
+
+    # parse data entries from table
+    rows, notes = [], []
+    for tr in table_soup.find_all('tr'):
+        data_cells = tr.find_all('td', {'class': 'normalText'})
+        if len(data_cells) > 1:
+            row = []
+            for td in data_cells:
+                try:
+                    row.append(float(td.text.strip()))
+                except ValueError:
+                    row.append(td.text.strip())
+            rows.append(row)
+        else:
+            try:
+                notes.append(data_cells[0].text.strip())
+            except:
+                pass
+
+    # format as dataframe
+    df = pd.DataFrame(rows, columns=columns).replace({'--': float('nan')})
+    return df, notes
+
+
 if __name__ == '__main__':
 
     # Folsom           | FOLC1
@@ -624,4 +677,5 @@ if __name__ == '__main__':
     # print(get_seasonal_trend_tabular('SHDC1', 2018)['data'].head())
 
 
-    print(get_ensemble_product_2('ORDC1'))
+    # print(get_ensemble_product_2('ORDC1'))
+    import pprint; pprint.pprint(get_ensemble_product_6('ORDC1'))
