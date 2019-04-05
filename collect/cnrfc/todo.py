@@ -9,6 +9,5 @@ https://www.cnrfc.noaa.gov/restricted/graphicalRelease_tabular.php?id=ORDC1
 
 Ensemble Traces:
 ---------------------------------------
-http://www.cnrfc.noaa.gov/ensembleProduct.php?id=ORDC1&prodID=4
-
+https://www.cnrfc.noaa.gov/awipsProducts/RNOWRK10D.php
 """

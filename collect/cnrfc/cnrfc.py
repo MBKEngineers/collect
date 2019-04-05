@@ -389,14 +389,47 @@ def get_ensemble_product_1(cnrfc_id):
 def get_ensemble_product_2(cnrfc_id):
     """
     http://www.cnrfc.noaa.gov/ensembleProduct.php?id=ORDC1&prodID=2
+
+    (alt text source: https://www.cnrfc.noaa.gov/awipsProducts/RNOWRK10D.php)
     """
     url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=2'.format(cnrfc_id)
     get_web_status(url)
 
+    # request Ensemble Product 2 page content
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    data_table = soup.find_all('table', {'style': 'standardTable'})[0]
+
+    # parse title and date updated from table
+    for td in data_table.find_all('td', {'class': 'medBlue-background'}):
+        title, time_issued = str(td.find('strong')).split('<br/>')
+        time_issued = time_issued.rstrip('</strong>').lstrip('Data Updated: ')
+
+    # parse header names from table
+    columns = []
+    for td in data_table.find_all('td', {'class': 'blue-background'}):
+        columns.append(td.text.strip())
+
     # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
-    return {'data': None, 'info': {'url': url, 
-                                   'type': 'Tabular 10-Day Streamflow Volume Accumulation',
-                                   'units': 'TAF'}}
+    rows = []
+    for tr in data_table.find_all('tr'):
+        data_cells = tr.find_all('td', {'class': 'normalText'})
+        if len(data_cells) > 1:
+            row = []
+            for td in data_cells:
+                try:
+                    row.append(float(td.text))
+                except ValueError:
+                    row.append(td.text)
+            rows.append(row)
+
+    # format as dataframe
+    df = pd.DataFrame(rows, columns=columns)
+    df.set_index('Probability', inplace=True)
+
+    return {'data': df, 'info': {'url': url, 
+                                 'type': 'Tabular 10-Day Streamflow Volume Accumulation',
+                                 'issue_time': time_issued,
+                                 'units': 'TAF'}}
 
 
 def get_ensemble_product_3(cnrfc_id):
@@ -583,12 +616,12 @@ if __name__ == '__main__':
     # Pine Flat        | PNFC1
     # Shasta           | SHDC1
 
-    print(get_ensemble_product_1('FOLC1'))
+    # print(get_ensemble_product_1('FOLC1'))
+    # print(get_deterministic_forecast('SHDC1', truncate_historical=False)['data'].head())
+    # print(get_ensemble_forecast('SHDC1', 'h')['data'].head())
+    # print(get_deterministic_forecast_watershed('UpperSacramento', None)['data'].head())
+    # print(get_ensemble_forecast_watershed('UpperSacramento', 'hourly', None)['data'].head())
+    # print(get_seasonal_trend_tabular('SHDC1', 2018)['data'].head())
 
-    print(get_deterministic_forecast('SHDC1', truncate_historical=False)['data'].head())
-    print(get_ensemble_forecast('SHDC1', 'h')['data'].head())
-    print(get_deterministic_forecast_watershed('UpperSacramento', None)['data'].head())
-    print(get_ensemble_forecast_watershed('UpperSacramento', 'hourly', None)['data'].head())
-    print(get_seasonal_trend_tabular('SHDC1', 2018)['data'].head())
 
-
+    print(get_ensemble_product_2('ORDC1'))
