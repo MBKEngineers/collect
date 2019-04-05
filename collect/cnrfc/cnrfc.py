@@ -678,4 +678,4 @@ if __name__ == '__main__':
 
 
     # print(get_ensemble_product_2('ORDC1'))
-    import pprint; pprint.pprint(get_ensemble_product_6('ORDC1'))
+    get_ensemble_product_6('ORDC1')
