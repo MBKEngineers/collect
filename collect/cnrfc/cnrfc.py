@@ -536,6 +536,31 @@ def get_ensemble_product_13(cnrfc_id):
                                    'units': 'TAF'}}
 
 
+def get_data_report_part_8():
+    """
+    https://www.wrh.noaa.gov/cnrfc/rsa_getprod.php?prod=RNORR8RSA&wfo=cnrfc&version=0
+    """
+    url = 'https://www.wrh.noaa.gov/cnrfc/rsa_getprod.php?prod=RNORR8RSA&wfo=cnrfc&version=0'
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'Hydrology-meteorology Data Report Part 8',
+                                   'units': 'TAF'}}
+
+
+def get_monthly_reservoir_storage_summary():
+    url = 'https://www.cnrfc.noaa.gov/awipsProducts/RNORR6RSA.php'
+    get_web_status(url)
+    return {'data': None, 'info': {'url': url, 
+                                   'type': 'CNRFC Monthly Reservoir Storage Summary',
+                                   'units': 'TAF'}}
+
+
+def esp_trace_analysis_wrapper():
+    """
+    """
+    url = 'https://www.cnrfc.noaa.gov/esp_trace_analysis.php'
+
+
 def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
 
     # convert kcfs/day to cfs/day
