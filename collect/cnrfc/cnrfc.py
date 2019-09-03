@@ -224,7 +224,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     
     # get issue time of most recent hourly inflow forecast (no support for daily yet)
     date_string = _default_date_string(None)
-    time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
+    # time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
 
     # forecast data url
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_hefs_csv_{1}.csv'.format(cnrfc_id, duration)
@@ -248,7 +248,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     return {'data': df, 'info': {'url': url, 
                                  'watershed': get_watershed(cnrfc_id), 
                                  'type': '{0} Ensemble Forecast'.format(duration.title()),
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
+                                 # 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
                                  'duration': duration,
