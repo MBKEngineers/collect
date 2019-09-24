@@ -128,7 +128,7 @@ def get_data_columns(reservoir, water_year=None):
     result = {'FLOW-RES IN': 2, 
               'FLOW-RES OUT': 3}
 
-    if reservoir.lower() in ['bucq', 'hidq', 'exc', 'mil', 'dnp', 'lbn', 'sha', 'bul']:
+    if reservoir.lower() in ['bucq', 'hidq', 'exc', 'mil', 'dnp', 'lbn', 'sha']:
         result.update({'TOP CON STOR': 4, 
                        'STOR-RES EOP': 5})
 
@@ -138,9 +138,17 @@ def get_data_columns(reservoir, water_year=None):
     if reservoir.lower() == 'hidq':
         result.update({'ABV HENSLEY FLOW': 7})
 
-    if reservoir.lower() in ['burq', 'ownq', 'barq', 'marq', 'bdc']:
+    if reservoir.lower() in ['burq', 'ownq', 'barq', 'marq', 'bdc', 'engq']:
         result.update({'STOR-RES EOP': 4, 
                        'PRECIP-INC': 5})
+
+    if reservoir.lower() == 'bul':
+        if water_year >= 2015:
+            result.update({'TOP CON STOR': 4, 
+                           'STOR-RES EOP': 5})
+        else:
+            result.update({'STOR-RES EOP': 4, 
+                           'PRECIP-INC': 5})
 
     if reservoir.lower() == 'barq':
         result.update({'AT MCKEE RD FLOW': 6, 
@@ -173,8 +181,8 @@ def get_data_columns(reservoir, water_year=None):
                            'STOR-RES EOP': 6, 
                            'PRECIP-BASIN': 7})
         else:
-            result.update({'TOP CON STOR': 4,
-                           'STOR-RES EOP': 5, 
+            result.update({'TOP CON STOR': 5,
+                           'STOR-RES EOP': 4, 
                            'PRECIP-BASIN': 6})
 
     if reservoir.lower() == 'fol':
