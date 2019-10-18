@@ -128,39 +128,57 @@ def get_data_columns(reservoir, water_year=None):
     result = {'FLOW-RES IN': 2, 
               'FLOW-RES OUT': 3}
 
-    if reservoir.lower() in ['bucq', 'hidq', 'exc', 'mil', 'dnp', 'lbn', 'sha']:
-        result.update({'TOP CON STOR': 4, 
-                       'STOR-RES EOP': 5})
+    if reservoir.lower() in ['sha', 'blbq', 'bul', 'oro', 'inv', 'cmn', 'nml', 'tul', 'dnp', 'exc', 'lbn', 'bucq', 'hidq', 'mil', 'dlv', 'mrtq', 'prs', 'stp', 'boc']:
+        result.update({'TOP CON STOR': 5, 
+                       'STOR-RES EOP': 4})
 
-    if reservoir.lower() in ['bucq', 'hidq', 'exc', 'mil', 'dnp', 'sha', 'bul']:
+    if reservoir.lower() == 'inv':
+        result.update({ 'PRECIP-INC': 6})
+        if (water_year >= 2009)&(water_year != 2014):
+            result.update({ 'YCFCWCA TOP CON STOR': 6,
+                            'PRECIP-INC': 7})
+        if (water_year >= 2015):
+            result.update({'TOP CON STOR': 4,
+                            'YCFCWCA TOP CON STOR': 5,
+                            'STOR-RES EOP': 6, 
+                            'PRECIP-INC': 7})
+
+    if reservoir.lower() in ['bucq', 'hidq', 'mil', 'sha', 'bul', 'blbq', 'oro', 'nml', 'tul', 'dnp', 'exc', 'dlv', 'mrtq', 'boc']:
         result.update({'PRECIP-INC': 6})
 
+    if reservoir.lower() == 'prs':
+        if water_year <= 2006:
+            result.update({'PRECIP-INC': 6})
+
+    if reservoir.lower() == 'stp':
+        if water_year <= 2005:
+            result.update({'PRECIP-INC': 6})
+
     if reservoir.lower() == 'hidq':
-        result.update({'ABV HENSLEY FLOW': 7})
+        if water_year >= 2009:
+            result.update({'ABV HENSLEY FLOW': 7})
 
     if reservoir.lower() in ['burq', 'ownq', 'barq', 'marq', 'bdc', 'engq']:
         result.update({'STOR-RES EOP': 4, 
                        'PRECIP-INC': 5})
 
-    if reservoir.lower() == 'bul':
+    if reservoir.lower() in ['bul', 'sha', 'blbq','oro', 'cmn', 'nml', 'tul', 'dnp', 'exc', 'lbn', 'bucq', 'hidq', 'mil', 'dlv', 'mrtq', 'prs', 'stp', 'boc']:
         if water_year >= 2015:
             result.update({'TOP CON STOR': 4, 
                            'STOR-RES EOP': 5})
-        else:
-            result.update({'STOR-RES EOP': 4, 
-                           'PRECIP-INC': 5})
 
     if reservoir.lower() == 'barq':
         result.update({'AT MCKEE RD FLOW': 6, 
                        'BLK RASCAL D FLOW': 7})
    
     if reservoir.lower() == 'nml': 
-        result.update({'FLOW-RES OUT': 2, 
-                       'FLOW-RES IN': 3, 
-                       'NMLLATE TOP CON STOR': 4, 
-                       'STOR-RES EOP': 6, 
-                       'TOP CON STOR': 5, 
-                       'PRECIP-INC': 7})
+        if water_year >= 2017:
+            result.update({'FLOW-RES OUT': 2, 
+                           'FLOW-RES IN': 3, 
+                           'NMLLATE TOP CON STOR': 5, 
+                           'STOR-RES EOP': 6, 
+                           'TOP CON STOR': 4, 
+                           'PRECIP-INC': 7})
 
     if reservoir.lower() == 'bdc': 
         result.update({'BIG DRY CR FLOW': 6, 
@@ -168,11 +186,17 @@ def get_data_columns(reservoir, water_year=None):
                        'WASTEWAY FLOW': 8})
 
     if reservoir.lower() == 'pnfq':
-        result.update({'BLW NF KINGS FLOW': 4, 
-                       'NR PIEDRA FLOW': 5,
-                       'TOP CON STOR': 6, 
-                       'STOR-RES EOP': 7, 
+        result.update({'BLW NF KINGS FLOW': 5, 
+                       'NR PIEDRA FLOW': 6,
+                       'TOP CON STOR': 7, 
+                       'STOR-RES EOP': 4, 
                        'PRECIP-INC': 8})
+        if water_year >= 2015:
+            result.update({'BLW NF KINGS FLOW': 4, 
+                           'NR PIEDRA FLOW': 5,
+                           'TOP CON STOR': 6, 
+                           'STOR-RES EOP': 7, 
+                           'PRECIP-INC': 8})
 
     if reservoir.lower() == 'oro':
         if water_year >= 2016:
@@ -180,10 +204,6 @@ def get_data_columns(reservoir, water_year=None):
                            'TOP CON STOR': 5,
                            'STOR-RES EOP': 6, 
                            'PRECIP-BASIN': 7})
-        else:
-            result.update({'TOP CON STOR': 5,
-                           'STOR-RES EOP': 4, 
-                           'PRECIP-BASIN': 6})
 
     if reservoir.lower() == 'fol':
         result.update({'FLOW-RES OUT': 2, 
@@ -203,6 +223,120 @@ def get_data_columns(reservoir, water_year=None):
                        'FBO TOP CON STOR': 8, 
                        'STOR-RES EOP': 9, 
                        'PRECIP-BASIN': 10})
+    
+    if reservoir.lower() == 'nhgq':
+        result.update({'STOR-RES EOP': 4,
+                       'FLOW': 5,
+                       'TOP CON STOR': 6,
+                       'PRECIP-BASIN': 7})
+        if water_year >= 1996:
+            result.update({'STOR-RES EOP': 4,
+                           'FLOW': 5,
+                           'BELLOTA FLOW': 6,
+                           'TOP CON STOR': 7,
+                           'PRECIP-BASIN': 8})
+        if water_year >= 2015:
+            result.update({'STOR-RES EOP': 7,
+                           'FLOW': 4,
+                           'BELLOTA FLOW': 5,
+                           'TOP CON STOR': 6,
+                           'PRECIP-BASIN': 8})
+    
+    if reservoir.lower() == 'frmq':
+        if water_year != 2014:
+            result.update({'STOR-RES EOP': 4,
+                           'PRECIP-INC': 5,
+                           'FLOW AT FARMINGTON': 6,
+                           'FLOW NR FARMINGTON': 7,
+                           'FLOW DUCK CR DIV': 8})
+        if water_year >= 1999:
+            result.update({'FLOW BLW FARMINGTON': 9})
+        if water_year == 2014:
+            result.update({'FLOW DUCK CR DIV': 4,
+                           'PRECIP-INC': 5,
+                           'FLOW AT FARMINGTON': 6,
+                           'FLOW BLW FARMINGTON': 7})
+
+    if reservoir.lower() == 'trmq':
+        result.update({'STOR-RES EOP': 4, 
+                       'FLOW AT THREE RIV': 5, 
+                       'FLOW NR LEMONCOVE': 6,
+                       'TOP CON STOR': 7,
+                       'PRECIP-BASIN': 8})
+        if water_year >= 2015:
+            result.update({'FLOW AT THREE RIV': 4,
+                           'FLOW NR LEMONCOVE': 5,
+                           'TOP CON STOR': 6,
+                           'STOR-RES EOP': 7,
+                           'PRECIP-BASIN': 8})
+
+    if reservoir.lower() == 'sccq':
+        result.update({'STOR-RES EOP': 4, 
+                       'FLOW NR SPRINGVIL': 5, 
+                       'FLOW NR SUCCESS': 6,
+                       'TOP CON STOR': 7,
+                       'PRECIP-BASIN': 8})
+        if water_year >= 2015:
+            result.update({'FLOW NR SPRINGVIL': 4,
+                           'FLOW NR SUCCESS': 5,
+                           'TOP CON STOR': 6,
+                           'STOR-RES EOP': 7,
+                           'PRECIP-BASIN': 8})
+
+    if reservoir.lower() == 'isbq':
+        if water_year != 2017:
+            result.update({'STOR-RES EOP': 4, 
+                           'FLOW AT KERNVILLE': 5, 
+                           'FLOW BOREL CANAL': 6,
+                           'FLOW': 7,
+                           'TOP CON STOR': 8,
+                           'PRECIP-BASIN': 9})
+            if water_year >= 2015:
+                result.update({'FLOW AT KERNVILLE': 4,
+                               'FLOW BOREL CANAL': 5,
+                               'FLOW': 6,
+                               'TOP CON STOR': 7,
+                               'STOR-RES EOP': 8,
+                               'PRECIP-BASIN': 9})
+        if water_year == 2017:
+            result.update({'FLOW': 4,
+                           'TOP CON STOR': 5,
+                           'STOR-RES EOP': 6,
+                           'PRECIP-BASIN': 7})
+
+    if reservoir.lower() == 'coyq':
+        result.update({'FLOW-RES OUT': 2, 
+                       'FLOW-RES IN': 3, 
+                       'STOR-RES EOP': 4,
+                       'FLOW NR UKIAH': 5,
+                       'FLOW NR HOPLAND': 6,
+                       'TOP CON STOR': 7,
+                       'PRECIP-INC': 8})
+        if water_year >= 2009:
+            result.update({'TOP CON STOR COYHIGH': 7,
+                           'TOP CON STOR': 8,
+                           'PRECIP-INC': 9})
+        if water_year >= 2015:
+            result.update({'FLOW NR UKIAH': 4,
+                           'FLOW NR HOPLAND': 5,
+                           'TOP CON STOR COYHIGH': 6,
+                           'TOP CON STOR': 7,
+                           'STOR-RES EOP': 8,
+                           'PRECIP-INC': 9})
+
+    if reservoir.lower() == 'wrsq':
+        result.update({'STOR-RES EOP': 4,
+                       'FLOW NR GUERNEVIL': 5,
+                       'FLOW NR GEYSERVIL': 6,
+                       'TOP CON STOR': 7,
+                       'PRECIP-INC': 8})
+        if water_year >= 1996:
+            result.update({'FLOW NR HEALDSBUR (CDEC)': 5,
+                       'FLOW NR GUERNEVIL': 6,
+                       'FLOW NR GEYSERVIL': 7,
+                       'TOP CON STOR': 8,
+                       'PRECIP-INC': 9})
+
 
     return result
 
