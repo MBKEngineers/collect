@@ -32,7 +32,7 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
     adapted from data accessed in py_water_supply_reporter.py
     """
 
-    url = '?'.join(['http://www.cnrfc.noaa.gov/ensembleProductTabular.php', 
+    url = '?'.join(['https://www.cnrfc.noaa.gov/ensembleProductTabular.php', 
                     'id={}&prodID=7&year={}'.format(cnrfc_id, water_year)])
    
     # retrieve from public CNRFC webpage
@@ -210,7 +210,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     ported from SAFCA Portal project
 
     The hourly ensemble traces (product 4) are available at this URL pattern for certain forecast points
-    http://www.cnrfc.noaa.gov/ensembleProduct.php?id=XXXC1&prodID=4
+    https://www.cnrfc.noaa.gov/ensembleProduct.php?id=XXXC1&prodID=4
 
     The csv is directly available at 
     https://www.cnrfc.noaa.gov/csv/XXXC1_hefs_csv_XXXXX.csv
@@ -224,7 +224,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     
     # get issue time of most recent hourly inflow forecast (no support for daily yet)
     date_string = _default_date_string(None)
-    time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
+    # time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
 
     # forecast data url
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_hefs_csv_{1}.csv'.format(cnrfc_id, duration)
@@ -248,7 +248,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     return {'data': df, 'info': {'url': url, 
                                  'watershed': get_watershed(cnrfc_id), 
                                  'type': '{0} Ensemble Forecast'.format(duration.title()),
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
+                                 # 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
                                  'duration': duration,
@@ -265,11 +265,13 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     """
     units = 'kcfs'
 
+    duration = _validate_duration(duration)
+
     # forecast datestamp prefix
     date_string = _default_date_string(date_string)
 
     # data source
-    url = 'http://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
+    url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
     csvdata = _get_forecast_csv(url)
 
     # parse forecast data from CSV
@@ -291,11 +293,11 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
 
     # get date/time stamp from ensemble download page
-    time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
+    # time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
     
     return {'data': df, 'info': {'url': url, 
                                  'watershed': watershed, 
-                                 'issue_time': time_issued,
+                                 # 'issue_time': time_issued,
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
                                  'duration': duration,
@@ -642,8 +644,11 @@ def _get_forecast_csv(url):
         zipdata = io.BytesIO(content)
         zip_ref = zipfile.ZipFile(zipdata)
 
+        # read filenames in zip archive
+        csv_filename = zip_ref.namelist()[0]
+
         # extract CSV from zip object
-        csvdata = io.BytesIO(zip_ref.read(filename.replace('.zip', '.csv')))       
+        csvdata = io.BytesIO(zip_ref.read(csv_filename))
         zip_ref.close()
         zipdata.close()
 
