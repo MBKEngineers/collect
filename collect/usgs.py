@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
-import requests
+from bs4 import BeautifulSoup
 import dateutil.parser
 import pandas as pd
+import requests
 
 
 def get_usgs_data(station_id, sensor, start_time, end_time, interval='instantaneous'):
@@ -39,7 +40,8 @@ def get_usgs_data(station_id, sensor, start_time, end_time, interval='instantane
         'sites={station_id}',
         'startDT={start_time}',
         'endDT={end_time}',
-        'parameterCd={sensor}&siteStatus=all'
+        'parameterCd={sensor}',
+        'siteStatus=all'
     ]).format(
         interval={'instantaneous':'i', 'daily':'d'}[interval],
         station_id=station_id, 
@@ -77,5 +79,44 @@ def get_usgs_data(station_id, sensor, start_time, end_time, interval='instantane
         'units': variable_info['unit']['unitCode'],
         'interval': interval
     }
+
+    return {'data': frame, 'info': info}
+
+
+def get_peak_streamflow(station_id):
+    """
+    Download annual peak timeseries data from USGS database; return as dataframe
+    """
+
+    # construct query url
+    url = '?'.join(['https://nwis.waterdata.usgs.gov/nwis/peak', 
+                    'site_no={station_id}&agency_cd=USGS&format=rdb']).format(station_id=station_id)
+
+    # process annual peak time series from tab-delimited table
+    frame = pd.read_csv(url,
+                        comment='#', 
+                        parse_dates=True,
+                        header=0,
+                        delimiter='\t')
+    frame.drop(0, axis=0, inplace=True)
+    frame.index = pd.to_datetime(frame['peak_dt'])
+
+    # load USGS site informatiokn
+    result = BeautifulSoup(requests.get(url.rstrip('rdb')).content, 'lxml')
+    info = {'site number': station_id, 'site name': result.find('h2').text}
+    meta = result.findAll('div', {'class': 'leftsidetext'})[0]
+    for div in meta.findChildren('div', {'align': 'left'}):
+        if 'county' in div.text.lower():
+            info['county'] = div.text.replace('\xa0', '')
+        elif 'unit code' in div.text.lower():
+            info['hydrologic unit code'] = div.text.split('Code ')
+        elif 'latitude' in div.text.lower():
+            info['latitude'] = div.text.split(', ')[0].lstrip('Latitude').replace('\xa0', '').strip()
+            info['longitude'] = div.text.split(', ')[1].lstrip('Longitude').replace('\xa0', '').split('\n')[0]
+            info['datum'] = div.text.split('\n')[-1].strip().replace('\xa0', '')
+        elif 'drainage' in div.text.lower():
+            info['drainage area'] = div.text.split('area ')[1].replace('\xa0', ' ')
+        elif 'datum' in div.text.lower():
+            info['gage datum'] = div.text.split('datum ')[1].replace('\xa0', ' ').strip()
 
     return {'data': frame, 'info': info}
