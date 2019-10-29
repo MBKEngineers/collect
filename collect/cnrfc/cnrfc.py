@@ -379,10 +379,19 @@ def get_ensemble_first_forecast_ordinate(url=None, df=None):
     return df.index.tolist()[0].to_pydatetime()
 
 
+def get_ensemble_product_url(product_id, cnrfc_id):
+    """
+    return the URL for the product display
+    """
+    return 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={1}&prodID={0}'.format(product_id, cnrfc_id)
+
+
 def get_ensemble_product_1(cnrfc_id):
     """
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=1'.format(cnrfc_id)
+    raise NotImplementedError
+
+    url = get_ensemble_product_url(1, cnrfc_id)
     get_web_status(url)
     return {'data': None, 'info': {'url': url, 
                                    'type': '10-Day Probability Plot',
@@ -391,11 +400,11 @@ def get_ensemble_product_1(cnrfc_id):
 
 def get_ensemble_product_2(cnrfc_id):
     """
-    http://www.cnrfc.noaa.gov/ensembleProduct.php?id=ORDC1&prodID=2
+    http://www.cnrfc.noaa.gov/ensembleProduct.php?id=XXXC1&prodID=2
 
     (alt text source: https://www.cnrfc.noaa.gov/awipsProducts/RNOWRK10D.php)
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=2'.format(cnrfc_id)
+    url = get_ensemble_product_url(2, cnrfc_id)
     get_web_status(url)
 
     # request Ensemble Product 2 page content
@@ -421,7 +430,9 @@ def get_ensemble_product_2(cnrfc_id):
 def get_ensemble_product_3(cnrfc_id):
     """
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=3'.format(cnrfc_id)
+    raise NotImplementedError
+
+    url = get_ensemble_product_url(3, cnrfc_id)
     get_web_status(url)
     return {'data': None, 'info': {'url': url, 
                                    'type': '5-Day Peaks Plot',
@@ -431,7 +442,9 @@ def get_ensemble_product_3(cnrfc_id):
 def get_ensemble_product_5(cnrfc_id):
     """
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=5'.format(cnrfc_id)
+    raise NotImplementedError
+
+    url = get_ensemble_product_url(5, cnrfc_id)
     get_web_status(url)
     return {'data': None, 'info': {'url': url, 
                                    'type': 'Tabular 5-Day Volume Accumulations',
@@ -443,7 +456,7 @@ def get_ensemble_product_6(cnrfc_id):
     Monthly exceedance volume data is presented in tabular format or plotted as a barchart at
     the ensemble product page
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=6'.format(cnrfc_id)
+    url = get_ensemble_product_url(6, cnrfc_id)
     get_web_status(url)
 
     # request Ensemble Product 6 page content
@@ -472,7 +485,9 @@ def get_ensemble_product_9(cnrfc_id):
     """
     
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=9'.format(cnrfc_id)
+    raise NotImplementedError
+
+    url = get_ensemble_product_url(9, cnrfc_id)
     get_web_status(url)
     return {'data': None, 'info': {'url': url, 
                                    'type': 'Water Year Trend Plot',
@@ -486,7 +501,7 @@ def get_ensemble_product_10(cnrfc_id):
 
     @narlesky TO DO - recreate graphic
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=10'.format(cnrfc_id)
+    url = get_ensemble_product_url(10, cnrfc_id)
     get_web_status(url)
 
     # request Ensemble Product 10 page content
@@ -509,7 +524,9 @@ def get_ensemble_product_11(cnrfc_id):
     Multi-Year Accumulated Volume Plot - chart data available through highchart download CSV api
     Tabular Monthly Volume Accumulation
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=11'.format(cnrfc_id)
+    raise NotImplementedError
+
+    url = get_ensemble_product_url(11, cnrfc_id)
     get_web_status(url)
     return {'data': None, 'info': {'url': url, 
                                    'type': 'Multi-Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation',
@@ -519,7 +536,9 @@ def get_ensemble_product_11(cnrfc_id):
 def get_ensemble_product_12(cnrfc_id):
     """
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=12'.format(cnrfc_id)
+    raise NotImplementedError
+
+    url = get_ensemble_product_url(12, cnrfc_id)
     get_web_status(url)
     return {'data': None, 'info': {'url': url, 
                                    'type': 'Historical Flows (Water Year & Seasonal (Apr-Jul)',
@@ -529,7 +548,9 @@ def get_ensemble_product_12(cnrfc_id):
 def get_ensemble_product_13(cnrfc_id):
     """
     """
-    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={0}&prodID=13'.format(cnrfc_id)
+    raise NotImplementedError
+
+    url = get_ensemble_product_url(13, cnrfc_id)
     get_web_status(url)
     return {'data': None, 'info': {'url': url, 
                                    'type': 'Water Resources Verification',
@@ -540,6 +561,8 @@ def get_data_report_part_8():
     """
     https://www.wrh.noaa.gov/cnrfc/rsa_getprod.php?prod=RNORR8RSA&wfo=cnrfc&version=0
     """
+    raise NotImplementedError
+
     url = 'https://www.wrh.noaa.gov/cnrfc/rsa_getprod.php?prod=RNORR8RSA&wfo=cnrfc&version=0'
     get_web_status(url)
     return {'data': None, 'info': {'url': url, 
@@ -548,6 +571,8 @@ def get_data_report_part_8():
 
 
 def get_monthly_reservoir_storage_summary():
+    raise NotImplementedError
+
     url = 'https://www.cnrfc.noaa.gov/awipsProducts/RNORR6RSA.php'
     get_web_status(url)
     return {'data': None, 'info': {'url': url, 
