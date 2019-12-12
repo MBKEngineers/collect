@@ -38,7 +38,7 @@ def get_cawdl_data(site_id):
     return {'data': df, 'info': well_info}
 
 
-def get_cawdl_surface_water_data(site_id, water_year):
+def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
     """
     Download timeseries data from CAWDL database; return as dataframe
     ------------------|-------|-------------
@@ -48,13 +48,13 @@ def get_cawdl_surface_water_data(site_id, water_year):
     ------------------|-------|-------------
         water_year    |  int  |  2017
     ------------------|-------|-------------
-        variable      |  str  |  'STAGE'
+        variable      |  str  |  'STAGE' or 'FLOW'
     ------------------|-------|-------------
-        interval      |  str  |  '15-MINUTE_DATA'
+        interval      |  str  |  '15-MINUTE_DATA' or 'DAILY MEAN' or 'DAILY MINMAX'
     ------------------|-------|-------------
     """
     cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
-    table_url = cawdl_url + 'docs/{0}/{1}/STAGE_15-MINUTE_DATA_DATA.CSV'.format(site_id, water_year)
+    table_url = cawdl_url + 'docs/{0}/{1}/{2}_{3}_DATA.CSV'.format(site_id, water_year, variable, interval)
     site_url = cawdl_url + 'index.cfm?site={0}'.format(site_id)
     report_url = cawdl_url + 'docs/{0}/POR/Site_Report.txt'.format(site_id)
 
