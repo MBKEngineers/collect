@@ -50,7 +50,7 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
     ------------------|-------|-------------
         variable      |  str  |  'STAGE' or 'FLOW'
     ------------------|-------|-------------
-        interval      |  str  |  '15-MINUTE_DATA' or 'DAILY MEAN' or 'DAILY MINMAX'
+        interval      |  str  |  '15-MINUTE_DATA' or 'DAILY_MEAN' or 'DAILY_MINMAX'
     ------------------|-------|-------------
     """
     cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
@@ -62,10 +62,13 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
     df = pandas.read_csv(table_url, header=[0, 1, 2], parse_dates=[0], index_col=0)
     df.index.name = ' '.join(df.columns.names)
     sensor_meta = df.columns[0]
-    df.columns = [df.columns[i][2] for i in range(3)]
-    meta = df['Unnamed: 3_level_2'].dropna()
-    df.drop('Unnamed: 3_level_2', axis=1, inplace=True)
-
+    if interval is 'DAILY_MINMAX':
+        n = 7
+    else:
+        n = 3
+    df.columns = [df.columns[i][2] for i in range(n)]
+    meta = df[f'Unnamed: {n}_level_2'].dropna()
+    df.drop(f'Unnamed: {n}_level_2', axis=1, inplace=True)
     # df = df.tz_localize('US/Pacific')
 
     # parse HTML file structure; extract station/well metadata
@@ -102,7 +105,7 @@ def get_cawdl_surface_water_site_report(site_id):
 
     # parse HTML file structure; extract station/well metadata
     site_info = {}
-    soup = BeautifulSoup(requests.get(site_url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(site_url).content, 'lxml') # NOT FUNCTIONAL
     table = soup.find('p')
 
     return {'info': site_info}
