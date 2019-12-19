@@ -101,11 +101,11 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
 def get_cawdl_surface_water_site_report(site_id):
     """
     """
-    url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/docs/{}/POR/Site_Report.txt'.format(site_id)
+    site_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/docs/{}/POR/Site_Report.txt'.format(site_id)
 
     # parse HTML file structure; extract station/well metadata
     site_info = {}
-    soup = BeautifulSoup(requests.get(site_url).content, 'lxml') # NOT FUNCTIONAL
+    soup = BeautifulSoup(requests.get(site_url).content, 'lxml') # Needs update
     table = soup.find('p')
 
     return {'info': site_info}
