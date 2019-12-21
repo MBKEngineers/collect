@@ -5,6 +5,7 @@ access DWR water supply index data
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
+import io
 from bs4 import BeautifulSoup
 import pandas as pd
 import requests
@@ -79,4 +80,42 @@ def get_wsi_forecast():
     """
     http://cdec.water.ca.gov/reportapp/javareports?name=wsi
     """
-    return {'data': {}, 'info': {}}
+
+    url = 'http://cdec.water.ca.gov/reportapp/javareports?name=wsi'
+
+    result = requests.get(url).content
+    result = BeautifulSoup(result, 'lxml').find('pre').text
+
+    data = {}
+    info = {}
+
+    # print(repr(result))
+
+    title = re.findall(r'\d{4} Water Year Forecast as of \w+ \d{1,2}, \d{4}', result)
+    index_line = re.findall(r'\n.*\n--+\n.*\n', result, re.MULTILINE)
+    index_dict = {'SRR': index_line[0], 'SVI': index_line[1], 'SJI': index_line[2]}
+
+    previous_month = re.findall(r'Water Year Runoff through end of last month:\n.*\n.*\n', result)
+    current = re.findall(r'\d{4} \(\w+\w+\)', previous_month)
+    print(current)
+    info.update({'Water Runoff through end of last month': previous_month})
+    print(previous_month)
+
+    # data = pd.DataFrame(columns=['Index name','99%','90%','75%','50%','25%','10%'])
+    # data = pd.DataFrame()
+    for index, line in index_dict.items():
+        nums = re.findall(r'\d{1,3}\.\d', line)
+        percentages = re.findall(r'\(\d{1,3}\%\)', line)
+
+        data.update({index: {'99%': nums[0], '90%': nums[1], '75%': nums[2], '50%': nums[3], '25%': nums[4], '10%': nums[5]}})
+
+        # buf = io.StringIO()
+        # buf.write(line)
+        # buf.seek(0)
+        # df = pd.read_fwf(buf, header=[0], skiprows=[0], index_col=None).drop([0])
+        # print(df.columns)
+        # df.columns = ['Forecast Date','99%','90%','75%','50%','25%','10%']
+
+    info = {'title': title}
+
+    return {'info': info, 'data': data}
