@@ -87,19 +87,12 @@ def get_wsi_forecast():
     result = BeautifulSoup(result, 'lxml').find('pre').text
 
     data = {}
-    info = {}
-
-    # print(repr(result))
 
     title = re.findall(r'\d{4} Water Year Forecast as of \w+ \d{1,2}, \d{4}', result)
     index_line = re.findall(r'\n.*\n--+\n.*\n', result, re.MULTILINE)
     index_dict = {'SRR': index_line[0], 'SVI': index_line[1], 'SJI': index_line[2]}
 
-    previous_month = re.findall(r'Water Year Runoff through end of last month:\n.*\n.*\n', result)
-    current = re.findall(r'\d{4} \(\w+\w+\)', previous_month)
-    print(current)
-    info.update({'Water Runoff through end of last month': previous_month})
-    print(previous_month)
+    current_runoff, prev_runoff = re.findall(r'\d{4} \(\w+ \w+\) \= +(.*) MAF +(.*)', result)
 
     # data = pd.DataFrame(columns=['Index name','99%','90%','75%','50%','25%','10%'])
     # data = pd.DataFrame()
@@ -116,6 +109,6 @@ def get_wsi_forecast():
         # print(df.columns)
         # df.columns = ['Forecast Date','99%','90%','75%','50%','25%','10%']
 
-    info = {'title': title}
+    info = {'title': title, 'Water Year Runoff through end of last month': {'Current year': current_runoff, 'Previous year': prev_runoff}}
 
     return {'info': info, 'data': data}
