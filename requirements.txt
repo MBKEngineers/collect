@@ -3,6 +3,6 @@ lxml==4.4.1
 matplotlib==3.0.3
 pandas==0.24.2
 PyPDF2==1.26.0
-python-dotenv-0.10.3
+python-dotenv==0.10.3
 requests==2.21.0
 selenium==3.8.0

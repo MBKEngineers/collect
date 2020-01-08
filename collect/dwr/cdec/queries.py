@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import datetime as dt
 import json
+from bs4 import BeautifulSoup
 import pandas as pd
 import requests
 from six import string_types
@@ -161,3 +162,40 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
         raise ValueError('sensor `{}` is not valid for station `{}`'.format(sensor, station))
     
     return df
+
+
+def get_station_metadata(station):
+    """
+    get the gage meta data and datum, monitor/flood/danger stage information
+    """
+
+    # construct URL
+    url = 'http://cdec.water.ca.gov/dynamicapp/staMeta?station_id={station}'.format(station=station)
+
+    # request info page
+    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+
+    # initialize the result dictionary
+    site_info = {'title':  soup.find('h2').text}
+    
+    # extract the station geographic info table
+    table = soup.find('table')
+    for tr in table.find_all('tr'):
+        cells = tr.find_all('td')
+        for i, cell in enumerate(cells):
+            if i % 2 == 0:
+                key = cells[i].text.strip()
+                value = cells[i+1].text.strip()
+                site_info.update({key: value})
+
+    # extract the station datum and measurement info table
+    table = soup.find_all('table')[1]
+    header_row = table.find_all('tr')[0]
+    data_row = table.find_all('tr')[1]
+
+    for (k, v) in zip(header_row.find_all('th'), data_row.find_all('td')):
+        key = k.text.strip()
+        value = v.text.strip()
+        site_info.update({key: value})
+
+    return {'info': site_info}
