@@ -10,6 +10,15 @@ from collect.dwr import errors
 from collect.utils import get_web_status, clean_fixed_width_headers
 
 
+# TODO - add support for historical reports in format: 
+# http://cdec.water.ca.gov/reportapp/javareports?name=B120.201203
+# http://cdec.water.ca.gov/reportapp/javareports?name=B120.201802
+
+# TODO - check updated homepage for bulletin 120 for new links
+# https://cdec.water.ca.gov/snow/bulletin120/index2.html
+
+# tie validation of dates to https://cdec.water.ca.gov/prev_b120.html and https://cdec.water.ca.gov/prev_b120up.html
+
 def get_b120_data(date_suffix=''):
     """
     B-120 Water Supply Forecast Summary
