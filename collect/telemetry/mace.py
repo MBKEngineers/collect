@@ -3,7 +3,10 @@
 # Python Standard Lib Imports
 import datetime
 import os
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except:
+    from io import StringIO
 
 # Third Party Python Imports
 from bs4 import BeautifulSoup
