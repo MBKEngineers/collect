@@ -1,3 +1,8 @@
+"""
+collect.telemetry.wildeye
+============================================================
+Wildeye telemetry
+"""
 # -*- coding: utf-8 -*-
 import datetime as dt
 import os

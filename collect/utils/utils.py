@@ -1,3 +1,8 @@
+"""
+collect.utils.utils
+============================================================
+The utilities module of MBK Engineers' collect project
+"""
 # -*- coding: utf-8 -*-
 import requests
 

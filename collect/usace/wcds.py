@@ -1,3 +1,8 @@
+"""
+collect.usace.wcds
+============================================================
+USACE Water Control Data System (WCDS)
+"""
 # -*- coding: utf-8 -*-
 import datetime as dt
 import io
@@ -18,11 +23,8 @@ def format_float(value):
 def get_water_year(datetime_structure):
     """
     Returns water year of current datetime object.
-    -------------------------|---------------|----------------------------
     argument                 | type          |  example
-    -------------------------|---------------|----------------------------
         datetime_structure   |  dt.datetime  |  dt.datetime(2016, 10, 1)
-    -------------------------|---------------|----------------------------
     """
     
     YEAR = datetime_structure.year
@@ -35,13 +37,13 @@ def get_water_year(datetime_structure):
 def get_water_year_data(reservoir, water_year, interval='d'):
     """
     Scrape water year operations data from Folsom entry on USACE-SPK's WCDS.
-    -----------------|---------------|----------------------------
+    
     argument         | type          |  example
-    -----------------|---------------|----------------------------
+    
         reservoir    |  str          |  'fol'
         water_year   |  int          |  2017
         interval     |  str          |  'd'
-    -----------------|---------------|----------------------------
+    
     
 
     Note: times formatted as 2400 are assigned to 0000 of the next date. (hourly and daily)
@@ -344,14 +346,14 @@ def get_data_columns(reservoir, water_year=None):
 def get_wcds_data(reservoir, start_time, end_time, interval='d'):
     """
     Scrape water year operations data from reservoir page on USACE-SPK's WCDS.
-    -----------------|---------------|----------------------------
+    
     argument         | type          |  example
-    -----------------|---------------|----------------------------
+    
         reservoir    |  str          |  'fol'
         start_time   |  dt.datetime  |  dt.datetime(2016, 10, 1)
         end_time     |  dt.datetime  |  dt.datetime(2017, 11, 5)
         interval     |  str          |  'd'
-    -----------------|---------------|----------------------------
+    
     """
     frames = []
     for water_year in range(get_water_year(start_time), get_water_year(end_time) + 1):

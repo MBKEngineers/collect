@@ -1,3 +1,8 @@
+"""
+collect.dwr.wsi
+============================================================
+access DWR water supply index data
+"""
 # -*- coding: utf-8 -*-
 import datetime as dt
 from bs4 import BeautifulSoup

@@ -1,3 +1,8 @@
+"""
+collect.cnrfc.utilities
+============================================================
+
+"""
 # -*- coding: utf-8 -*-
 import datetime as dt
 import math
@@ -6,6 +11,17 @@ from collect.cnrfc import *
 
 
 def rank_by_peak_average_flow(df, horizon, exceedences):
+    """
+    placeholder
+
+    Args:
+        df (pandas.DataFrame): description
+        horizon (str): description
+        exceedences (list): description
+
+    Returns:
+        (list)
+    """
 
     # average x-day flows (x=horizon)
     avg = pd.DataFrame.rolling(df[::-1], window=horizon, min_periods=0).mean()[::-1][start:end]
@@ -20,6 +36,15 @@ def get_ranked_members(df, duration='H', horizon=5, exceedences=[10, 50, 90]):
     """
     assign max envelope, min envelope, and 5%, 10%, 25%, 50% exceedence members
     horizon (days) | int | 5, 30
+
+    Args:
+        df (pandas.DataFrame): description
+        duration (str): description
+        horizon (int): description
+        exceedences (list): description
+
+    Returns:
+        (dict)
     """
 
     # start and end of ranking horizon

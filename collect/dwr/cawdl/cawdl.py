@@ -1,3 +1,8 @@
+"""
+collect.dwr.cawdl.cawdl
+============================================================
+access CA Water Data Library surface water and well data
+"""
 # -*- coding: utf-8 -*-
 from bs4 import BeautifulSoup
 import pandas
@@ -7,11 +12,8 @@ import requests
 def get_cawdl_data(site_id):
     """
     Download well timeseries data from CAWDL database; return as dataframe
-    ------------------|-------|-------------
     search term       | type  |  example
-    ------------------|-------|-------------
         site_id       |  str  |  '17202'
-    ------------------|-------|-------------
     """
     cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/groundwater/hydrographs/'
     table_url = cawdl_url + 'report_xcl_brr.cfm?CFGRIDKEY={0}&amp;type=xcl'.format(site_id)
@@ -41,17 +43,11 @@ def get_cawdl_data(site_id):
 def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
     """
     Download timeseries data from CAWDL database; return as dataframe
-    ------------------|-------|-------------
     search term       | type  |  example
-    ------------------|-------|-------------
         site_id       |  str  |  'B94100'
-    ------------------|-------|-------------
         water_year    |  int  |  2017
-    ------------------|-------|-------------
         variable      |  str  |  'STAGE' or 'FLOW'
-    ------------------|-------|-------------
         interval      |  str  |  '15-MINUTE_DATA' or 'DAILY_MEAN' or 'DAILY_MINMAX'
-    ------------------|-------|-------------
     """
     cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
     table_url = cawdl_url + 'docs/{0}/{1}/{2}_{3}_DATA.CSV'.format(site_id, water_year, variable, interval)

@@ -1,3 +1,8 @@
+"""
+collect.dwr.cdec.queries
+============================================================
+access CDEC gage data
+"""
 # -*- coding: utf-8 -*-
 import datetime as dt
 import json
@@ -15,6 +20,16 @@ def get_station_url(station, start, end, data_format='CSV', sensors=[], duration
                                      'D' defaults to last month of data
                                      'M' defaults to last year of data
     - currently start and end are required arguments
+
+    Args:
+        station (str): the 3-letter CDEC station ID
+        start (dt.datetime): query start date
+        end (dt.datetime): query end date
+        data_format (str): the CSV or JSON data format
+        sensors (list): list of the numeric sensor codes
+        duration (str): interval code for timeseries data (ex: 'H')
+    Returns:
+        url (str): the CDEC query URL
     """
 
     # validate station(s)
@@ -77,6 +92,13 @@ def get_station_sensors(station, start, end):
     """
     Returns a `dict` of the available sensors for `station` for each duration in window
     defined by `start` and `end`.
+
+    Args:
+        station (str): the 3-letter CDEC station ID
+        start (dt.datetime): query start date
+        end (dt.datetime): query end date
+    Returns:
+        sensors (list): the available sensors for the station in this window
     """
     sensors = {}
     for duration in ['E', 'H', 'D', 'M']:
@@ -90,6 +112,15 @@ def get_station_data(station, start, end, sensors=[], duration=''):
     """
     General purpose function for returning a pandas DataFrame for all available
     data for CDEC `station` in the given time window, with optional `duration` argument.
+
+    Args:
+        station (str): the 3-letter CDEC station ID
+        start (dt.datetime): query start date
+        end (dt.datetime): query end date
+        sensors (list): list of the numeric sensor codes
+        duration (str): interval code for timeseries data (ex: 'H')
+    Returns:
+        df (pandas.DataFrame): the queried timeseries as a DataFrame
     """
     return get_raw_station_csv(station, start, end, sensors, duration)
 
@@ -98,6 +129,17 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
     """
     Use CDEC CSV query URL to download available data.  Optional `filename` argument
     specifies custom file location for download of CSV records.
+
+    Args:
+        station (str): the 3-letter CDEC station ID
+        start (dt.datetime): query start date
+        end (dt.datetime): query end date
+        sensors (list): list of the numeric sensor codes
+        duration (str): interval code for timeseries data (ex: 'H')
+        filename (str): optional filename for locally saving data
+    Returns:
+        df (pandas.DataFrame): the queried timeseries as a DataFrame
+
     """
     # CDEC url with query parameters
     url = get_station_url(station, start, end, data_format='CSV', duration=duration)
@@ -134,6 +176,17 @@ def get_raw_station_json(station, start, end, sensors=[], duration='', filename=
     """
     Use CDEC JSON query URL to download available data.  Optional `filename` argument
     specifies custom file location for download of validated JSON records.
+
+    Args:
+        station (str): the 3-letter CDEC station ID
+        start (dt.datetime): query start date
+        end (dt.datetime): query end date
+        sensors (list): list of the numeric sensor codes
+        duration (str): interval code for timeseries data (ex: 'H')
+        filename (str): optional filename for locally saving data
+    Returns:
+        result (str): the queried timeseries as JSON
+
     """
 
     url = get_station_url(station, start, end, data_format='JSON', sensors=sensors, duration=duration)
@@ -151,6 +204,16 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
     """
     return a pandas DataFrame of `station` data for a particular sensor, filtered
     by `duration` and `start` and `end` dates.
+
+    Args:
+        station (str): the 3-letter CDEC station ID
+        start (dt.datetime): query start date
+        end (dt.datetime): query end date
+        sensor (str): the numeric sensor code
+        duration (str): interval code for timeseries data (ex: 'H')
+    Returns:
+        df (pandas.DataFrame): the queried timeseries for a single sensor as a DataFrame
+
     """
     raw = get_station_data(station, start, end, duration)
 
@@ -167,6 +230,12 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
 def get_station_metadata(station):
     """
     get the gage meta data and datum, monitor/flood/danger stage information
+
+    Args:
+        station (str): the 3-letter CDEC station ID
+    Returns:
+        info (dict): the CDEC station metadata, stored as key, value pairs
+
     """
 
     # construct URL
@@ -199,3 +268,22 @@ def get_station_metadata(station):
         site_info.update({key: value})
 
     return {'info': site_info}
+
+
+def get_data(station, start, end, sensor='', duration=''):
+    """
+    return station date for a query bounded by start and end datetimes for
+    a particular sensor/duration combination
+
+    Args:
+        station (str): the 3-letter CDEC station ID
+        start (dt.datetime): query start date
+        end (dt.datetime): query end date
+        sensor (int): the numeric sensor code
+        duration (str): interval code for timeseries data (ex: 'H')
+
+    Returns:
+        result (dict): dictionary of pandas.DataFrame and metadata dict
+    """
+    df = get_sensor_frame(station, start, end, sensor, duration)
+    return {'data': df, 'info': get_station_metadata(station)}
