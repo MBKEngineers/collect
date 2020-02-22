@@ -23,7 +23,7 @@ Web tools for public water resources data.
    examples.rst
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Reference
 
    reference/index

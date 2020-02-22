@@ -19,6 +19,9 @@
    .. automodule:: collect.dwr.cdec
       :members:
 
+      .. automodule:: collect.dwr.cdec.queries
+         :members:
+
    .. automodule:: collect.dwr.errors
       :members:
 
