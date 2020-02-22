@@ -40,17 +40,17 @@ def get_cawdl_data(site_id):
     return {'data': df, 'info': well_info}
 
 
-def get_cawdl_surface_water_data(site_id, water_year):
+def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
     """
     Download timeseries data from CAWDL database; return as dataframe
     search term       | type  |  example
         site_id       |  str  |  'B94100'
         water_year    |  int  |  2017
-        variable      |  str  |  'STAGE'
-        interval      |  str  |  '15-MINUTE_DATA'
+        variable      |  str  |  'STAGE' or 'FLOW'
+        interval      |  str  |  '15-MINUTE_DATA' or 'DAILY_MEAN' or 'DAILY_MINMAX'
     """
     cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
-    table_url = cawdl_url + 'docs/{0}/{1}/STAGE_15-MINUTE_DATA_DATA.CSV'.format(site_id, water_year)
+    table_url = cawdl_url + 'docs/{0}/{1}/{2}_{3}_DATA.CSV'.format(site_id, water_year, variable, interval)
     site_url = cawdl_url + 'index.cfm?site={0}'.format(site_id)
     report_url = cawdl_url + 'docs/{0}/POR/Site_Report.txt'.format(site_id)
 
@@ -58,10 +58,13 @@ def get_cawdl_surface_water_data(site_id, water_year):
     df = pandas.read_csv(table_url, header=[0, 1, 2], parse_dates=[0], index_col=0)
     df.index.name = ' '.join(df.columns.names)
     sensor_meta = df.columns[0]
-    df.columns = [df.columns[i][2] for i in range(3)]
-    meta = df['Unnamed: 3_level_2'].dropna()
-    df.drop('Unnamed: 3_level_2', axis=1, inplace=True)
-
+    if interval is 'DAILY_MINMAX':
+        n = 7
+    else:
+        n = 3
+    df.columns = [df.columns[i][2] for i in range(n)]
+    meta = df[f'Unnamed: {n}_level_2'].dropna()
+    df.drop(f'Unnamed: {n}_level_2', axis=1, inplace=True)
     # df = df.tz_localize('US/Pacific')
 
     # parse HTML file structure; extract station/well metadata
@@ -94,11 +97,11 @@ def get_cawdl_surface_water_data(site_id, water_year):
 def get_cawdl_surface_water_site_report(site_id):
     """
     """
-    url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/docs/{}/POR/Site_Report.txt'.format(site_id)
+    site_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/docs/{}/POR/Site_Report.txt'.format(site_id)
 
     # parse HTML file structure; extract station/well metadata
     site_info = {}
-    soup = BeautifulSoup(requests.get(site_url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(site_url).content, 'lxml') # Needs update
     table = soup.find('p')
 
     return {'info': site_info}
