@@ -29,6 +29,11 @@ def get_b120_data(date_suffix=''):
     B-120 Water Supply Forecast Summary
     for current (latest) B120 forecast, use date_suffix = ''
     for an earlier month, use format date_suffix = '_201804'
+
+    Args:
+        date_suffix (str):
+    Returns:
+
     """
 
     if validate_date_suffix(date_suffix, min_year=2017):
@@ -91,6 +96,12 @@ def validate_date_suffix(date_suffix, min_year=2017):
         https://cdec.water.ca.gov/b120_YYYYMM.html
     min year is 2011 for text-formatted report at 
         http://cdec.water.ca.gov/reportapp/javareports?name=B120.YYYYMM
+
+    Args:
+        date_suffix (str):
+        min_year (int):
+    Returns:
+
     """
 
     if date_suffix == '':
@@ -104,6 +115,12 @@ def validate_date_suffix(date_suffix, min_year=2017):
 
 
 def clean_td(text):
+    """
+    Args:
+        text (str):
+    Returns:
+        value (float, None)
+    """
     try:
         value = float(text.strip().replace('-', '').replace(',', '').replace('\xa0\xa0-', ''))
     except ValueError:
@@ -114,7 +131,14 @@ def clean_td(text):
 
 
 def get_b120_update_data(date_suffix=''):
-    
+    """
+    Args:
+        date_suffix (str):
+
+    Returns:
+
+    """
+
     # main B120 page (new DWR format)
     url = 'http://cdec.water.ca.gov/b120up{}.html'.format(date_suffix)
 
@@ -166,6 +190,13 @@ def get_120_archived_reports(year, month):
     """
     Text-formatted reports available through CDEC javareports app for 2011-2017
     http://cdec.water.ca.gov/reportapp/javareports?name=B120.YYYYMM
+    
+    Args:
+        year (int):
+        month (int):
+
+    Returns:
+        (dict)
     """
 
     report_date = dt.datetime(year, month, 1)
@@ -242,6 +273,12 @@ def get_120_archived_reports(year, month):
 def april_july_dataframe(data_list):
     """
     dataframe storing Apr-Jul forecast table
+
+    Args:
+        data_list (list):
+
+    Returns:
+        
     """
     columns = ['Hydrologic Region', 'Watershed', 'Apr-Jul Forecast', '% of Avg', '90% Exceedance', '10% Exceedance']
     df = pd.DataFrame(data_list, columns=columns)
