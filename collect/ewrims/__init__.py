@@ -1,9 +1,7 @@
 """
-collect.telemetry
+collect.ewrims
 ============================================================
-telemetry providers
+Electronic Water Rights Information Management System
 """
 # -*- coding: utf-8 -*-
-
-from .mace import *
-from .wildeye import *
+from .ewrims import *

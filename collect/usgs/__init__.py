@@ -1,9 +1,7 @@
 """
-collect.telemetry
+collect.usgs
 ============================================================
-telemetry providers
+USGS National Water Information System (NWIS)
 """
 # -*- coding: utf-8 -*-
-
-from .mace import *
-from .wildeye import *
+from .usgs import *

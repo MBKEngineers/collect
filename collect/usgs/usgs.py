@@ -1,4 +1,10 @@
+"""
+collect.usgs.usgs
+============================================================
+USGS National Water Information System (NWIS)
+"""
 # -*- coding: utf-8 -*-
+
 from bs4 import BeautifulSoup
 import dateutil.parser
 import pandas as pd
@@ -8,15 +14,15 @@ import requests
 def get_usgs_data(station_id, sensor, start_time, end_time, interval='instantaneous'):
     """
     Download timeseries data from USGS database; return as dataframe
-    ---------------------|---------------|----------------------------
+    
     argument             | type          |  example
-    ---------------------|---------------|----------------------------
+    
         station_id       |  int or str   |  11446220
         sensor           |  str          |  '00060' (discharge)
         start_time       |  dt.datetime  |  dt.datetime(2016, 10, 1)
         end_time         |  dt.datetime  |  dt.datetime(2017, 10, 1)
         interval         |  str          |  'daily'
-    ---------------------|---------------|----------------------------
+    
 
     Sensor Codes
     ---------------------------------------

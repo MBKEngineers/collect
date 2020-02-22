@@ -1,3 +1,8 @@
+"""
+collect.cnrfc.figures
+============================================================
+plot CNRFC forecasts
+"""
 # -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 from collect.cnrfc import cnrfc

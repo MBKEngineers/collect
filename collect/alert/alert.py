@@ -1,9 +1,7 @@
 """
-collect.telemetry
+collect.alert.alert
 ============================================================
-telemetry providers
+Sacramento County Alert system
 """
 # -*- coding: utf-8 -*-
-
-from .mace import *
-from .wildeye import *
+pass

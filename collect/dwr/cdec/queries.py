@@ -1,3 +1,8 @@
+"""
+collect.dwr.cdec.queries
+============================================================
+access CDEC gage data
+"""
 # -*- coding: utf-8 -*-
 import datetime as dt
 import json

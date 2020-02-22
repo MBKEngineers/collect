@@ -1,3 +1,8 @@
+"""
+collect.dwr.b120
+============================================================
+access DWR Bulletin 120 forecast data
+"""
 # -*- coding: utf-8 -*-
 import datetime as dt
 import io
@@ -7,7 +12,7 @@ import pandas as pd
 import requests
 
 from collect.dwr import errors
-from collect.utils import get_web_status, clean_fixed_width_headers
+from collect.utils.utils import get_web_status, clean_fixed_width_headers
 
 
 # TODO - add support for historical reports in format: 

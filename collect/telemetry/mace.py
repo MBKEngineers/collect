@@ -1,3 +1,8 @@
+"""
+collect.telemetry.mace
+============================================================
+Mace telemetry
+"""
 # -*- coding: utf-8 -*-
 
 # Python Standard Lib Imports

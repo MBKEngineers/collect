@@ -1,9 +1,7 @@
 """
-collect.telemetry
+collect.srwp
 ============================================================
-telemetry providers
+Sacramento River Watershed Project
 """
 # -*- coding: utf-8 -*-
-
-from .mace import *
-from .wildeye import *
+from .srwp import *

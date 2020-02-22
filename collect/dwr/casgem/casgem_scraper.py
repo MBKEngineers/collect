@@ -1,3 +1,8 @@
+"""
+collect.dwr.casgem.casgem_scraper
+============================================================
+access CASGEM well data
+"""
 # -*- coding: utf-8 -*-
 import os
 from bs4 import BeautifulSoup
@@ -20,14 +25,25 @@ except ModuleNotFoundError:
 def get_casgem_data(casgem_id=None, state_well_number=None, local_well_designation=None, master_site_code=None, write_to_html_file=False):
     """
     Download well timeseries data from CASGEM database; return as dataframe
-    ----------------------------|-------|-----------------------
+
     search term                 | type  |  example
-    ----------------------------|-------|-----------------------
+
         casgem_id               |  str  |  '34318'
         state_well_number       |  str  |  '19N02W36H001M'
         local_well_designation  |  str  |  '19N02W36H001M'
         master_site_code        |  str  |  '394564N1220246W001'
-    ----------------------------|-------|-----------------------
+
+
+
+    Args:
+        casgem_id (str): desc
+        state_well_number (None): desc
+        local_well_designation (None): desc
+        master_site_code (None): desc
+        write_to_html_file (bool): desc
+    
+    Returns:
+        dict
     """
 
     if os.name == 'posix':

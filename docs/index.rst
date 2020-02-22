@@ -11,7 +11,7 @@ Welcome to the collect documentation!
 
 collect
 ================================================================
-Reservoir operations models and associated tools.
+Web tools for public water resources data.
 
 
 .. toctree::
@@ -26,7 +26,7 @@ Reservoir operations models and associated tools.
    :maxdepth: 2
    :caption: Reference
 
-   reference/index.rst
+   reference/index
 
 
 Indices and tables

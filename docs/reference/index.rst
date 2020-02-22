@@ -9,4 +9,17 @@ collect
 ================================================================
 
 .. toctree::
-   :maxdepth: 6
+   :maxdepth: 4
+   
+   alert
+   cnrfc
+   cvo
+   dwr
+   ewrims
+   noaa
+   nrcs
+   srwp
+   telemetry
+   usace
+   usgs
+   utils

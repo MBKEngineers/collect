@@ -1,3 +1,8 @@
+"""
+collect.dwr.cdec.todo
+============================================================
+todo list for CDEC gage data
+"""
 # http://cdec.water.ca.gov/cgi-progs/products/whatisnew.pdf
 
 

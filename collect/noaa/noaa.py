@@ -1,3 +1,10 @@
+"""
+collect.noaa.noaa
+============================================================
+access NOAA data
+"""
+# -*- coding: utf-8 -*-
+
 # water supply forecast
 # https://www.cnrfc.noaa.gov/products/water_supply/2009/ws052009.php
 

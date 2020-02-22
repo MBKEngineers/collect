@@ -1,3 +1,8 @@
+"""
+collect.telemetry.mccrometer
+============================================================
+McCrometer telemetry
+"""
 # -*- coding: utf-8 -*-
 import os
 import time
@@ -14,18 +19,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 # load credentials
 load_dotenv()
 
-PANEL_IDS = [int(x) for x in os.environ.get('MCCROMETER_ALL_PANELS')]
-FLOW_PANELS = [int(x) for x in os.environ.get('MCCROMETER_FLOW_PANELS')]
+# PANEL_IDS = [int(x) for x in os.environ.get('MCCROMETER_ALL_PANELS')]
+# FLOW_PANELS = [int(x) for x in os.environ.get('MCCROMETER_FLOW_PANELS')]
 
 
 def download_panel_csv(panel_id, download_path=None):
     """
     Download timeseries data from USGS database; return as dataframe
-    ---------------------|---------------|----------------------------
     argument             | type          |  example
-    ---------------------|---------------|----------------------------
         panel_id         |  int or str   |  9610
-    ---------------------|---------------|----------------------------
 
     """
     options = webdriver.ChromeOptions() 

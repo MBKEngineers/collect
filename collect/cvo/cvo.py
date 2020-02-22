@@ -1,9 +1,7 @@
 """
-collect.telemetry
+collect.cvo.cvo
 ============================================================
-telemetry providers
+US Bureau of Reclamation Central Valley Operations
 """
 # -*- coding: utf-8 -*-
-
-from .mace import *
-from .wildeye import *
+pass
