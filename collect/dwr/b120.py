@@ -78,8 +78,14 @@ def get_b120_data(date_suffix=''):
             'caption': soup.find('div', {'class': 'doc-table-caption'}).text.replace('FORECASTOF', 'FORECAST OF'),
             'notes': soup.find('div', {'class': 'doc-fcast-notes'}).text.replace(u'\xa0', ' ').split('\n'),
             'units': 'TAF',
-            'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')
+            'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M'),
         }
+
+        info.update({'posted': dt.datetime.strptime(info['title']
+                                                    .split('(posted on ')[1]
+                                                    .rstrip(')'), 
+                                                    '%m/%d/%y %H:%M') })
+
         return {'data': {'Apr-Jul': aj_df, 'WY': wy_df}, 'info': info}
 
     elif validate_date_suffix(date_suffix, min_year=2011):
@@ -173,6 +179,8 @@ def get_b120_update_data(date_suffix=''):
 
     df = pd.DataFrame(aj_list, columns=columns)
 
+    title = soup.find('div', {'class': 'fts-doc-title'}).text
+
     info = {
         'url': url,
         'type': 'B120 Update',
@@ -180,8 +188,13 @@ def get_b120_update_data(date_suffix=''):
         'caption': soup.find('div', {'class': 'doc-table-caption'}).text, 
         'notes': soup.find('div', {'class': 'fts-doc-notes'}).text,
         'units': 'TAF',
-        'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')
+        'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M'),
     }
+
+    info.update({'posted': dt.datetime.strptime(info['title']
+                                                .split('(posted on ')[1]
+                                                .rstrip(')'), 
+                                                '%m/%d/%y %H:%M')})#.strftime('%Y-%m-%d %H:%M') })
 
     return {'data': df, 'info': info}
 
