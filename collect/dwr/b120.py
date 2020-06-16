@@ -140,7 +140,7 @@ def get_b120_update_data(date_suffix=''):
     """
 
     # main B120 page (new DWR format)
-    url = 'http://cdec.water.ca.gov/b120up{}.html'.format(date_suffix)
+    url = 'https://cdec.water.ca.gov/b120up.html'#.format(date_suffix)
 
     if not validate_date_suffix(date_suffix, min_year=2018):
         raise errors.B120SourceError('B120 updates in this format not available before Feb. 2018.')
@@ -182,6 +182,10 @@ def get_b120_update_data(date_suffix=''):
         'units': 'TAF',
         'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')
     }
+
+    # extract date/time from posted date
+    info.update({'posted': dt.datetime.strptime(info['title'].split('posted on')[-1].strip(), 
+                                                '%m/%d/%y %H:%M)')})
 
     return {'data': df, 'info': info}
 
