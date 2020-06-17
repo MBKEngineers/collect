@@ -13,6 +13,7 @@ Check the location of your Python installation with ```where```:
 > where python
 C:\Python27\python.exe
 C:\Python36\python.exe
+C:\Python38\python.exe
 ```
 
 ### Install the package requirements (pip or pip3)
