@@ -664,6 +664,10 @@ def _get_forecast_csv(url):
     return csvdata
 
 
+def get_forecast_csvdata(url):
+    return _get_forecast_csv(url)
+
+
 def _default_date_string(date_string):
     """
     supply expected latest forecast datestamp or use defined date_string argument
