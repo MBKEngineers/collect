@@ -5,48 +5,43 @@ USACE Water Control Data System (WCDS)
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
-import io
+from io import StringIO
 
 from bs4 import BeautifulSoup
+from dateutil import parser
 import pandas as pd
 import requests
-from dateutil.parser import parse
+
+from collect.utils import get_water_year
 
 
 def format_float(value):
+    """
+    if possible, convert value to a float, otherwise return None
+
+    Arguments:
+        value: 
+    Returns:
+        None or value (float)
+    """
     try:
         return float(value)
     except ValueError:
         return None
 
 
-def get_water_year(datetime_structure):
-    """
-    Returns water year of current datetime object.
-    argument                 | type          |  example
-        datetime_structure   |  dt.datetime  |  dt.datetime(2016, 10, 1)
-    """
-    
-    YEAR = datetime_structure.year
-    if datetime_structure.month < 10:
-        return YEAR
-    else:
-        return YEAR + 1
-
-
 def get_water_year_data(reservoir, water_year, interval='d'):
     """
     Scrape water year operations data from Folsom entry on USACE-SPK's WCDS.
-    
-    argument         | type          |  example
-    
-        reservoir    |  str          |  'fol'
-        water_year   |  int          |  2017
-        interval     |  str          |  'd'
-    
-    
-
     Note: times formatted as 2400 are assigned to 0000 of the next date. (hourly and daily)
+
+    Arguments:
+        reservoir (str): three-letter reservoir code; i.e. 'fol'
+        water_year (int): the water year
+        interval (str): data interval; i.e. 'd' 
+
+    Returns:
+        result (dict): query result dictionary with 'data' and 'info' keys
     """
     result = []
 
@@ -96,13 +91,26 @@ def get_water_year_data(reservoir, water_year, interval='d'):
 def parse_date(time_string, date_string):
     """
     Python hours are indexed 0-23, but WCDS posts 0100-2400
+
+    Arguments:
+        time_string (str): string representation of time
+        date_string (str): string representation of date
+    Returns:
+        result (datetime.datetime): datetime structure
     """
     hours = time_string[:2]
     minutes = time_string[2:]
-    return parse(date_string) + dt.timedelta(hours=int(hours)) + dt.timedelta(minutes=int(minutes))
+    return parser.parse(date_string) + dt.timedelta(hours=int(hours)) + dt.timedelta(minutes=int(minutes))
 
 
 def parse_header(line, reservoir):
+    """
+    Arguments:
+        line (str): fixed width file line
+        reservoir (str): the string reservoir code
+    Returns:
+        result (list): list of string entries in line
+    """
 
     for breaker in ['FLOW', 'TOP', 'PRECIP', 'STOR-RES', '@', reservoir.upper()]:
         line = line.replace(breaker, '|'+breaker)
@@ -111,6 +119,14 @@ def parse_header(line, reservoir):
 
 
 def check_date_row(row):
+    """
+    checks if the first entry of the row is a datetime
+
+    Arguments:
+        row (list): list of entries in fixed width file row
+    Returns:
+        result (bool): switch to determine if row contains valid data
+    """
     if not bool(row):
         return False
     elif len(row) < 2:
@@ -124,7 +140,13 @@ def check_date_row(row):
 
 def get_data_columns(reservoir, water_year=None):
     """
-    TO DO: add columns mapping for non San Joaquin basin reservoirs
+    TODO: add columns mapping for non San Joaquin basin reservoirs
+
+    Arguments:
+        reservoir (str): reservoir code
+        water_year (int): the water year
+    Returns:
+        result (dict): the mapping for column headers
     """
 
     result = {'FLOW-RES IN': 2, 
@@ -347,13 +369,13 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d'):
     """
     Scrape water year operations data from reservoir page on USACE-SPK's WCDS.
     
-    argument         | type          |  example
-    
-        reservoir    |  str          |  'fol'
-        start_time   |  dt.datetime  |  dt.datetime(2016, 10, 1)
-        end_time     |  dt.datetime  |  dt.datetime(2017, 11, 5)
-        interval     |  str          |  'd'
-    
+    Arguments:
+        reservoir (str): three-letter reservoir code
+        start_time (datetime.datetime): query start datetime
+        end_time (datetime.datetime): query end datetime
+        interval (str): data interval
+    Returns:
+        result (dict): query result dictionary with data and info keys
     """
     frames = []
     for water_year in range(get_water_year(start_time), get_water_year(end_time) + 1):
@@ -375,7 +397,7 @@ def get_wcds_reservoirs():
     Corps and Section 7 Projects in California
     http://www.spk-wc.usace.army.mil/plots/california.html
     """
-    csv_data = io.StringIO("""Region|River Basin|Agency|Project|WCDS_ID|Hourly Data|Daily Data
+    csv_data = StringIO("""Region|River Basin|Agency|Project|WCDS_ID|Hourly Data|Daily Data
                             Sacramento Valley|Sacramento River|USBR|Shasta Dam & Lake Shasta|SHA|False|True
                             Sacramento Valley|Stony Creek|COE|Black Butte Dam & Lake|BLB|True|True
                             Sacramento Valley|Feather River|DWR|Oroville Dam & LakeOroville|ORO|False|True

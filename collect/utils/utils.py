@@ -42,3 +42,15 @@ def clean_fixed_width_headers(columns):
                 column[i] = ''
         headers.append(' '.join(column).strip())
     return headers
+
+
+def get_water_year(datetime_structure):
+    """
+    Returns water year of current datetime object.
+
+    Arguments:
+        datetime_structure (datetime.datetime): a Python datetime
+    """
+    if datetime_structure.month < 10:
+        return datetime_structure.year
+    return datetime_structure.year + 1
