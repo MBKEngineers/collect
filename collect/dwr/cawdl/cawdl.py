@@ -58,7 +58,7 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
     df = pandas.read_csv(table_url, header=[0, 1, 2], parse_dates=[0], index_col=0)
     df.index.name = ' '.join(df.columns.names)
     sensor_meta = df.columns[0]
-    if interval is 'DAILY_MINMAX':
+    if interval == 'DAILY_MINMAX':
         n = 7
     else:
         n = 3
