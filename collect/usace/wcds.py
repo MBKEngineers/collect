@@ -11,7 +11,7 @@ import requests
 from collect.utils import get_water_year
 
 
-def get_water_year_data(reservoir, water_year):
+def get_water_year_data(reservoir, water_year, interval='d'):
     """
     Scrape water year operations data from Folsom entry on USACE-SPK's WCDS.
     Note: times formatted as 2400 are assigned to 0000 of the next date. (hourly and daily)
@@ -26,23 +26,21 @@ def get_water_year_data(reservoir, water_year):
     """
 
     # USACE-SPK Folsom page
-    url = ''.join(['https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}h', '_', '{water_year}', '.plot']
-        ).format(reservoir=reservoir, water_year=water_year)
+    url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
 
     # Read url data
-    s=requests.get(url, verify=False).content
-    df = pd.read_csv(io.StringIO(s.decode('utf-8')), header=0)
+    response=requests.get(url, verify=False).content
+    df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values='-')
 
-    # Clean data
-    nan_value = float('NaN')
-    df.replace('-', nan_value, inplace=True)
-    df.replace(int(0), nan_value, inplace=True)
+    # Clean zeros in note columns
+    note_columns = ['Top of Conservation notes','Storage notes', 'Elevation notes', 'Inflow notes', 'Outflow notes', 'Precip at Dam notes', '@Fair Oaks notes']
+    df[note_columns] = df[note_columns].replace(0, float('NaN'))
 
     # Convert to date time object
-    df['ISO 8601 Date Time'] =  pd.to_datetime(df['ISO 8601 Date Time'], format='%Y-%m-%d')
     df.set_index('ISO 8601 Date Time', inplace=True)
+    df.index = pd.to_datetime(df.index)
 
-    return {'data': df, 'info': {'reservoir': reservoir,'water year': water_year}}
+    return {'data': df, 'info': {'reservoir': reservoir,'water year': water_year, 'interval':interval}}
 
 
     
@@ -62,7 +60,12 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d'): #trim this to 
     for water_year in range(get_water_year(start_time), get_water_year(end_time) + 1):
         frames.append(get_water_year_data(reservoir, water_year, interval)['data'])
 
+
     df = pd.concat(frames)
+
+    df.to_csv('water_year.csv')
+
+
     if interval == 'd':
         df.index = pd.to_datetime(df.index, format='2400 %d%b%Y')
     else:
@@ -117,6 +120,7 @@ def get_wcds_reservoirs():
     return pd.read_csv(csv_data, header=0, delimiter='|', index_col='WCDS_ID')
 
 
-
+test = get_water_year_data('fol', 2020, 'h')
+test['data'].to_csv('df.csv')
 
 
