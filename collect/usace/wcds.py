@@ -5,6 +5,7 @@ USACE Water Control Data System (WCDS)
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
+from datetime import datetime
 import io
 import pandas as pd
 import requests
@@ -33,7 +34,7 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values='-')
 
     # Clean zeros in note columns
-    note_columns = ['Top of Conservation notes','Storage notes', 'Elevation notes', 'Inflow notes', 'Outflow notes', 'Precip at Dam notes', '@Fair Oaks notes']
+    note_columns = ['Top of Conservation notes','Storage notes', 'Elevation notes', 'Inflow notes', 'Outflow notes', 'Precip at Dam notes'] 
     df[note_columns] = df[note_columns].replace(0, float('NaN'))
 
     # Convert to date time object
@@ -56,20 +57,20 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d'): #trim this to 
     Returns:
         result (dict): query result dictionary with data and info keys
     """
+    earliest_time = datetime.strptime('1994-10-01', '%Y-%m-%d')
+
+    if start_time < earliest_time:
+        print('Select later start date')
+        return
+
     frames = []
     for water_year in range(get_water_year(start_time), get_water_year(end_time) + 1):
         frames.append(get_water_year_data(reservoir, water_year, interval)['data'])
 
 
     df = pd.concat(frames)
-
+    df.index.name = 'ISO 8601 Date Time'
     df.to_csv('water_year.csv')
-
-
-    if interval == 'd':
-        df.index = pd.to_datetime(df.index, format='2400 %d%b%Y')
-    else:
-        df.index = pd.to_datetime(df.index, format='%H%M %d%b%Y')
 
     return {'data': df, 'info': {'reservoir': reservoir, 
                                  'interval': interval, 
@@ -120,7 +121,14 @@ def get_wcds_reservoirs():
     return pd.read_csv(csv_data, header=0, delimiter='|', index_col='WCDS_ID')
 
 
-test = get_water_year_data('fol', 2020, 'h')
-test['data'].to_csv('df.csv')
+start_time = datetime.strptime('2015-08-01', '%Y-%m-%d')
+end_time = datetime.strptime('2016-04-06', '%Y-%m-%d')
+
+test = get_wcds_data('fol', start_time, end_time, 'd')
+
+
+
+
+
 
 
