@@ -5,7 +5,6 @@ USACE Water Control Data System (WCDS)
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
-from datetime import datetime
 import io
 import pandas as pd
 import requests
@@ -31,10 +30,23 @@ def get_water_year_data(reservoir, water_year, interval='d'):
 
     # Read url data
     response=requests.get(url, verify=False).content
-    df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values='-')
+    df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values=['-', 'M'])
+
+    # Check that user chosen water year is within range with data
+    earliest_time = 1995
+
+    if water_year < earliest_time:
+        print(f'No data for selected water year. Earliest possible year selected: {earliest_time}')
+        water_year = earliest_time
 
     # Clean zeros in note columns
-    note_columns = ['Top of Conservation notes','Storage notes', 'Elevation notes', 'Inflow notes', 'Outflow notes', 'Precip at Dam notes'] 
+    column_list = df.columns.tolist()
+    note_columns = []
+
+    for col in column_list:
+        if col.find('notes') != -1:
+            note_columns.append(col)
+
     df[note_columns] = df[note_columns].replace(0, float('NaN'))
 
     # Convert to date time object
@@ -57,20 +69,21 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d'): #trim this to 
     Returns:
         result (dict): query result dictionary with data and info keys
     """
-    earliest_time = datetime.strptime('1994-10-01', '%Y-%m-%d')
+
+    # Check that user chosen water year is within range with data
+    earliest_time = dt.datetime.strptime('1994-10-01', '%Y-%m-%d')
 
     if start_time < earliest_time:
-        print('Select later start date')
-        return
+        print(f'No data for selected start date. Earliest possible start date selected instead: {earliest_time}')
+        start_time = earliest_time
 
+    # Make new dataframe
     frames = []
     for water_year in range(get_water_year(start_time), get_water_year(end_time) + 1):
         frames.append(get_water_year_data(reservoir, water_year, interval)['data'])
 
-
     df = pd.concat(frames)
     df.index.name = 'ISO 8601 Date Time'
-    df.to_csv('water_year.csv')
 
     return {'data': df, 'info': {'reservoir': reservoir, 
                                  'interval': interval, 
@@ -120,11 +133,6 @@ def get_wcds_reservoirs():
                             Truckee River Basin|LittleTruckee River|USBR|Boca Dam & Reservoir|BOC|False|True""")
     return pd.read_csv(csv_data, header=0, delimiter='|', index_col='WCDS_ID')
 
-
-start_time = datetime.strptime('2015-08-01', '%Y-%m-%d')
-end_time = datetime.strptime('2016-04-06', '%Y-%m-%d')
-
-test = get_wcds_data('fol', start_time, end_time, 'd')
 
 
 
