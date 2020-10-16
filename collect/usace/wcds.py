@@ -5,29 +5,10 @@ USACE Water Control Data System (WCDS)
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
-from io import StringIO
-
-from bs4 import BeautifulSoup
-from dateutil import parser
+import io
 import pandas as pd
 import requests
-
 from collect.utils import get_water_year
-
-
-def format_float(value):
-    """
-    if possible, convert value to a float, otherwise return None
-
-    Arguments:
-        value: 
-    Returns:
-        None or value (float)
-    """
-    try:
-        return float(value)
-    except ValueError:
-        return None
 
 
 def get_water_year_data(reservoir, water_year, interval='d'):
@@ -43,329 +24,40 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     Returns:
         result (dict): query result dictionary with 'data' and 'info' keys
     """
-    result = []
 
     # USACE-SPK Folsom page
-    url = '&'.join(['http://www.spk-wc.usace.army.mil/fcgi-bin/getplottext.py?plot={reservoir}r', 
-        'length=wy', 
-        'wy={water_year}', 
-        'interval={interval}']).format(reservoir=reservoir,
-                                       water_year=water_year,
-                                       interval=interval)
+    url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
+
+    # Read url data
+    response=requests.get(url, verify=False).content
+    df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values=['-', 'M'])
+
+    # Check that user chosen water year is within range with data
+    earliest_time = 1995
+
+    if water_year < earliest_time:
+        print(f'No data for selected water year. Earliest possible year selected: {earliest_time}')
+        water_year = earliest_time
+
+    # Clean zeros in note columns
+    column_list = df.columns.tolist()
+    note_columns = []
+
+    for col in column_list:
+        if col.find('notes') != -1:
+            note_columns.append(col)
+
+    df[note_columns] = df[note_columns].replace(0, float('NaN'))
+
+    # Convert to date time object
+    df.set_index('ISO 8601 Date Time', inplace=True)
+    df.index = pd.to_datetime(df.index)
+
+    return {'data': df, 'info': {'reservoir': reservoir,'water year': water_year, 'interval':interval}}
+
+
     
-    # reservoir data series
-    series_map = get_data_columns(reservoir, water_year)
-
-    # Download url content and parse HTML
-    soup = BeautifulSoup(requests.get(url).content , 'lxml')
-
-    header = []
-
-    # Parse Folsom reservoir page for date/time of interest
-    for i, line in enumerate(soup.find('pre').text.splitlines()):
-        
-        if 3 <= i <= 5:
-            header.append(parse_header(line, reservoir))
-
-        row = line.split()
-        if check_date_row(row):
-
-            entry = {
-                'datestring': parse_date(row[0], row[1]), 
-            }
-
-            for key, value in series_map.items():
-                entry.update({key: format_float(row[value])})
-
-            result.append(entry)
-        else:
-            pass
-
-    df = pd.DataFrame.from_records(result, index='datestring')
-
-    return {'data': df, 'info': {'reservoir': reservoir, 
-                                 'interval': interval, 
-                                 'water year': water_year}}
-
-
-def parse_date(time_string, date_string):
-    """
-    Python hours are indexed 0-23, but WCDS posts 0100-2400
-
-    Arguments:
-        time_string (str): string representation of time
-        date_string (str): string representation of date
-    Returns:
-        result (datetime.datetime): datetime structure
-    """
-    hours = time_string[:2]
-    minutes = time_string[2:]
-    return parser.parse(date_string) + dt.timedelta(hours=int(hours)) + dt.timedelta(minutes=int(minutes))
-
-
-def parse_header(line, reservoir):
-    """
-    Arguments:
-        line (str): fixed width file line
-        reservoir (str): the string reservoir code
-    Returns:
-        result (list): list of string entries in line
-    """
-
-    for breaker in ['FLOW', 'TOP', 'PRECIP', 'STOR-RES', '@', reservoir.upper()]:
-        line = line.replace(breaker, '|'+breaker)
-
-    return [x.strip() for x in line.split('|')]
-
-
-def check_date_row(row):
-    """
-    checks if the first entry of the row is a datetime
-
-    Arguments:
-        row (list): list of entries in fixed width file row
-    Returns:
-        result (bool): switch to determine if row contains valid data
-    """
-    if not bool(row):
-        return False
-    elif len(row) < 2:
-        return False
-    try:
-        dt.datetime.strptime(row[1], '%d%b%Y')
-        return True
-    except:
-        return False
-
-
-def get_data_columns(reservoir, water_year=None):
-    """
-    TODO: add columns mapping for non San Joaquin basin reservoirs
-
-    Arguments:
-        reservoir (str): reservoir code
-        water_year (int): the water year
-    Returns:
-        result (dict): the mapping for column headers
-    """
-
-    result = {'FLOW-RES IN': 2, 
-              'FLOW-RES OUT': 3}
-
-    if reservoir.lower() in ['sha', 'blbq', 'bul', 'oro', 'inv', 'cmn', 'nml', 'tul', 'dnp', 'exc', 'lbn', 'bucq', 'hidq', 'mil', 'dlv', 'mrtq', 'prs', 'stp', 'boc']:
-        result.update({'TOP CON STOR': 5, 
-                       'STOR-RES EOP': 4})
-
-    if reservoir.lower() == 'inv':
-        result.update({ 'PRECIP-INC': 6})
-        if (water_year >= 2009)&(water_year != 2014):
-            result.update({ 'YCFCWCA TOP CON STOR': 6,
-                            'PRECIP-INC': 7})
-        if (water_year >= 2015):
-            result.update({'TOP CON STOR': 4,
-                            'YCFCWCA TOP CON STOR': 5,
-                            'STOR-RES EOP': 6, 
-                            'PRECIP-INC': 7})
-
-    if reservoir.lower() in ['bucq', 'hidq', 'mil', 'sha', 'bul', 'blbq', 'oro', 'nml', 'tul', 'dnp', 'exc', 'dlv', 'mrtq', 'boc']:
-        result.update({'PRECIP-INC': 6})
-
-    if reservoir.lower() == 'prs':
-        if water_year <= 2006:
-            result.update({'PRECIP-INC': 6})
-
-    if reservoir.lower() == 'stp':
-        if water_year <= 2005:
-            result.update({'PRECIP-INC': 6})
-
-    if reservoir.lower() == 'hidq':
-        if water_year >= 2009:
-            result.update({'ABV HENSLEY FLOW': 7})
-
-    if reservoir.lower() in ['burq', 'ownq', 'barq', 'marq', 'bdc', 'engq']:
-        result.update({'STOR-RES EOP': 4, 
-                       'PRECIP-INC': 5})
-
-    if reservoir.lower() in ['bul', 'sha', 'blbq','oro', 'cmn', 'nml', 'tul', 'dnp', 'exc', 'lbn', 'bucq', 'hidq', 'mil', 'dlv', 'mrtq', 'prs', 'stp', 'boc']:
-        if water_year >= 2015:
-            result.update({'TOP CON STOR': 4, 
-                           'STOR-RES EOP': 5})
-
-    if reservoir.lower() == 'barq':
-        result.update({'AT MCKEE RD FLOW': 6, 
-                       'BLK RASCAL D FLOW': 7})
-   
-    if reservoir.lower() == 'nml': 
-        if water_year >= 2017:
-            result.update({'FLOW-RES OUT': 2, 
-                           'FLOW-RES IN': 3, 
-                           'NMLLATE TOP CON STOR': 5, 
-                           'STOR-RES EOP': 6, 
-                           'TOP CON STOR': 4, 
-                           'PRECIP-INC': 7})
-
-    if reservoir.lower() == 'bdc': 
-        result.update({'BIG DRY CR FLOW': 6, 
-                       'LITTLE @BDC FLOW': 7,
-                       'WASTEWAY FLOW': 8})
-
-    if reservoir.lower() == 'pnfq':
-        result.update({'BLW NF KINGS FLOW': 5, 
-                       'NR PIEDRA FLOW': 6,
-                       'TOP CON STOR': 7, 
-                       'STOR-RES EOP': 4, 
-                       'PRECIP-INC': 8})
-        if water_year >= 2015:
-            result.update({'BLW NF KINGS FLOW': 4, 
-                           'NR PIEDRA FLOW': 5,
-                           'TOP CON STOR': 6, 
-                           'STOR-RES EOP': 7, 
-                           'PRECIP-INC': 8})
-
-    if reservoir.lower() == 'oro':
-        if water_year >= 2016:
-            result.update({'THERMOLITO FLOW': 4, 
-                           'TOP CON STOR': 5,
-                           'STOR-RES EOP': 6, 
-                           'PRECIP-BASIN': 7})
-
-    if reservoir.lower() == 'fol':
-        result.update({'FLOW-RES OUT': 2, 
-                       'FLOW-RES IN': 3, 
-                       'TOP CON STOR': 4, 
-                       'SAFCA TOP CON STOR': 5, 
-                       'STOR-RES EOP': 6, 
-                       'PRECIP-BASIN': 7})
-
-    if reservoir.lower() == 'folq':
-        result.update({'FLOW-RES OUT': 2, 
-                       'FLOW-RES IN': 3, 
-                       '@LAKE NATOMA FLOW-RESOUT': 4,
-                       '@FAIR OAKS MISSING FLOW': 5,
-                       'TOP CON STOR': 6, 
-                       'SAFCA TOP CON STOR': 7, 
-                       'FBO TOP CON STOR': 8, 
-                       'STOR-RES EOP': 9, 
-                       'PRECIP-BASIN': 10})
-    
-    if reservoir.lower() == 'nhgq':
-        result.update({'STOR-RES EOP': 4,
-                       'FLOW': 5,
-                       'TOP CON STOR': 6,
-                       'PRECIP-BASIN': 7})
-        if water_year >= 1996:
-            result.update({'STOR-RES EOP': 4,
-                           'FLOW': 5,
-                           'BELLOTA FLOW': 6,
-                           'TOP CON STOR': 7,
-                           'PRECIP-BASIN': 8})
-        if water_year >= 2015:
-            result.update({'STOR-RES EOP': 7,
-                           'FLOW': 4,
-                           'BELLOTA FLOW': 5,
-                           'TOP CON STOR': 6,
-                           'PRECIP-BASIN': 8})
-    
-    if reservoir.lower() == 'frmq':
-        if water_year != 2014:
-            result.update({'STOR-RES EOP': 4,
-                           'PRECIP-INC': 5,
-                           'FLOW AT FARMINGTON': 6,
-                           'FLOW NR FARMINGTON': 7,
-                           'FLOW DUCK CR DIV': 8})
-        if water_year >= 1999:
-            result.update({'FLOW BLW FARMINGTON': 9})
-        if water_year == 2014:
-            result.update({'FLOW DUCK CR DIV': 4,
-                           'PRECIP-INC': 5,
-                           'FLOW AT FARMINGTON': 6,
-                           'FLOW BLW FARMINGTON': 7})
-
-    if reservoir.lower() == 'trmq':
-        result.update({'STOR-RES EOP': 4, 
-                       'FLOW AT THREE RIV': 5, 
-                       'FLOW NR LEMONCOVE': 6,
-                       'TOP CON STOR': 7,
-                       'PRECIP-BASIN': 8})
-        if water_year >= 2015:
-            result.update({'FLOW AT THREE RIV': 4,
-                           'FLOW NR LEMONCOVE': 5,
-                           'TOP CON STOR': 6,
-                           'STOR-RES EOP': 7,
-                           'PRECIP-BASIN': 8})
-
-    if reservoir.lower() == 'sccq':
-        result.update({'STOR-RES EOP': 4, 
-                       'FLOW NR SPRINGVIL': 5, 
-                       'FLOW NR SUCCESS': 6,
-                       'TOP CON STOR': 7,
-                       'PRECIP-BASIN': 8})
-        if water_year >= 2015:
-            result.update({'FLOW NR SPRINGVIL': 4,
-                           'FLOW NR SUCCESS': 5,
-                           'TOP CON STOR': 6,
-                           'STOR-RES EOP': 7,
-                           'PRECIP-BASIN': 8})
-
-    if reservoir.lower() == 'isbq':
-        if water_year != 2017:
-            result.update({'STOR-RES EOP': 4, 
-                           'FLOW AT KERNVILLE': 5, 
-                           'FLOW BOREL CANAL': 6,
-                           'FLOW': 7,
-                           'TOP CON STOR': 8,
-                           'PRECIP-BASIN': 9})
-            if water_year >= 2015:
-                result.update({'FLOW AT KERNVILLE': 4,
-                               'FLOW BOREL CANAL': 5,
-                               'FLOW': 6,
-                               'TOP CON STOR': 7,
-                               'STOR-RES EOP': 8,
-                               'PRECIP-BASIN': 9})
-        if water_year == 2017:
-            result.update({'FLOW': 4,
-                           'TOP CON STOR': 5,
-                           'STOR-RES EOP': 6,
-                           'PRECIP-BASIN': 7})
-
-    if reservoir.lower() == 'coyq':
-        result.update({'FLOW-RES OUT': 2, 
-                       'FLOW-RES IN': 3, 
-                       'STOR-RES EOP': 4,
-                       'FLOW NR UKIAH': 5,
-                       'FLOW NR HOPLAND': 6,
-                       'TOP CON STOR': 7,
-                       'PRECIP-INC': 8})
-        if water_year >= 2009:
-            result.update({'TOP CON STOR COYHIGH': 7,
-                           'TOP CON STOR': 8,
-                           'PRECIP-INC': 9})
-        if water_year >= 2015:
-            result.update({'FLOW NR UKIAH': 4,
-                           'FLOW NR HOPLAND': 5,
-                           'TOP CON STOR COYHIGH': 6,
-                           'TOP CON STOR': 7,
-                           'STOR-RES EOP': 8,
-                           'PRECIP-INC': 9})
-
-    if reservoir.lower() == 'wrsq':
-        result.update({'STOR-RES EOP': 4,
-                       'FLOW NR GUERNEVIL': 5,
-                       'FLOW NR GEYSERVIL': 6,
-                       'TOP CON STOR': 7,
-                       'PRECIP-INC': 8})
-        if water_year >= 1996:
-            result.update({'FLOW NR HEALDSBUR (CDEC)': 5,
-                       'FLOW NR GUERNEVIL': 6,
-                       'FLOW NR GEYSERVIL': 7,
-                       'TOP CON STOR': 8,
-                       'PRECIP-INC': 9})
-
-
-    return result
-
-
-def get_wcds_data(reservoir, start_time, end_time, interval='d'):
+def get_wcds_data(reservoir, start_time, end_time, interval='d'): #trim this to start and end
     """
     Scrape water year operations data from reservoir page on USACE-SPK's WCDS.
     
@@ -377,15 +69,21 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d'):
     Returns:
         result (dict): query result dictionary with data and info keys
     """
+
+    # Check that user chosen water year is within range with data
+    earliest_time = dt.datetime.strptime('1994-10-01', '%Y-%m-%d')
+
+    if start_time < earliest_time:
+        print(f'No data for selected start date. Earliest possible start date selected instead: {earliest_time}')
+        start_time = earliest_time
+
+    # Make new dataframe
     frames = []
     for water_year in range(get_water_year(start_time), get_water_year(end_time) + 1):
         frames.append(get_water_year_data(reservoir, water_year, interval)['data'])
 
     df = pd.concat(frames)
-    if interval == 'd':
-        df.index = pd.to_datetime(df.index, format='2400 %d%b%Y')
-    else:
-        df.index = pd.to_datetime(df.index, format='%H%M %d%b%Y')
+    df.index.name = 'ISO 8601 Date Time'
 
     return {'data': df, 'info': {'reservoir': reservoir, 
                                  'interval': interval, 
@@ -434,3 +132,11 @@ def get_wcds_reservoirs():
                             Truckee River Basin|LittleTruckee River|USBR|Stampede Dam & Reservoir|STP|False|True
                             Truckee River Basin|LittleTruckee River|USBR|Boca Dam & Reservoir|BOC|False|True""")
     return pd.read_csv(csv_data, header=0, delimiter='|', index_col='WCDS_ID')
+
+
+
+
+
+
+
+
