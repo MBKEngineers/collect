@@ -165,9 +165,13 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
                      na_values=['m', '---', ' ', 'ART', 'BRT', -9999],
                      float_precision='high',
                      dtype=default_data_types)
+    df['DATE TIME'] = df.index
 
     if bool(filename):
         df.to_csv(filename)
+
+    if bool(sensors):
+        return df.loc[df['SENSOR_NUMBER'].isin(sensors)]
 
     return df
 
