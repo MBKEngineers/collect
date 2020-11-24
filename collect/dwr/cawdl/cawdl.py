@@ -7,9 +7,12 @@ access CA Water Data Library surface water and well data
 from bs4 import BeautifulSoup
 import pandas
 import requests
+import re
+import urllib
+import os
 
 
-def get_cawdl_data(site_id):
+def get_cawdl_data(site_id): # NEEDS UPDATES
     """
     Download well timeseries data from CAWDL database; return as dataframe
     search term       | type  |  example
@@ -40,19 +43,23 @@ def get_cawdl_data(site_id):
     return {'data': df, 'info': well_info}
 
 
-def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
+def get_cawdl_surface_water_data(site_id, water_year, variable, interval=None):
     """
     Download timeseries data from CAWDL database; return as dataframe
     search term       | type  |  example
         site_id       |  str  |  'B94100'
         water_year    |  int  |  2017
         variable      |  str  |  'STAGE' or 'FLOW'
-        interval      |  str  |  '15-MINUTE_DATA' or 'DAILY_MEAN' or 'DAILY_MINMAX'
+        interval      |  str  |  '15-MINUTE_DATA' or 'DAILY_MEAN' or 'DAILY_MINMAX' or 'POINT' (default for conductivity)
     """
-    cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
+    # cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
+    cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuousdata/'
+
+    if not interval and variable is 'CONDUCTIVITY':
+        interval = 'POINT'
+
     table_url = cawdl_url + 'docs/{0}/{1}/{2}_{3}_DATA.CSV'.format(site_id, water_year, variable, interval)
-    site_url = cawdl_url + 'index.cfm?site={0}'.format(site_id)
-    report_url = cawdl_url + 'docs/{0}/POR/Site_Report.txt'.format(site_id)
+    site_url = cawdl_url + 'index.cfm?site={0}'.format(site_id) # HAVE TO CHANGE AND ADD TO SITE INFO
 
     # read historical ground water timeseries from "recent groundwater level data" tab
     df = pandas.read_csv(table_url, header=[0, 1, 2], parse_dates=[0], index_col=0)
@@ -67,29 +74,7 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
     df.drop(f'Unnamed: {n}_level_2', axis=1, inplace=True)
     # df = df.tz_localize('US/Pacific')
 
-    # parse HTML file structure; extract station/well metadata
-    site_info = {}
-    soup = BeautifulSoup(requests.get(site_url).content, 'lxml')
-    table = soup.find_all('table')[0]
-    for tr in table.find('tbody').find_all('tr'):
-        if tr.get('id') != 'my_heading_row':
-            cells = tr.find_all('td')
-            if len(cells) == 2:
-                key = cells[0].text.strip()
-                try:
-                    value = float(cells[1].text.strip())
-                except ValueError:
-                    value = cells[1].text.strip()
-                site_info.update({key: value})
-
-    # get available data series for water_year
-    site_info['available series'] = []
-    for section in soup.find_all('div', {'id': 'layout_content_row'}):
-        if section.find('div').get_text().strip() == str(water_year):
-            for tr in section.find('table').find('tbody').find_all('tr'):
-                cells = tr.find_all('td')
-                site_info['available series'].append(cells[0].get_text().strip())
-            break
+    site_info = get_cawdl_surface_water_site_report(site_id)['info']
 
     return {'data': df, 'info': site_info}
 
@@ -97,11 +82,40 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval):
 def get_cawdl_surface_water_site_report(site_id):
     """
     """
-    site_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/docs/{}/POR/Site_Report.txt'.format(site_id)
+    cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuousdata/'
+    report_url = cawdl_url + 'docs/{0}/POR/Site_Report.txt'.format(site_id)
 
     # parse HTML file structure; extract station/well metadata
     site_info = {}
-    soup = BeautifulSoup(requests.get(site_url).content, 'lxml') # Needs update
-    table = soup.find('p')
+    file = urllib.request.urlopen(report_url)
+
+    site_info['available series'] = []
+    start_index = 9999
+    end_index = 9999
+
+    for i, line in enumerate(file):
+        if i > 5: # skip title lines
+            try:
+                decoded_line = line.decode().strip()
+
+                if 'Comment' in decoded_line:
+                    end_index = i
+                if 'Variable' in decoded_line:
+                    start_index = i
+
+                if i <= end_index: 
+                    if ':' in decoded_line:
+                        key = decoded_line.split(':')[0]
+                        value = decoded_line.split(':')[1]
+                        value =  os.linesep.join([s for s in value.splitlines() if s]).strip()
+                        site_info.update({key: value})
+
+                if i > start_index:
+                    series = decoded_line.split('  ')[0]
+                    if decoded_line is not '':
+                        site_info['available series'].append(series)
+
+            except UnicodeDecodeError:
+                pass
 
     return {'info': site_info}
