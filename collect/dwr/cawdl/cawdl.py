@@ -49,13 +49,13 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval=None):
     search term       | type  |  example
         site_id       |  str  |  'B94100'
         water_year    |  int  |  2017
-        variable      |  str  |  'STAGE' or 'FLOW'
-        interval      |  str  |  '15-MINUTE_DATA' or 'DAILY_MEAN' or 'DAILY_MINMAX' or 'POINT' (default for conductivity)
+        variable      |  str  |  'STAGE' or 'FLOW' or 'CONDUCTIVITY' or 'WATER_TEMPERATURE'
+        interval      |  str  |  '15-MINUTE_DATA' or 'DAILY_MEAN' or 'DAILY_MINMAX' or 'POINT' (default for conductivity & temp)
     """
     # cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
     cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuousdata/'
 
-    if not interval and variable is 'CONDUCTIVITY':
+    if not interval and variable in ('CONDUCTIVITY', 'WATER_TEMPERATURE'):
         interval = 'POINT'
 
     table_url = cawdl_url + 'docs/{0}/{1}/{2}_{3}_DATA.CSV'.format(site_id, water_year, variable, interval)
@@ -78,6 +78,14 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval=None):
 
     return {'data': df, 'info': site_info}
 
+def get_cawdl_surface_water_por(site_id, variable, interval=None):
+    """
+    Download full POR timeseries from CAWDL database
+        site_id       |  str  |  'B94100'
+        variable      |  str  |  'STAGE' or 'FLOW' or 'CONDUCTIVITY' or 'WATER_TEMPERATURE'
+        interval      |  str  |  '15-MINUTE_DATA' or 'DAILY_MEAN' or 'DAILY_MINMAX' or 'POINT' (default for conductivity & temp)
+    """
+    return get_cawdl_surface_water_data(site_id, 'POR', variable, interval)
 
 def get_cawdl_surface_water_site_report(site_id):
     """
