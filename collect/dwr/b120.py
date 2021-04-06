@@ -36,7 +36,11 @@ def get_b120_data(date_suffix=''):
 
     """
 
-    if validate_date_suffix(date_suffix, min_year=2017):
+    if validate_date_suffix(date_suffix, min_year=2021):
+        report_date = dt.datetime.strptime(date_suffix, '_%Y%m')
+        return get_120_new_format(report_date.year, report_date.month)
+
+    elif validate_date_suffix(date_suffix, min_year=2017):
 
         # main B120 page (new DWR format)
         url = 'http://cdec.water.ca.gov/b120{}.html'.format(date_suffix)
@@ -281,6 +285,68 @@ def get_120_archived_reports(year, month):
     }
 
     return {'data': {'Apr-Jul': aj_df, 'WY': wy_df}, 'info': info}
+
+
+def get_120_new_format(year, month):
+    """
+    Text-formatted reports available through CDEC javareports app for 2011-2017
+    http://cdec.water.ca.gov/reportapp/javareports?name=B120.YYYYMM
+    
+    Args:
+        year (int):
+        month (int):
+
+    Returns:
+        (dict)
+    """
+
+    report_date = dt.datetime(year, month, 1)
+
+    if not validate_date_suffix(report_date.strftime('_%Y%m'), min_year=2011):
+        raise errors.B120SourceError('B120 Issuances before Feb. 2011 are avilable as PDF.')
+
+    url = f'http://cdec.water.ca.gov/reportapp/javareports?name=B120.{report_date:%Y%m}'
+    
+    result = requests.get(url).content
+    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+    tables = soup.find_all('table', {'class': 'data', 'id': 'B120'})
+
+    # read HTML table with April-July Forecast Summary (TAF)
+    aj_list = []
+    for table in tables:
+        for i, tr in enumerate(table.find_all('tr')):
+            cells = tr.find_all('td')
+            if i == 1: # skip title line
+                pass
+            else:
+                if len(tr) == 1:
+                    region = tr.text.strip()
+                else:
+                    aj_list.append([region] + [clean_td(td.text) for td in cells])
+
+    # dataframe storing Apr-Jul forecast table
+    aj_df = april_july_dataframe(aj_list)
+    aj_df.dropna(subset=['Hydrologic Region'], inplace=True)
+
+    info = {
+        'url': url,
+        'type': 'B120 Forecast',
+        'notes': soup.find('table', {'class': 'data', 'id': 'NOTES'}).text.replace(u'\xa0', ' ').split('\n')[1],
+        'units': 'TAF',
+        'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M'),
+    }
+
+
+    # ADD IN B120 DIST INFO
+
+    # difference btwn this and updated version?? https://cdec.water.ca.gov/reportapp/javareports?name=B120UP
+
+    info.update({'posted': dt.datetime.strptime(soup.find('left').text
+                                                .split('Report generated: ')[1]
+                                                .rstrip(')'), 
+                                                '%B %d, %Y %H:%M') })
+
+    return {'data': {'Apr-Jul': aj_df}, 'info': info}
 
 
 def april_july_dataframe(data_list):
