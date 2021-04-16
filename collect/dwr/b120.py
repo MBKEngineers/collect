@@ -37,13 +37,13 @@ def get_b120_data(date_suffix=''):
     """
 
     if validate_date_suffix(date_suffix, min_year=2021):
-        report_date = dt.datetime.strptime(date_suffix, '_%Y%m')
-        return get_120_new_format(report_date.year, report_date.month)
+        report_date = dt.datetime.strptime(date_suffix, '_%Y%m%d')
+        return get_120_new_format(report_date.year, report_date.month, report_date.day)
 
     elif validate_date_suffix(date_suffix, min_year=2017):
 
         # main B120 page (new DWR format)
-        url = 'http://cdec.water.ca.gov/b120{}.html'.format(date_suffix)
+        url = 'http://cdec.water.ca.gov/b120{}.html'.format(date_suffix[0:-2])
 
         # parse HTML file structure; AJ forecast table
         soup = BeautifulSoup(requests.get(url).content, 'html5lib')
@@ -68,7 +68,7 @@ def get_b120_data(date_suffix=''):
         wy_list = []
         for tr in table.find('tbody').find_all('tr'):
             wy_list.append([clean_td(td.text) for td in tr.find_all('td')])
-        
+
         # header info
         headers = table.find('thead').find('tr', {'class': 'header-row2'}).find_all('th')
         columns = [th.text.replace('thru', '-').replace('%', ' % ').replace('WaterYear', 'WY') for th in headers]
@@ -93,7 +93,7 @@ def get_b120_data(date_suffix=''):
         return {'data': {'Apr-Jul': aj_df, 'WY': wy_df}, 'info': info}
 
     elif validate_date_suffix(date_suffix, min_year=2011):
-        report_date = dt.datetime.strptime(date_suffix, '_%Y%m')
+        report_date = dt.datetime.strptime(date_suffix, '_%Y%m%d')
         return get_120_archived_reports(report_date.year, report_date.month)
 
     else:
@@ -117,7 +117,7 @@ def validate_date_suffix(date_suffix, min_year=2017):
     if date_suffix == '':
         return True
 
-    elif dt.datetime.strptime(date_suffix, '_%Y%m') >= dt.datetime(min_year, 2, 1):
+    elif dt.datetime.strptime(date_suffix, '_%Y%m%d') >= dt.datetime(min_year, 2, 1):
         return True
     
     else:
@@ -140,7 +140,7 @@ def clean_td(text):
     return value
 
 
-def get_b120_update_data(date_suffix=''):
+def get_b120_update_data(date_suffix=''): # need to redo this
     """
     Args:
         date_suffix (str):
@@ -220,7 +220,7 @@ def get_120_archived_reports(year, month):
 
     report_date = dt.datetime(year, month, 1)
 
-    if not validate_date_suffix(report_date.strftime('_%Y%m'), min_year=2011):
+    if not validate_date_suffix(report_date.strftime('_%Y%m%d'), min_year=2011):
         raise errors.B120SourceError('B120 Issuances before Feb. 2011 are avilable as PDF.')
 
     url = f'http://cdec.water.ca.gov/reportapp/javareports?name=B120.{report_date:%Y%m}'
@@ -287,7 +287,7 @@ def get_120_archived_reports(year, month):
     return {'data': {'Apr-Jul': aj_df, 'WY': wy_df}, 'info': info}
 
 
-def get_120_new_format(year, month):
+def get_120_new_format(year, month, day):
     """
     Text-formatted reports available through CDEC javareports app for 2011-2017
     http://cdec.water.ca.gov/reportapp/javareports?name=B120.YYYYMM
@@ -300,13 +300,13 @@ def get_120_new_format(year, month):
         (dict)
     """
 
-    report_date = dt.datetime(year, month, 1)
+    report_date = dt.datetime(year, month, day)
 
-    if not validate_date_suffix(report_date.strftime('_%Y%m'), min_year=2011):
+    if not validate_date_suffix(report_date.strftime('_%Y%m%d'), min_year=2011):
         raise errors.B120SourceError('B120 Issuances before Feb. 2011 are avilable as PDF.')
 
     url = f'http://cdec.water.ca.gov/reportapp/javareports?name=B120.{report_date:%Y%m}'
-    
+
     result = requests.get(url).content
     soup = BeautifulSoup(requests.get(url).content, 'lxml')
     tables = soup.find_all('table', {'class': 'data', 'id': 'B120'})
@@ -336,17 +336,42 @@ def get_120_new_format(year, month):
         'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M'),
     }
 
-
-    # ADD IN B120 DIST INFO
-
-    # difference btwn this and updated version?? https://cdec.water.ca.gov/reportapp/javareports?name=B120UP
-
-    info.update({'posted': dt.datetime.strptime(soup.find('left').text
+    info.update({'AJ_posted': dt.datetime.strptime(soup.find('left').text
                                                 .split('Report generated: ')[1]
                                                 .rstrip(')'), 
                                                 '%B %d, %Y %H:%M') })
 
-    return {'data': {'Apr-Jul': aj_df}, 'info': info}
+
+    # ADD IN B120 DIST INFO
+    url = f'http://cdec.water.ca.gov/reportapp/javareports?name=B120DIST.{report_date:%Y%m%d}'
+
+    result = requests.get(url).content
+    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+    tables = soup.find_all('table', {'class': 'data', 'id': 'B120DIST_1'})
+
+    wy_list = []
+    for i, table in enumerate(tables):
+        if i == 0:
+            for td in table.find_all('td'):
+                if 'left' in str(td):
+                    watershed = td.text
+                    num_list = [watershed]
+                    wy_list.append(num_list)
+                else:
+                    num_list.append(clean_td(td.text))
+
+    # clean columns
+    headers = ['Watershed','Oct thru Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Water Year Total','90%% Exceedance','10%% Exceedance','WY %% Avg']
+    wy_df = pd.DataFrame(wy_list, columns=headers)
+
+    info.update({'WY_posted': dt.datetime.strptime(tables[0].previousSibling
+                                                .split('Report generated: ')[1]
+                                                .rstrip(')'), 
+                                                '%B %d, %Y %H:%M') })
+
+    # difference btwn this and updated version?? https://cdec.water.ca.gov/reportapp/javareports?name=B120UP
+
+    return {'data': {'Apr-Jul': aj_df, 'WY': wy_df}, 'info': info}
 
 
 def april_july_dataframe(data_list):
