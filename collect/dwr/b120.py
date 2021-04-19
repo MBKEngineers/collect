@@ -151,7 +151,11 @@ def get_b120_update_data(date_suffix=''): # need to redo this
 
     # main B120 page (new DWR format)
     # available Feb, Mar, Apr, May, Jun
-    url = 'http://cdec.water.ca.gov/b120up{}.html'.format(date_suffix)
+    url = 'http://cdec.water.ca.gov/b120up{}.html'.format(date_suffix[0:-2])
+
+    if validate_date_suffix(date_suffix, min_year=2021):
+        report_date = dt.datetime.strptime(date_suffix, '_%Y%m%d')
+        return get_120_update_data_new_format(report_date.year, report_date.month)
 
     if not validate_date_suffix(date_suffix, min_year=2018):
         raise errors.B120SourceError('B120 updates in this format not available before Feb. 2018.')
@@ -201,6 +205,91 @@ def get_b120_update_data(date_suffix=''): # need to redo this
                                                 .split('(posted on ')[1]
                                                 .rstrip(')'), 
                                                 '%m/%d/%y %H:%M')})
+
+    return {'data': df, 'info': info}
+
+
+def get_120_update_data_new_format(year, month): 
+    """
+    Args:
+        date_suffix (str):
+
+    Returns:
+
+    """
+
+    # main B120 page (new DWR format)
+    report_date = dt.datetime(year, month, 1)
+
+    # available Feb, Mar, Apr, May, Jun
+    url = f'https://cdec.water.ca.gov/reportapp/javareports?name=B120UP.{report_date:%Y%m}'
+
+    if not validate_date_suffix(report_date.strftime('_%Y%m%d'), min_year=2011):
+        raise errors.B120SourceError('B120 Issuances before Feb. 2011 are avilable as PDF.')
+
+    result = requests.get(url).content
+    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+    tables = soup.find_all('table', {'class': 'data', 'id': 'B120UP'})
+
+    # # unused header info
+    thead = tables[0].find_all('th', {'class': 'top center'})
+    forecast_dates = [th.text for th in thead[0:3]]
+
+    # read HTML table with April-July Forecast Updates (TAF)
+    aj_list = []
+    row_list = []
+    watershed = None
+    average = None
+
+    for table in tables:
+        for tr in table.find_all('tr'):
+
+            cells = tr.find_all('td')
+
+            if len(cells) == 9:
+                for i, cell in enumerate(cells):
+                    cell_text = cell.text.strip()
+
+                    if i == 0:
+                        row_list = []
+                        row_list.append(watershed)
+                        row_list.append(average)
+
+                    if 'Average' in str(cell.text):
+                        watershed = cells[0].text.strip()
+                        average = cell_text.split('= ')[-1]
+
+                    else:
+                        if cell_text == '':
+                            pass
+                        else:
+                            row_list.append(cell_text)
+
+                # do not add lists that do not have each column
+                if len(row_list)==9:
+                    aj_list.append(row_list)
+
+    # dataframe storing Apr-Jul forecast table
+    columns = ['Hydrologic Region', 'Average', 'Percentile']
+    for date in forecast_dates:
+        columns += ['{} AJ Vol'.format(date), '{} % Avg'.format(date)]
+
+    df = pd.DataFrame(aj_list, columns=columns)
+
+    info = {
+        'url': url,
+        'type': 'B120 Update',
+        'title': soup.find('h1').text, 
+        'caption': soup.find('h3').text, 
+        'notes': soup.find('table', {'class': 'data', 'id': 'NOTES'}).text.replace(u'\xa0', ' ').split('\n')[1],
+        'units': 'TAF',
+        'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M'),
+    }
+
+    info.update({'posted': dt.datetime.strptime(soup.find('left').text
+                                                .split('Report generated: ')[1]
+                                                .rstrip(')'), 
+                                                '%B %d, %Y %H:%M') })
 
     return {'data': df, 'info': info}
 
