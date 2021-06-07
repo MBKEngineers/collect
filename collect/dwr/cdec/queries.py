@@ -68,7 +68,7 @@ def get_station_url(station, start, end, data_format='CSV', sensors=[], duration
     #         end = end + dt.timedelta(days=1)
 
     # construct URL
-    url_base = 'http://cdec.water.ca.gov/dynamicapp/req/{data_format}DataServlet'
+    url_base = 'https://cdec.water.ca.gov/dynamicapp/req/{data_format}DataServlet'
     url_args = ['Stations={station}', 'Start={start:%Y-%m-%d}', 'End={end:%Y-%m-%d}']
 
     # optional sensors filter
@@ -243,7 +243,7 @@ def get_station_metadata(station):
     """
 
     # construct URL
-    url = 'http://cdec.water.ca.gov/dynamicapp/staMeta?station_id={station}'.format(station=station)
+    url = 'https://cdec.water.ca.gov/dynamicapp/staMeta?station_id={station}'.format(station=station)
 
     # request info page
     soup = BeautifulSoup(requests.get(url).content, 'lxml')
