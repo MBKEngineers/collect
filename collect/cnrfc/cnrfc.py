@@ -674,7 +674,7 @@ def _default_date_string(date_string):
     """
     if date_string is None:
         now = dt.datetime.now().astimezone(UTC)
-        date_string = now.strftime('%Y%m%d{0}'.format(6 * round(now.hour//6)))
+        date_string = now.strftime('%Y%m%d{0:02.0f}'.format(6 * math.floor(now.hour/6)))
     
     # hour validation
     if date_string[-2:] not in ['00', '06', '12', '18']:
