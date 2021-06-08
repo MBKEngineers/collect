@@ -219,7 +219,7 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
         df (pandas.DataFrame): the queried timeseries for a single sensor as a DataFrame
 
     """
-    raw = get_station_data(station, start, end, duration)
+    raw = get_station_data(station, start, end, sensors=[sensor], duration=duration)
 
     if bool(sensor) and bool(duration):
         df = raw.loc[(raw['SENSOR_NUMBER']==sensor) & (raw['DURATION']==duration)]
