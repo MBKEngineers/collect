@@ -142,7 +142,7 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
 
     """
     # CDEC url with query parameters
-    url = get_station_url(station, start, end, data_format='CSV', duration=duration)
+    url = get_station_url(station, start, end, data_format='CSV', sensors=sensors, duration=duration)
 
     # suppress low memory error due to guessing d-types
     default_data_types = {
