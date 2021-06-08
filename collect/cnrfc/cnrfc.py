@@ -6,6 +6,7 @@ access CNRFC forecasts
 # -*- coding: utf-8 -*-
 import datetime as dt
 import io
+import math
 import os
 import zipfile
 from bs4 import BeautifulSoup
