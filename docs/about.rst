@@ -13,23 +13,23 @@ Contributing
 ----------------------------------------
 Report bugs and/or new feature requests with the GitHub issues tracker: https://github.com/MBKEngineers/collect/issues
 
-To start development on a new feature, pull the latest state of **master** and checkout a new branch (ex: **dev**)::
+To start development on a new feature, pull the latest state of **main** and checkout a new branch (ex: **dev**)::
 
    $ git fetch
-   $ git checkout master
-   $ git pull origin master
+   $ git checkout main
+   $ git pull origin main
    $ git checkout -b dev
 
 To push your branch to the GitHub **collect** repository::
 
    $ git push origin dev
 
-For contributing code, open a pull request from your **dev** branch into **master** or the target branch and request a review.  Before requesting review, make sure that the remote (GitHub) version of **master** is merged into your local **dev** branch::
+For contributing code, open a pull request from your **dev** branch into **main** or the target branch and request a review.  Before requesting review, make sure that the remote (GitHub) version of **main** is merged into your local **dev** branch::
 
    $ git fetch
-   $ git merge remotes/origin/master
+   $ git merge remotes/origin/main
 
-Resolve any conflicts and request a review.  Additional changes may be made to the open pull request (PR) by pushing to the **dev** branch on GitHub.  Once review comments have been addressed and the PR is approved, you may merge your branch into master and delete the **dev** branch.
+Resolve any conflicts and request a review.  Additional changes may be made to the open pull request (PR) by pushing to the **dev** branch on GitHub.  Once review comments have been addressed and the PR is approved, you may merge your branch into main and delete the **dev** branch.
 
 
 Updating Documentation

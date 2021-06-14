@@ -68,7 +68,7 @@ def get_station_url(station, start, end, data_format='CSV', sensors=[], duration
     #         end = end + dt.timedelta(days=1)
 
     # construct URL
-    url_base = 'http://cdec.water.ca.gov/dynamicapp/req/{data_format}DataServlet'
+    url_base = 'https://cdec.water.ca.gov/dynamicapp/req/{data_format}DataServlet'
     url_args = ['Stations={station}', 'Start={start:%Y-%m-%d}', 'End={end:%Y-%m-%d}']
 
     # optional sensors filter
@@ -142,7 +142,7 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
 
     """
     # CDEC url with query parameters
-    url = get_station_url(station, start, end, data_format='CSV', duration=duration)
+    url = get_station_url(station, start, end, data_format='CSV', sensors=sensors, duration=duration)
 
     # suppress low memory error due to guessing d-types
     default_data_types = {
@@ -165,9 +165,13 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
                      na_values=['m', '---', ' ', 'ART', 'BRT', -9999],
                      float_precision='high',
                      dtype=default_data_types)
+    df['DATE TIME'] = df.index
 
     if bool(filename):
         df.to_csv(filename)
+
+    if bool(sensors):
+        return df.loc[df['SENSOR_NUMBER'].isin(sensors)]
 
     return df
 
@@ -215,7 +219,7 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
         df (pandas.DataFrame): the queried timeseries for a single sensor as a DataFrame
 
     """
-    raw = get_station_data(station, start, end, duration)
+    raw = get_station_data(station, start, end, sensors=[sensor], duration=duration)
 
     if bool(sensor) and bool(duration):
         df = raw.loc[(raw['SENSOR_NUMBER']==sensor) & (raw['DURATION']==duration)]
@@ -239,7 +243,7 @@ def get_station_metadata(station):
     """
 
     # construct URL
-    url = 'http://cdec.water.ca.gov/dynamicapp/staMeta?station_id={station}'.format(station=station)
+    url = 'https://cdec.water.ca.gov/dynamicapp/staMeta?station_id={station}'.format(station=station)
 
     # request info page
     soup = BeautifulSoup(requests.get(url).content, 'lxml')
