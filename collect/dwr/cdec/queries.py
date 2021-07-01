@@ -21,7 +21,7 @@ def get_station_url(station, start, end, data_format='CSV', sensors=[], duration
                                      'M' defaults to last year of data
     - currently start and end are required arguments
 
-    Args:
+    Arguments:
         station (str): the 3-letter CDEC station ID
         start (dt.datetime): query start date
         end (dt.datetime): query end date
@@ -93,7 +93,7 @@ def get_station_sensors(station, start, end):
     Returns a `dict` of the available sensors for `station` for each duration in window
     defined by `start` and `end`.
 
-    Args:
+    Arguments:
         station (str): the 3-letter CDEC station ID
         start (dt.datetime): query start date
         end (dt.datetime): query end date
@@ -113,7 +113,7 @@ def get_station_data(station, start, end, sensors=[], duration=''):
     General purpose function for returning a pandas DataFrame for all available
     data for CDEC `station` in the given time window, with optional `duration` argument.
 
-    Args:
+    Arguments:
         station (str): the 3-letter CDEC station ID
         start (dt.datetime): query start date
         end (dt.datetime): query end date
@@ -130,7 +130,7 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
     Use CDEC CSV query URL to download available data.  Optional `filename` argument
     specifies custom file location for download of CSV records.
 
-    Args:
+    Arguments:
         station (str): the 3-letter CDEC station ID
         start (dt.datetime): query start date
         end (dt.datetime): query end date
@@ -139,7 +139,6 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
         filename (str): optional filename for locally saving data
     Returns:
         df (pandas.DataFrame): the queried timeseries as a DataFrame
-
     """
     # CDEC url with query parameters
     url = get_station_url(station, start, end, data_format='CSV', sensors=sensors, duration=duration)
@@ -181,7 +180,7 @@ def get_raw_station_json(station, start, end, sensors=[], duration='', filename=
     Use CDEC JSON query URL to download available data.  Optional `filename` argument
     specifies custom file location for download of validated JSON records.
 
-    Args:
+    Arguments:
         station (str): the 3-letter CDEC station ID
         start (dt.datetime): query start date
         end (dt.datetime): query end date
@@ -190,7 +189,6 @@ def get_raw_station_json(station, start, end, sensors=[], duration='', filename=
         filename (str): optional filename for locally saving data
     Returns:
         result (str): the queried timeseries as JSON
-
     """
 
     url = get_station_url(station, start, end, data_format='JSON', sensors=sensors, duration=duration)
@@ -209,7 +207,7 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
     return a pandas DataFrame of `station` data for a particular sensor, filtered
     by `duration` and `start` and `end` dates.
 
-    Args:
+    Arguments:
         station (str): the 3-letter CDEC station ID
         start (dt.datetime): query start date
         end (dt.datetime): query end date
@@ -217,7 +215,6 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
         duration (str): interval code for timeseries data (ex: 'H')
     Returns:
         df (pandas.DataFrame): the queried timeseries for a single sensor as a DataFrame
-
     """
     raw = get_station_data(station, start, end, sensors=[sensor], duration=duration)
 
@@ -235,11 +232,10 @@ def get_station_metadata(station):
     """
     get the gage meta data and datum, monitor/flood/danger stage information
 
-    Args:
+    Arguments:
         station (str): the 3-letter CDEC station ID
     Returns:
         info (dict): the CDEC station metadata, stored as key, value pairs
-
     """
 
     # construct URL
@@ -249,29 +245,103 @@ def get_station_metadata(station):
     soup = BeautifulSoup(requests.get(url).content, 'lxml')
 
     # initialize the result dictionary
-    site_info = {'title':  soup.find('h2').text}
+    site_info = {'title':  soup.find('h2').text, 
+                 'sensors': {}, 
+                 'comments': {}}
     
+    # tables
+    tables = soup.find_all('table')
+
     # extract the station geographic info table
-    table = soup.find('table')
+    site_info.update(_parse_station_geo_table(tables[0]))
+
+    # extract available sensor metadata (interval/por)
+    site_info['comments'].update(_parse_station_comments_table(tables[2]))
+
+    # extract the station datum and measurement info table
+    site_info['sensors'].update(_parse_station_sensors_table(tables[1]))
+    
+    return {'info': site_info}
+
+
+def _parse_station_geo_table(table):
+    """
+    Arguments:
+        table (bs4.element.Tag): the table node parsed from HTML with BeautifulSoup
+    Returns:
+        result (dict): dictionary of geographic and operator info for station
+    """
+    result = {}
     for tr in table.find_all('tr'):
         cells = tr.find_all('td')
         for i, cell in enumerate(cells):
             if i % 2 == 0:
                 key = cells[i].text.strip()
                 value = cells[i+1].text.strip()
-                site_info.update({key: value})
+                result.update({key: value})
+    return result
 
-    # extract the station datum and measurement info table
-    table = soup.find_all('table')[1]
-    header_row = table.find_all('tr')[0]
-    data_row = table.find_all('tr')[1]
 
-    for (k, v) in zip(header_row.find_all('th'), data_row.find_all('td')):
-        key = k.text.strip()
-        value = v.text.strip()
-        site_info.update({key: value})
+def _parse_station_sensors_table(table):
+    """
+    extract station sensor availabilty, descriptions and periods of record and return
+    as a nested dictionary that can be queried by sensor, then duration (interval)
 
-    return {'info': site_info}
+    Arguments:
+        table (bs4.element.Tag): the table node parsed from HTML with BeautifulSoup
+    Returns:
+        result (dict): dictionary of paired comment date and content for station
+    """
+    result = {}
+
+    for row in table.find_all('tr'):
+        sensor_description, sensor_number, duration, plot, data_collection, data_available = [x.text.strip() for x in row.find_all('td')]
+        duration = duration.strip('()')
+
+        if sensor_number not in result:
+            result[sensor_number] = {}            
+
+        result[sensor_number].update({
+            duration: {'description': sensor_description, 
+                       'sensor': sensor_number, 
+                       'duration': duration,
+                       'collection': data_collection, 
+                       'availability': data_available,
+                       'years': _parse_data_available(data_available)}
+        })
+    
+    return result
+
+
+def _parse_station_comments_table(table):
+    """
+    extracts the dated station comments and returns as a dictionary
+
+    Arguments:
+        table (bs4.element.Tag): the table node parsed from HTML with BeautifulSoup
+    Returns:
+        result (dict): dictionary of paired comment date and content for station
+    """
+    result = {}
+    for tr in table.find_all('tr'):
+        key, value = [x.text.strip() for x in tr.find_all('td')]
+        result.update({key: value})
+    return result
+
+
+def _parse_data_available(text):
+    """
+    returns the list of years included in summary of data availability
+    
+    Arguments:
+        text (str): station sensor "data available" column entry
+    Returns:
+        result (dict): list of years covered by data availability record
+    """
+    start, end = text.split(' to ')
+    start = dt.datetime.strptime(start, '%m/%d/%Y')
+    end = dt.datetime.strptime(end, '%m/%d/%Y') if end != 'present' else dt.date.today()
+    return list(range(start.year, end.year + 1))
 
 
 def get_data(station, start, end, sensor='', duration=''):
@@ -279,7 +349,7 @@ def get_data(station, start, end, sensor='', duration=''):
     return station date for a query bounded by start and end datetimes for
     a particular sensor/duration combination
 
-    Args:
+    Arguments:
         station (str): the 3-letter CDEC station ID
         start (dt.datetime): query start date
         end (dt.datetime): query end date
