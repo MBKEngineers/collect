@@ -103,7 +103,7 @@ def get_station_sensors(station, start, end):
     sensors = {}
     for duration in ['E', 'H', 'D', 'M']:
         url = get_station_url(station, start, end, duration=duration)
-        df = pd.read_csv(url, header=0, na_values=['m', '---', ' ', 'ART', 'BRT', -9999, , -9998, , -9997], usecols=[0, 1, 2, 3])
+        df = pd.read_csv(url, header=0, na_values=['m', '---', ' ', 'ART', 'BRT', -9999, -9998, -9997], usecols=[0, 1, 2, 3])
         sensors.update({duration: list(df['SENSOR_TYPE'].unique())})
     return sensors
 
@@ -161,7 +161,7 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
                      header=0, 
                      parse_dates=True, 
                      index_col=4, 
-                     na_values=['m', '---', ' ', 'ART', 'BRT', -9999, , -9998, , -9997],
+                     na_values=['m', '---', ' ', 'ART', 'BRT', -9999, -9998, -9997],
                      float_precision='high',
                      dtype=default_data_types)
     df['DATE TIME'] = df.index
