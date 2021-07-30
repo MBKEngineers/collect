@@ -103,7 +103,7 @@ def get_station_sensors(station, start, end):
     sensors = {}
     for duration in ['E', 'H', 'D', 'M']:
         url = get_station_url(station, start, end, duration=duration)
-        df = pd.read_csv(url, header=0, na_values=['m', '---', ' ', 'ART', 'BRT'], usecols=[0, 1, 2, 3])
+        df = pd.read_csv(url, header=0, na_values=['m', '---', ' ', 'ART', 'BRT', -9999, , -9998, , -9997], usecols=[0, 1, 2, 3])
         sensors.update({duration: list(df['SENSOR_TYPE'].unique())})
     return sensors
 
@@ -161,7 +161,7 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
                      header=0, 
                      parse_dates=True, 
                      index_col=4, 
-                     na_values=['m', '---', ' ', 'ART', 'BRT', -9999],
+                     na_values=['m', '---', ' ', 'ART', 'BRT', -9999, , -9998, , -9997],
                      float_precision='high',
                      dtype=default_data_types)
     df['DATE TIME'] = df.index
@@ -190,7 +190,6 @@ def get_raw_station_json(station, start, end, sensors=[], duration='', filename=
     Returns:
         result (str): the queried timeseries as JSON
     """
-
     url = get_station_url(station, start, end, data_format='JSON', sensors=sensors, duration=duration)
     response = requests.get(url, stream=True)
     result = json.loads(response.text)
@@ -228,7 +227,7 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
     return df
 
 
-def get_station_metadata(station):
+def get_station_metadata(station, as_geojson=False):
     """
     get the gage meta data and datum, monitor/flood/danger stage information
 
@@ -253,18 +252,97 @@ def get_station_metadata(station):
     tables = soup.find_all('table')
 
     # extract the station geographic info table
-    site_info.update(_parse_station_geo_table(tables[0]))
+    site_info.update(_parse_station_generic_table(tables[_get_table_index('site', tables)]))
+
+    # extract datum info if available
+    # if _get_table_index('datum', tables) is not None:
+    #     site_info.update(_parse_station_generic_table(tables[_get_table_index('datum', tables)]))
 
     # extract available sensor metadata (interval/por)
-    site_info['comments'].update(_parse_station_comments_table(tables[2]))
+    site_info['comments'].update(_parse_station_comments_table(tables[_get_table_index('comments', tables)]))
 
     # extract the station datum and measurement info table
-    site_info['sensors'].update(_parse_station_sensors_table(tables[1]))
-    
+    site_info['sensors'].update(_parse_station_sensors_table(tables[_get_table_index('sensors', tables)]))
+
+    # add site url
+    site_info.update({"CDEC URL": f"<a target=\"_blank\" href=\"{url}\">{station}</a>"})
+
+    if soup.find('a', href=True, text='Dam Information'):
+        site_info.update(get_dam_metadata(station))
+
+    if soup.find('a', href=True, text='Reservoir Information'):
+        site_info.update(get_reservoir_metadata(station))
+
+    # export a geojson feature (as dictionary)
+    if as_geojson:
+        return {'type': 'Feature', 
+                'geometry': {'type': 'Point', 'coordinates': [float(site_info['Longitude'].strip('°')), 
+                                                              float(site_info['Latitude'].strip('°'))]},
+                'properties': site_info}
+
     return {'info': site_info}
 
 
-def _parse_station_geo_table(table):
+def get_dam_metadata(station):
+    """
+    get the gage meta data and datum, monitor/flood/danger stage information
+
+    Arguments:
+        station (str): the 3-letter CDEC station ID
+    Returns:
+        info (dict): the CDEC station metadata, stored as key, value pairs
+    """
+    url = 'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=dam'.format(station=station)
+
+    # request dam info page
+    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+
+    # initialize the result dictionary
+    site_info = {'title':  soup.find('h2').text}
+    
+    # tables
+    tables = soup.find_all('table')
+
+    site_info.update(_parse_station_generic_table(tables[-1]))
+
+    return {'dam': site_info}
+
+
+def get_reservoir_metadata(station):
+    """
+    get the gage meta data and datum, monitor/flood/danger stage information
+
+    Arguments:
+        station (str): the 3-letter CDEC station ID
+    Returns:
+        info (dict): the CDEC station metadata, stored as key, value pairs
+    """
+    url = 'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=res'.format(station=station)
+    site_info = {}
+    return {'reservoir': site_info}
+
+
+def _get_table_index(table_type, tables):
+    """
+    Arguments:
+        table_type (str): identifier for the station metadata or comments tables, etc.
+        tables (list): the tables parsed from HTML via BeautifulSoup
+    Returns:
+        (int): the index of table on page matching the table type
+    """
+    if table_type == 'site':
+        return 0
+    elif table_type == 'datum':
+        return 1 if len(tables) > 3 else None
+    elif table_type == 'sensors':
+        return len(tables) - 2
+    elif table_type == 'comments':
+        return len(tables) - 1 
+    
+    return None
+
+
+def _parse_station_generic_table(table):
     """
     Arguments:
         table (bs4.element.Tag): the table node parsed from HTML with BeautifulSoup
@@ -324,8 +402,10 @@ def _parse_station_comments_table(table):
     """
     result = {}
     for tr in table.find_all('tr'):
-        key, value = [x.text.strip() for x in tr.find_all('td')]
-        result.update({key: value})
+        cleaned = [x.text.strip() for x in tr.find_all('td')]
+        if len(cleaned) > 1:
+            key, value = cleaned
+            result.update({key: value})
     return result
 
 
