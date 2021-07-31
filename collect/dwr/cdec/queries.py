@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import requests
 from six import string_types
+from collect.utils import get_web_status
 
 
 def get_station_url(station, start, end, data_format='CSV', sensors=[], duration=''):
@@ -218,7 +219,7 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
     raw = get_station_data(station, start, end, sensors=[sensor], duration=duration)
 
     if bool(sensor) and bool(duration):
-        df = raw.loc[(raw['SENSOR_NUMBER']==sensor) & (raw['DURATION']==duration)]
+        df = raw.loc[raw['SENSOR_NUMBER']==sensor].loc[df['DURATION']==duration]
     elif bool(sensor):
         df = raw.loc[raw['SENSOR_TYPE']==sensor]
     else:
