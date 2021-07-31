@@ -40,7 +40,9 @@ def get_report_catalog(console=True):
             'Water Quality Summary (daily)': f'{oco_url_base}Delta-Status-And-Operations/Delta-Water-Quality-Daily-Summary.pdf',
             'Hydrologic Conditions Summary (daily)': f'{oco_url_base}Delta-Status-And-Operations/Delta-Hydrologic-Conditions-Daily-Summary.pdf',
             'Miscellaneous Monitoring Data (daily)': f'{oco_url_base}Delta-Status-And-Operations/Delta-Miscellaneous-Daily-Monitoring-Data.pdf',
-            'Barker Slough Flows (weekly)': f'{oco_url_base}Delta-Status-And-Operations/Barker-Slough-Weekly-Flows.pdf',
+            'Barker Slough Flows (weekly)': f'{oco_url_base}Delta-Status-And-Operations/Barker-Slough-Weekly-Flows.pdf'
+        },
+        'Oroville Operations': {
             'Forecasted Storage': f'{oco_url_base}Oroville-Operations/Oroville-Forecasted-Storage.pdf',
             'Hatchery and Robinson Riffle Daily Average Water Temperature': f'{oco_url_base}Oroville-Operations/Hatchery-and-Robinson-Riffle-Daily-Average-Water-Temperature.pdf',
         },
@@ -72,9 +74,8 @@ def get_report_catalog(console=True):
 
 def get_report_url(report):
     """
-    
     Arguments:
-
+        report (str): designates which report to retrieve
     Returns:
         url (str): the path to the PDF report
     """
@@ -82,9 +83,11 @@ def get_report_url(report):
     swp_base = url_base + 'Operations-And-Maintenance/Files/Operations-Control-Office/Delta-Status-And-Operations'
     url = '/'.join([swp_base, 'Delta-Operations-Daily-Summary.pdf'])
 
-    # get_report_catalog(console=False)['Delta Status and Operations']['Hydrologic Conditions Summary (daily)']
+    # flatten the catalog
+    flat = {k: v for d in get_report_catalog(console=False).values() for k, v in d.items() }
 
-    return get_report_catalog(console=False)['Delta Status and Operations']['Barker Slough Flows (weekly)']
+    # look up the URL by the name of the report
+    return flat.get(report)
 
 
 def get_raw_text(report, filename=None, preserve_white_space=True):
@@ -119,7 +122,7 @@ def get_raw_text(report, filename=None, preserve_white_space=True):
     return content
 
 
-def get_delta_daily_data(report):
+def get_delta_daily_data():
     """
     fetch and return SWP OCO's daily delta operations report
     
@@ -128,7 +131,7 @@ def get_delta_daily_data(report):
     Returns:
         result (dict): the report contents and metadata
     """
-    content = get_raw_text(report, 'raw_export.txt')
+    content = get_raw_text('Delta Operations Summary (daily)', 'raw_export.txt')
 
     # extract current report's date
     rx = re.compile(r'(?P<date>\d{1,2}/\d{1,2}/\d{4})')   
@@ -201,16 +204,16 @@ def get_delta_daily_data(report):
     return {'info': meta, 'data': result}
 
 
-def get_barker_slough_data(report):
+def get_barker_slough_data():
     """
-    fetch and return SWP OCO's weekly Barker Slough flows report
+    fetch and return SWP OCO's Barker Slough Flows (weekly) report
     
     Arguments:
         report (str): designates which report to retrieve
     Returns:
         result (dict): the report contents and metadata
     """
-    content = get_raw_text(report)
+    content = get_raw_text('Barker Slough Flows (weekly)')
 
     # report information
     meta =  {
@@ -233,3 +236,123 @@ def get_barker_slough_data(report):
     
     # return result
     return {'info': meta, 'data': df}
+
+
+def get_oco_tabular_data(report):
+    """
+    support for Hydrologic Conditions Summary (daily) and Miscellaneous Monitoring Data (daily)
+    reports; combines multi-page reporting into single date-indexed dataframe
+
+    Arguments:
+        report (str): designates which report to retrieve
+        filename (str): optional filename (.txt) for raw report export
+    Returns:
+        content (str): the string contents of the PDF (preserves whitespace)
+    """
+    # construct URL
+    url = get_report_url(report)
+
+    # request report content from URL
+    f = io.BytesIO(requests.get(url).content)
+    f.seek(0)
+
+    # parse PDF and extract as string
+    content = list(pdftotext.PDF(f))
+
+    # report information
+    meta =  {
+        'filename': url.split('/')[-1],
+        # 'title': content[0].splitlines()[0],
+        'contact': 'OCO_Export_Management@water.ca.gov',
+        'retrieved': dt.datetime.now().strftime('%Y-%m-%d'),
+        'raw': content,
+        'pages': len(content)
+    }
+
+    def _process_page(i, page, report):
+        """
+        Arguments:
+            i (int): the index of the page
+            page (str): the text content of the page
+        Returns:
+            df (pandas.DataFrame): tabular results as dataframe
+        """
+        # strip leading white space, filter out empty rows, and split rows 
+        # based variable # of whitespace characters (2 or more)
+        page = page.replace(',', '')
+        rows = [re.split(r'\s{2,}', x.lstrip())
+                for x in page.splitlines() if bool(x)]
+
+        # convert table to a dataframe
+        df = pd.DataFrame(rows)
+
+        # fill missing column entry (first line of date header)
+        if report == 'Miscellaneous Monitoring Data (daily)':
+            rows[2] = [''] + rows[2]
+            rows[4][0] = '(30 days)'
+            df.columns = [' '.join(list(x)).strip() for x in zip(*rows[2:5])]
+
+        elif report == 'Water Quality Summary (daily)':
+            if i == 0:
+                return pd.DataFrame()
+            # delta water quality conditions (page 2)
+            if i == 1:
+                rows[2][0] = 'Date (30 days)'
+                rows[2][2] = 'ANT Half'
+                rows[2].insert(3, 'PCT@64km mdEC')
+                df.columns = rows[2]
+            # delta water quality conditions (page 3)
+            elif i == 2:
+                rows[2][0] = 'Date (30 days)'
+                df.columns = rows[2]
+            # delta water quality conditions (page 4)
+            elif i == 3:
+                rows[2][0] = 'Date (30 days)'
+                df.columns = rows[2]
+            # south delta stations (page 5)
+            elif i == 4:
+                rows[3][0] = 'Date (30 days)'
+                df.columns = rows[3]
+            # Suisun marsh stations (page 6)
+            elif i == 5:
+                rows[3][0] = 'Date (30 days)'
+                df.columns = rows[3]
+
+        # page 1 of hydrology report
+        elif i == 0:
+            rows[2] = [''] + rows[2]
+            rows[4] = [''] + rows[4]
+            rows[6] = ['Date (30 days)'] + rows[6]
+            df.columns = [' '.join(list(x)).strip() for x in zip(*[rows[2], rows[4], rows[6]])]
+        
+        # page 2 of hydrology report
+        elif i == 1:
+            rows[2] = [''] + rows[2]
+            rows[3][0] = 'Date (30 days)'
+            df.columns = [' '.join(list(x)).strip() for x in zip(*[rows[2], rows[3]])]
+
+        else:
+            raise NotImplementedError('Report is expected to include a maximum of 2 pages.')
+
+        # filter for date format and set date index
+        df = df.loc[df['Date (30 days)'].str.match(r'\d{2}/\d{2}/\d{4}')]
+        df.set_index('Date (30 days)', drop=True, inplace=True)
+        df.index = pd.to_datetime(df.index)
+
+        # filter out all rows/columns where all entries are null/None
+        df = df.dropna(axis=0, how='all').dropna(axis=1, how='all')
+
+        return df
+
+    # process multiple pages
+    frames = [_process_page(i, page, report) for i, page in enumerate(content)]
+
+    # return string content
+    return {'info': meta, 'data': pd.concat(frames, axis=1)}
+
+
+if __name__ == '__main__':
+
+    # df = get_oco_tabular_data('Miscellaneous Monitoring Data (daily)')['data']
+    # df = get_oco_tabular_data('Miscellaneous Monitoring Data (daily)')['data']
+    df = get_oco_tabular_data('Water Quality Summary (daily)')['data']
