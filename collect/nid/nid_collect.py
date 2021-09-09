@@ -83,6 +83,7 @@ for site, name in sites.items():
         df = pd.concat((df, month_df))
 
     df.dropna(inplace=True)
+    df[metric] = pd.to_numeric(df[metric])
     df.index = df['date']
 
     new_index = pd.date_range(start=df.index[0], end=df.index[-1])
