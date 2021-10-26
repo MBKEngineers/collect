@@ -91,7 +91,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
     """
 
     # get forecast file from csv url
-    url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id={0}'.format(cnrfc_id)
+    url = 'https://www.cnrfc.noaa.gov/graphicalRVF_csv.php?id={0}'.format(cnrfc_id)
     csvdata = _get_forecast_csv(url)
 
     # read historical and forecast series from CSV
@@ -142,6 +142,15 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
     from: https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
     https://www.cnrfc.noaa.gov/csv/2019040318_american_csv_export.zip
 
+    Arguments:
+        watershed (str):
+        date_string (str):
+        acre_feet (bool): 
+        pdt_convert (bool): 
+        as_pdt (bool): 
+        cnrfc_id (str): 
+    Returns:
+        (dict): 
     """
     units = 'kcfs'
 
@@ -189,10 +198,17 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
 def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False):
     """
     Get issuance time from the deterministic inflow forecast page
+    
+    Arguments:
+        cnrfc_id (str): the 5-character CNRFC forecast location code
+        first_ordinate (bool): flag for whether to extract first forecast timestep
+    Returns:
+        (tuple): tuple of forecast issuance time, next issuance time (as datetimes) and plot_type (None)
     """
+    issue_time, next_issue_time, plot_type = None, None, None
     
     # request page with CNRFC credentials and parse HTML content
-    url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_tabular.php?id={0}'.format(cnrfc_id)
+    url = 'https://www.cnrfc.noaa.gov/graphicalRVF_tabular.php?id={0}'.format(cnrfc_id)
     soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
@@ -221,6 +237,15 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
 
     The csv is directly available at 
     https://www.cnrfc.noaa.gov/csv/XXXC1_hefs_csv_XXXXX.csv
+
+    Arguments:
+        cnrfc_id (str): the 5-character CNRFC forecast location code
+        duration (str): forecast data timestep (hourly or daily)
+        acre_feet (bool): flag to convert flows to volumes
+        pdf_convert (bool): flag to convert from UTC/GMT to Pacific timezone
+        as_pdt (bool): flag to parse datetimes assuming Pacific timezone (no conversion from UTC)
+    Returns:
+        (dict): dictionary with data (dataframe) entry and info metadata dict
     """
 
     # default ensemble forecast units    
@@ -269,6 +294,16 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
 
     download seasonal outlook for the watershed as zipped file, unzip...
 
+    Arguments:
+        watershed (str): the forecast group identifier
+        duration (str): forecast data timestep (hourly or daily)
+        date_string (str): the forecast issuance date as a YYYYMMDDHH formatted string
+        acre_feet (bool): flag to convert flows to volumes
+        pdf_convert (bool): flag to convert from UTC/GMT to Pacific timezone
+        as_pdt (bool): flag to parse datetimes assuming Pacific timezone (no conversion from UTC)
+        cnrfc_id (str): the 5-character CNRFC forecast location code
+    Returns:
+        (dict): dictionary with data (dataframe) entry and info metadata dict
     """
     units = 'kcfs'
 
