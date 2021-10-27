@@ -54,8 +54,10 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
                          skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 16], 
                          na_values=['<i>Missing</i>', 'Missing'])
     
-    # clean columns
+    # clean columns and fix spelling in source
     df.columns = clean_fixed_width_headers(df.columns)
+    df.rename({x: x.replace('Foreacst', 'Forecast').replace('Foreacast', 'Forecast') 
+               for x in df.columns}, axis=1, inplace=True)
 
     # clean missing data rows
     df.dropna(subset=['Date (mm/dd/YYYY)'], inplace=True)
@@ -89,9 +91,16 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
     cnrfc_id:  CNRFC station id (5 letter id) (e.g. FOLC1)
     convert CSV data to DataFrame, separating historical from forecast inflow series
     """
-
-    # get forecast file from csv url
+    # default deterministic URL and index name
     url = 'https://www.cnrfc.noaa.gov/graphicalRVF_csv.php?id={0}'.format(cnrfc_id)
+    date_column_header = 'Date/Time (Pacific Time)'
+
+    # use restricted site url for certain forecast locations
+    if cnrfc_id in RESTRICTED:
+        url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id={0}'.format(cnrfc_id)
+        date_column_header = 'ArrayDate/Time (Pacific Time)'
+    
+    # get forecast file from csv url
     csvdata = _get_forecast_csv(url)
 
     # read historical and forecast series from CSV
@@ -100,10 +109,10 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
                      parse_dates=True,
                      index_col=0,
                      float_precision='high',
-                     dtype={'Date/Time (Pacific Time)': str, 
+                     dtype={date_column_header: str, 
                             'Flow (CFS)': float, 
                             'Trend': str})
-        
+
     # add timezone info
     df.index.name = 'PDT/PST'
     
@@ -208,7 +217,7 @@ def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False):
     issue_time, next_issue_time, plot_type = None, None, None
     
     # request page with CNRFC credentials and parse HTML content
-    url = 'https://www.cnrfc.noaa.gov/graphicalRVF_tabular.php?id={0}'.format(cnrfc_id)
+    url = 'https://www.cnrfc.noaa.gov/{1}graphicalRVF_tabular.php?id={0}'.format(cnrfc_id, 'restricted/' if cnrfc_id in RESTRICTED else '')
     soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
@@ -328,8 +337,7 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     # filter watershed for single forecast point ensemble
     if cnrfc_id is not None:
         columns = [x for x in df.columns if cnrfc_id in x]
-    else:
-        columns = df.columns
+        df = df[columns]
     
     # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
     df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)

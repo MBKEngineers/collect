@@ -98,3 +98,24 @@ ALL = sorted(set(KLAMATH_GAGES +
                  EASTSIERRA_GAGES + 
                  HUMBOLDT_GAGES))
 
+RESTRICTED = ['ADOC1', 'ALRC1', 'ANDC1', 'ANOC1', 'ANTC1', 
+              'BCAC1', 'BCKC1', 'BHNC1', 'BLBC1', 'BNCC1', 
+              'BPRC1', 'BWKC1', 'CADC1', 'CCHC1', 'CEGC1', 
+              'CFWC1', 'CHVC1', 'CKEC1', 'CMPC1', 'COYC1', 
+              'CSKC1', 'CVQC1', 'DMCC1', 'DNRC1', 'DVGN2', 
+              'DVGN2', 'DVSC1', 'EFBC1', 'ELPC1', 'EPRC1', 
+              'EXQC1', 'FHDC1', 'FMDC1', 'FOCC1', 'FOLC1', 
+              'FRAC1', 'FRGC1', 'GERO3', 'GUAC1', 'HAWC1', 
+              'HETC1', 'HIDC1', 'HLEC1', 'HLLC1', 'HSAC1', 
+              'ICHC1', 'ILAC1', 'INVC1', 'IRGC1', 'ISAC1', 
+              'JKRC1', 'KKVC1', 'KLAO3', 'KNBC1', 'KTRC1', 
+              'LAMC1', 'LBDC1', 'LBEC1', 'LEXC1', 'LNRC1', 
+              'LVKC1', 'LWON2', 'MLIC0', 'MPAC1', 'MTSC1', 
+              'MVDC1', 'NACC1', 'NBBC1', 'NDPC1', 'NDVC1', 
+              'NHGC1', 'NMFC1', 'NMSC1', 'NSWC1', 'ORDC1', 
+              'OWCC1', 'PFTC1', 'PLBC1', 'PLLC1', 'PSRC1', 
+              'PYMC1', 'RBBC1', 'ROLC1', 'SACC0', 'SCSC1', 
+              'SGEC1', 'SHDC1', 'SHRC1', 'SNRC1', 'SOVC1', 
+              'SRWC1', 'STPC1', 'SUAC1', 'SVCC1', 'SVIC1', 
+              'SVWC1', 'TAHC1', 'TMDC1', 'TWDC1', 'UNVC1', 
+              'VLKC1', 'VNSC0', 'WFMC1', 'WHSC1', 'WSDC1']
