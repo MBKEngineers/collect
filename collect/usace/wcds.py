@@ -6,6 +6,7 @@ USACE Water Control Data System (WCDS)
 # -*- coding: utf-8 -*-
 import datetime as dt
 import io
+import re
 import pandas as pd
 import requests
 from collect.utils import get_water_year
@@ -29,7 +30,7 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
 
     # Read url data
-    response=requests.get(url, verify=False).content
+    response = requests.get(url, verify=False).content
     df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values=['-', 'M'])
 
     # Check that user chosen water year is within range with data
@@ -53,11 +54,13 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     df.set_index('ISO 8601 Date Time', inplace=True)
     df.index = pd.to_datetime(df.index)
 
-    return {'data': df, 'info': {'reservoir': reservoir,'water year': water_year, 'interval':interval}}
-
+    return {'data': df, 
+            'info': {'reservoir': reservoir,
+                     'water year': water_year, 
+                     'interval':interval}}
 
     
-def get_wcds_data(reservoir, start_time, end_time, interval='d'): #trim this to start and end
+def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True): #trim this to start and end
     """
     Scrape water year operations data from reservoir page on USACE-SPK's WCDS.
     
@@ -69,9 +72,11 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d'): #trim this to 
     Returns:
         result (dict): query result dictionary with data and info keys
     """
-
     # Check that user chosen water year is within range with data
     earliest_time = dt.datetime.strptime('1994-10-01', '%Y-%m-%d')
+
+    if start_time.tzinfo._tzname in ['US/Pacific', 'PST', 'PDT']:
+        earliest_time = start_time.tzinfo.localize(earliest_time)
 
     if start_time < earliest_time:
         print(f'No data for selected start date. Earliest possible start date selected instead: {earliest_time}')
@@ -85,15 +90,24 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d'): #trim this to 
     df = pd.concat(frames)
     df.index.name = 'ISO 8601 Date Time'
 
-    return {'data': df, 'info': {'reservoir': reservoir, 
-                                 'interval': interval, 
-                                 'notes': 'daily data value occurs on midnight of entry date'}}
+    # strip units from column headers
+    if clean_column_headers:
+        df.rename(_cleaned_columns_map(df.columns), axis=1, inplace=True)
+
+    # return timeseries data and record metadata
+    return {'data': df, 
+            'info': {'reservoir': reservoir, 
+                     'interval': interval, 
+                     'notes': 'daily data value occurs on midnight of entry date'}}
 
 
 def get_wcds_reservoirs():
     """
     Corps and Section 7 Projects in California
     http://www.spk-wc.usace.army.mil/plots/california.html
+
+    Returns:
+        (pandas.DataFrame): dataframe containing table of WCDS reservoirs
     """
     csv_data = StringIO("""Region|River Basin|Agency|Project|WCDS_ID|Hourly Data|Daily Data
                             Sacramento Valley|Sacramento River|USBR|Shasta Dam & Lake Shasta|SHA|False|True
@@ -134,9 +148,14 @@ def get_wcds_reservoirs():
     return pd.read_csv(csv_data, header=0, delimiter='|', index_col='WCDS_ID')
 
 
-
-
-
-
-
-
+def _cleaned_columns_map(columns):
+    """
+    strips units and parentheses from WCDS column headers, since reservoir columns headers are not consistent
+    
+    Arguments:
+        columns (list, array, pandas.Index, tuple): iterable of column headers
+    Returns:
+        (dict): map of original column names to simplified column names
+    """
+    return {x: re.sub(r'(\(.*\))', '', x).replace('  ', ' ').strip() for x in columns}
+    
