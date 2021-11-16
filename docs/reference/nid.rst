@@ -4,8 +4,6 @@
 
 .. _my-reference-label: nid
 
-collect.nid
-
 .. automodule:: collect.nid
    :members: 
 

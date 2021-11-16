@@ -16,6 +16,7 @@ collect
    cvo
    dwr
    ewrims
+   nid
    noaa
    nrcs
    srwp
