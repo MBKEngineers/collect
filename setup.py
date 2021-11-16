@@ -24,4 +24,6 @@ setuptools.setup(name='collect',
                                    'selenium==3.8.0'],
                  extras_require={'figures': 'matplotlib==3.1.1'},
                  zip_safe=False,
-                 include_package_data=False)
+                 include_package_data=False,
+                 scripts=['bin/collect-start'],
+                )

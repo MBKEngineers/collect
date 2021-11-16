@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import argparse
+import os
+import pathlib
+
+
+# define the path to collect modules
+module_dir = pathlib.Path(__file__).absolute().parent.parent.joinpath('collect')
+
+# parse module_name
+parser = argparse.ArgumentParser(description='Add some integers.')
+parser.add_argument('module_name', metavar='name', type=str, nargs=1,
+                    default='template', help='new collect module name')
+args = parser.parse_args()
+
+name = args.module_name[0]
+docs_module_path = module_dir.parent.joinpath('docs', 'reference', f'{name}.rst')
+docs_index_path = module_dir.parent.joinpath('docs', 'reference', 'index.rst')
+library_init_path = module_dir.joinpath('__init__.py')
+module_init_path = module_dir.joinpath(name, '__init__.py')
+module_main_path = module_dir.joinpath(name, f'{name}.py')
+
+# create the module folder
+os.makedirs(module_dir.joinpath(name))
+
+# create the __init__.py from template
+with open (module_init_path, 'w') as f:
+    f.writelines('\n'.join([
+        '"""',
+        f'collect.{name}',
+        '============================================================',
+        f'access {name} data',
+        '"""',
+        '# -*- coding: utf-8 -*-',
+        '',
+        f'from .{name} import *',
+    ]))
+
+# create the main module content from template
+with open (module_main_path, 'w') as f:
+    f.write('\n'.join([
+        '"""',
+        f'collect.{name}.{name}',
+        '============================================================',
+        f'access {name} data',
+        '"""',
+        '# -*- coding: utf-8 -*-',
+        'import datetime as dt',
+        'import io',
+        'import re',
+        '',
+        'import requests',
+        'import pandas as pd',
+        'from bs4 import BeautifulSoup',
+        '',
+        '',
+        'def get_sites():',
+        '    """',
+        '    returns list of included sites',
+        '    Returns:',
+        '        sites (dict): dictionary of site IDs and titles',
+        '    """',
+        '',
+        '    # define or scrape list of relevant sites/stations',
+        '',
+        '    return sites',
+        '',
+        '',
+        'def get_station_url(site, interval, *args, **kwargs):',
+        '    """',
+        '    Arguments:',
+        '        site (str): the site identifier',
+        '        interval (str): data interval, one of daily or hourly',
+        '    Returns:',
+        '        url (str): the url for request',
+        '    """',
+        '',
+        '    # construct the station url',
+        '',
+        '    return url',
+        '',
+        '',
+        'def get_data(site, interval, *args, **kwargs):',
+        '    """',
+        '    returns a dictionary containing data and metadata for specified station',
+        '    Arguments:',
+        '        site (str): the site identifier',
+        '        interval (str): the data interval or duration',
+        '    Returns:',
+        '        result (dict): dictionary of data and info for each site',
+        '    """',
+        '    url = get_station_url(site, interval)',
+        '    response = requests.get(url).text',
+        '',
+        '    # parse reponse and create date-indexed dataframe',
+        '',
+        '    # return the dataset',
+        '    return {\'info\': {\'site\': site,',
+        '                     \'description\': \'\',',
+        '                     \'url\': url,',
+        '                     \'metric\': metric, ',
+        '                     \'timeseries_type\': \'\',',
+        '                     \'timeseries_units\': \'\'},',
+        '            \'data\': df}',
+        '',
+        '',
+        'def get_station_meta(site, *args, **kwargs):',
+        '    """',
+        '    Arguments:',
+        '        url (str): the site identifier',
+        '    Returns:',
+        f'        result (dict): meta data for the {name} station/site/gage',
+        '    """',
+        '    return {}',
+        ''
+    ]))
+
+# create the documentation template file for module
+with open (docs_module_path, 'w') as f:
+    f.writelines('\n'.join([
+        f'.. collect.{name} documentation file', 
+        '',
+        f'.. title: {name}', 
+        '',
+        f'.. _my-reference-label: {name}', 
+        '',
+        f'.. automodule:: collect.{name}', 
+        '   :members: ',
+        '',
+           f'.. automodule:: collect.{name}.{name}', 
+        '      :members:',
+        ]))
+
+with open (docs_index_path, 'a') as f:
+    f.write(f'\n   {name}')
+
+# update the root module with additional module name
+import collect
+modules = sorted({name, *collect.__all__})
+modules_formatted = ', '.join(modules)
+with open (library_init_path, 'w') as f:
+    f.write('\n'.join([
+        '"""',
+        'collect',
+        '============================================================',
+        'The core module of MBK Engineers\' data collection tools',
+        '"""',
+        '# -*- coding: utf-8 -*-', 
+        f'__all__ = {str(modules)}',
+        '__author__ = \'MBK Engineers\'',
+        '__docs__ = \'collect: webscrapers for water resources\'',
+        '', 
+        f'from . import {modules_formatted}',
+        ''
+    ]))
