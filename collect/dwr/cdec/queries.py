@@ -329,7 +329,7 @@ def get_reservoir_metadata(station):
     # tables
     tables = soup.find_all('table')
     site_info.update(_parse_station_generic_table(tables[0]))
-    site_info.update('monthly_averages': _parse_station_generic_table(tables[-1]))
+    site_info.update({'monthly_averages': _parse_station_generic_table(tables[-1])})
 
     return {'reservoir': site_info}
 
