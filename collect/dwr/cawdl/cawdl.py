@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup
 import pandas
 import requests
 import re
-import urllib
 import os
 
 
@@ -88,7 +87,7 @@ def get_cawdl_surface_water_por(site_id, variable, interval=None):
     """
     Download full POR timeseries from CAWDL database
 
-    Arguements:
+    Arguments:
         site_id (str): string representing cawdl site id; ie 'B94100'
         water_year (int): integer representing water year to collect data from
         variable (str): measurement description; ie 'STAGE' or 'FLOW' or 'CONDUCTIVITY' or 'WATER_TEMPERATURE'
@@ -102,7 +101,7 @@ def get_cawdl_surface_water_site_report(site_id):
     """
     Download site report from CAWDL database
 
-    Arguements:
+    Arguments:
         site_id (str): string representing cawdl site id; ie 'B94100'
     Returns:
         dictionary: 'info' key with text from CAWDL site report
@@ -112,7 +111,7 @@ def get_cawdl_surface_water_site_report(site_id):
 
     # parse HTML file structure; extract station/well metadata
     site_info = {}
-    file = urllib.request.urlopen(report_url)
+    file = requests.get(report_url)
 
     site_info['available series'] = []
     start_index = 9999
@@ -137,7 +136,7 @@ def get_cawdl_surface_water_site_report(site_id):
 
                 if i > start_index:
                     series = decoded_line.split('  ')[0]
-                    if decoded_line is not '':
+                    if decoded_line != '':
                         site_info['available series'].append(series)
 
             except UnicodeDecodeError:
