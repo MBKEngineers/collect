@@ -34,9 +34,9 @@ import datetime as dt
 import io
 import re
 
-import requests
-import pandas as pd
 from bs4 import BeautifulSoup
+import pandas as pd
+import requests
 
 
 def get_sites():
@@ -64,7 +64,7 @@ def get_issue_date():
     return dt.datetime.strptime(df.iloc[0, 1], 'Run on %Y/%m/%d %H:%M:%S')
 
 
-def get_site_links(site):
+def get_site_files(site):
     """
     Arguments:
         site (str): the site id
@@ -90,7 +90,7 @@ def get_site_metric(site, interval='daily'):
     search_pattern = r'usday_daily_(.*?)\.txt' if interval == 'daily' else r'csv_(.*?)\.csv'
 
     # loop through available links to determine product matching interval
-    for link in get_site_links(site):
+    for link in get_site_files(site):
         matches = re.search(search_pattern, link)
         if matches is not None:
             return matches.group(1)
@@ -145,6 +145,7 @@ def get_daily_data(site, json_compatible=False):
         data = pd.read_fwf(io.StringIO(re.split(r'\nTotal', table)[0]), 
                            header=0, 
                            skiprows=[1], 
+                           nrows=36,
                            na_values=['------', 'NaN', '']).dropna(how='all')
 
         # convert from monthly table to water-year series
@@ -186,10 +187,10 @@ def get_daily_meta(url=None, content=None):
         result (dict): meta data from the content above the daily fixed-width data table
     """
     if url:
-        data = [re.sub(r'\s{2,}|:\s+', '|', x.strip()).split('|') 
+        data = [re.sub(r'\s{2,}|:\s+|:', '|', x.strip()).split('|') 
                 for x in requests.get(url).text.splitlines()[:10]]
     elif content:
-        data = [re.sub(r'\s{2,}|:\s+', '|', x.strip()).split('|') 
+        data = [re.sub(r'\s{2,}|:\s+|:', '|', x.strip()).split('|') 
                 for x in content.splitlines()]
 
     result = {'district': data[0][0], 'version': data[0][1], 'report_stamp': data[0][2]}
@@ -213,7 +214,7 @@ def get_hourly_data(site, json_compatible=False):
     """
     metric = get_site_metric(site, interval='hourly')
     url = get_station_url(site, metric=metric, interval='hourly')
-    df = pd.read_csv(url, header=1, na_values=[' ""', 'nan', ''])
+    df = pd.read_csv(url, header=1, na_values=[' ""', 'nan', '', ' '])
 
     # clean up extra spaces in column names
     df.columns = df.columns.map(lambda x: x.strip())
