@@ -219,7 +219,7 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
     raw = get_station_data(station, start, end, sensors=[sensor], duration=duration)
 
     if bool(sensor) and bool(duration):
-        df = raw.loc[raw['SENSOR_NUMBER']==sensor].loc[df['DURATION']==duration]
+        df = raw.loc[raw['SENSOR_NUMBER']==sensor].loc[raw['DURATION']==duration]
     elif bool(sensor):
         df = raw.loc[raw['SENSOR_TYPE']==sensor]
     else:
@@ -319,7 +319,18 @@ def get_reservoir_metadata(station):
         info (dict): the CDEC station metadata, stored as key, value pairs
     """
     url = 'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=res'.format(station=station)
-    site_info = {}
+    
+    # request dam info page
+    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+
+    # initialize the result dictionary
+    site_info = {'title':  soup.find('h1').text}
+    
+    # tables
+    tables = soup.find_all('table')
+    site_info.update(_parse_station_generic_table(tables[0]))
+    site_info.update({'monthly_averages': _parse_station_generic_table(tables[-1])})
+
     return {'reservoir': site_info}
 
 
