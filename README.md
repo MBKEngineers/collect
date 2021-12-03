@@ -58,3 +58,8 @@ If pip3 comes packaged with your Python installation, another option is to use t
 
 ### Namespace
 Note, there is one other Python package on PyPi named  `collect`.  However, it is not maintained and is dated 2011, so not expecting MBK codebase to use that tool.
+
+### Adding new modules
+`collect` now includes a command line interface for starting a new module called `collect-start`. Initialize a new module from a template with
+```$ collect-start modulename
+```
