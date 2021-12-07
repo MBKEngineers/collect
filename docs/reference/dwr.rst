@@ -13,7 +13,7 @@
    .. automodule:: collect.dwr.casgem
       :members:
 
-   .. automodule:: collect.dwr.cawdl
+   .. automodule:: collect.dwr.cawdl.cawdl
       :members:
 
    .. automodule:: collect.dwr.cdec
