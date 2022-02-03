@@ -89,6 +89,10 @@ def get_data(station_id, sensor, start_time, end_time, interval='instantaneous')
     return {'data': frame, 'info': info}
 
 
+def get_usgs_data(station_id, sensor, start_time, end_time, interval='instantaneous'):
+    return get_data(station_id, sensor, start_time, end_time, interval=interval)
+
+
 def get_peak_streamflow(station_id):
     """
     Download annual peak timeseries data from USGS database; return as dataframe
