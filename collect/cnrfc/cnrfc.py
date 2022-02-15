@@ -41,7 +41,7 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
 
     url = '?'.join(['https://www.cnrfc.noaa.gov/ensembleProductTabular.php', 
                     'id={}&prodID=7&year={}'.format(cnrfc_id, water_year)])
-   
+
     # retrieve from public CNRFC webpage
     result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml').find('pre').text.replace('#', '')
 
@@ -51,15 +51,16 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
         # parse fixed-width text-formatted table
         df = pd.read_fwf(buf, 
                          header=[1, 2, 3, 4, 5], 
-                         skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 16], 
+                         # skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 16], 
+                         skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 16],
                          na_values=['<i>Missing</i>', 'Missing'])
-    
+
     # clean columns and fix spelling in source
     df.columns = clean_fixed_width_headers(df.columns)
     df.rename({x: x.replace('Foreacst', 'Forecast').replace('Foreacast', 'Forecast') 
                for x in df.columns}, axis=1, inplace=True)
 
-    # clean missing data rows
+    # clean missing data rows   
     df.dropna(subset=['Date (mm/dd/YYYY)'], inplace=True)
     df.drop(df.last_valid_index(), axis=0, inplace=True)
 
@@ -83,21 +84,32 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
+def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=False):
     """
     Adapted from SAFCA portal project
     ---
-    reads the url and returns a pandas dataframe from a file or the cnrfc url
+    reads the url and returns a pandas dataframe from a file or the CNRFC url
     cnrfc_id:  CNRFC station id (5 letter id) (e.g. FOLC1)
     convert CSV data to DataFrame, separating historical from forecast inflow series
+
+    Arguments:
+        cnrfc_id (str): the forecast location ID
+        truncate_historical (bool): flag for whether to trim historical timeseries from record
+        release (bool): flag for whether to query deterministic release forecast
+    Returns:
+        (dict): dictionary result with dataframe containing forecast data and additional metadata
     """
+    # forecast type
+    forecast_type = 'Release' if release else 'RVF'
+    flow_prefix = 'Release ' if release else ''
+
     # default deterministic URL and index name
-    url = 'https://www.cnrfc.noaa.gov/graphicalRVF_csv.php?id={0}'.format(cnrfc_id)
+    url = 'https://www.cnrfc.noaa.gov/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
     date_column_header = 'Date/Time (Pacific Time)'
 
     # use restricted site url for certain forecast locations
     if cnrfc_id in RESTRICTED:
-        url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id={0}'.format(cnrfc_id)
+        url = 'https://www.cnrfc.noaa.gov/restricted/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
         date_column_header = 'ArrayDate/Time (Pacific Time)'
     
     # get forecast file from csv url
@@ -110,17 +122,17 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
                      index_col=0,
                      float_precision='high',
                      dtype={date_column_header: str, 
-                            'Flow (CFS)': float, 
+                            f'{flow_prefix}Flow (CFS)': float, 
                             'Trend': str})
 
     # add timezone info
     df.index.name = 'PDT/PST'
     
     # Trend value is null for first historical and first forecast entry; select forecast entry
-    first_ordinate = df.where(df['Trend'].isnull()).dropna(subset=['Flow (CFS)']).last_valid_index()
+    first_ordinate = df.where(df['Trend'].isnull()).dropna(subset=[f'{flow_prefix}Flow (CFS)']).last_valid_index()
 
     # deterministic forecast inflow series
-    df['forecast'] = df.loc[(df.index >= first_ordinate), 'Flow (CFS)']
+    df['forecast'] = df.loc[(df.index >= first_ordinate), f'{flow_prefix}Flow (CFS)']
 
     # optional limit for start of historical data (2 days before start of forecast)
     if truncate_historical:
@@ -130,13 +142,13 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
         mask = True
 
     # historical inflow series
-    df['historical'] = df.loc[(df['forecast'].isnull()) & mask]['Flow (CFS)']
+    df['historical'] = df.loc[(df['forecast'].isnull()) & mask][f'{flow_prefix}Flow (CFS)']
 
     # additional issuance, plot-type information
     time_issued, next_issue_time, title, plot_type = get_forecast_meta_deterministic(cnrfc_id)
 
     return {'data': df, 'info': {'url': url,
-                                 'type': 'Deterministic Forecast',
+                                 'type': f'Deterministic {flow_prefix}Forecast',
                                  'title': title,
                                  'plot_type': plot_type,                                 
                                  'first_ordinate': first_ordinate.strftime('%Y-%m-%d %H:%M'),
@@ -204,20 +216,24 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False):
+def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=False):
     """
     Get issuance time from the deterministic inflow forecast page
     
     Arguments:
         cnrfc_id (str): the 5-character CNRFC forecast location code
         first_ordinate (bool): flag for whether to extract first forecast timestep
+        release (bool): flag for whether to query deterministic release forecast
     Returns:
         (tuple): tuple of forecast issuance time, next issuance time (as datetimes) and plot_type (None)
     """
+    # defaults
     issue_time, next_issue_time, plot_type = None, None, None
-    
+
     # request page with CNRFC credentials and parse HTML content
-    url = 'https://www.cnrfc.noaa.gov/{1}graphicalRVF_tabular.php?id={0}'.format(cnrfc_id, 'restricted/' if cnrfc_id in RESTRICTED else '')
+    url = 'https://www.cnrfc.noaa.gov/{1}graphical{2}_tabular.php?id={0}'.format(cnrfc_id, 
+                                                                        'restricted/' if cnrfc_id in RESTRICTED else '',
+                                                                        'Release' if release else 'RVF')
     soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
