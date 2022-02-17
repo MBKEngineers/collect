@@ -59,9 +59,10 @@ def get_water_year_data(reservoir, water_year, interval='d'):
                      'water year': water_year, 
                      'interval':interval}}
 
-    
-def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True): #trim this to start and end
+
+def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True):
     """
+    TODO:  trim this to start and end
     Scrape water year operations data from reservoir page on USACE-SPK's WCDS.
     
     Arguments:
@@ -75,7 +76,7 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_he
     # Check that user chosen water year is within range with data
     earliest_time = dt.datetime.strptime('1994-10-01', '%Y-%m-%d')
 
-    if start_time.tzinfo._tzname in ['US/Pacific', 'PST', 'PDT']:
+    if start_time.tzname() in ['US/Pacific', 'PST', 'PDT']:
         earliest_time = start_time.tzinfo.localize(earliest_time)
 
     if start_time < earliest_time:
@@ -146,6 +147,21 @@ def get_wcds_reservoirs():
                             Truckee River Basin|LittleTruckee River|USBR|Stampede Dam & Reservoir|STP|False|True
                             Truckee River Basin|LittleTruckee River|USBR|Boca Dam & Reservoir|BOC|False|True""")
     return pd.read_csv(csv_data, header=0, delimiter='|', index_col='WCDS_ID')
+
+
+def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True):
+    """
+    alias for wcds.get_data function, to support backwards compatibility
+
+    Arguments:
+        reservoir (str): three-letter reservoir code
+        start_time (datetime.datetime): query start datetime
+        end_time (datetime.datetime): query end datetime
+        interval (str): data interval
+    Returns:
+        result (dict): query result dictionary with data and info keys
+    """
+    return get_data(reservoir, start_time, end_time, interval=interval, clean_column_headers=clean_column_headers)
 
 
 def _cleaned_columns_map(columns):
