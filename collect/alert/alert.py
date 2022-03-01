@@ -32,39 +32,39 @@ def get_stations(as_dataframe=True, datatype='stream'):
     """
     main_alert_page = 'http://www.sacflood.org/home.php'
     if datatype == 'stream':
-        sites_url = 'http://www.sacflood.org/level.php?&view_id=1&group_type_id=19&grouping_id='
-    else: 
-        sites_url = 'http://www.sacflood.org/rain.php?&view_id=1&group_type_id=14&grouping_id='
+        measure = 'level'
+        group_type_id = 19
+    elif datatype == 'rain':
+        measure = 'rain'
+        group_type_id = 14
+
+    sites_url = f'http://www.sacflood.org/{measure}.php?&view_id=1&group_type_id={group_type_id}&grouping_id='
+    # https://www.sacflood.org/list/
+
     cj = CookieJar()
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-    main_response = opener.open(main_alert_page)
+    # main_response = opener.open(main_alert_page)
     sites_response = opener.open(sites_url)
     sites_text = sites_response.read()
-    soup_sites = BeautifulSoup(sites_text,'lxml')
-    stable = soup_sites.find('table')
-    tbl = pd.read_html(str(stable))
-    sites_df = tbl[0]
+    soup_sites = BeautifulSoup(sites_text, 'lxml')
+
+    sites_df = pd.read_html(str(soup_sites.find('table')))[0]
+
     # strip whitespace from columns
-    col_names_list = []
-    for col in sites_df.columns:
-        strip_col_name = col.strip()
-        col_names_list.append(strip_col_name)
-    sites_df.columns = col_names_list
-    remove_funky_ascii_text = lambda x: x[:-1]
-    for fcol in sites_df.columns:
-        first_entry = sites_df[fcol][0]
-        if isinstance(first_entry,str) or isinstance(first_entry,unicode):
-            funky = test_for_printable_chars(first_entry)
-            if not funky:
-                sites_df[fcol] = sites_df[fcol].apply(remove_funky_ascii_text)
+    sites_df.columns = [x.strip() for x in sites_df.columns]
+
+    for x in sites_df.columns:
+        first_entry = sites_df[x][0]
+        if isinstance(first_entry, str):
+            if not all(x in string.printable for x in first_entry):
+                sites_df[x] = sites_df[x].apply(lambda x: x[:-1])
+
+    # return
     if as_dataframe:
         return sites_df
     else:
         sites_dict = sites_df.to_dict()
-
-
-def test_for_printable_chars(test_string):
-    return all(x in string.printable for x in test_string)
+    return sites_dict
 
 
 def strip_timeouts(stations_df):
@@ -86,15 +86,14 @@ def get_station_data(start_datetime, end_datetime, site_sensor, ascending=False,
     Returns:
         station_dictionary (dict): dictionary of station notes and sensor readings
     """
-    if datatype == 'streamgage':
-        datatype = 'stream'
-    if datatype == 'precip':
-        datatype = 'precipitation'
     station_dict = {}
-    dates_correct_order = check_dates_correct_order(start_datetime,end_datetime)
-    if dates_correct_order == False:
-        print('Check start and end dates.  Start date comes after end date.')
+    datatype = {'streamgage': 'stream', 'precip': 'precipitation'}.get(datatype, datatype)
+
+    # check that start/end times are in correct order
+    if end_datetime <= start_datetime:
+        print('Check start and end dates. Start date comes after end date.')
         return None
+
     print('Retrieving data for {0} from {1:%Y-%m-%d} to {2:%Y-%m-%d}'.format(site_sensor, start_datetime, end_datetime))
     if (end_datetime - start_datetime).days >= 365:
         print('This may take a while for long period of records')
@@ -102,12 +101,12 @@ def get_station_data(start_datetime, end_datetime, site_sensor, ascending=False,
         for date_range in new_st_end_dates:
             st_dt = date_range[0]
             end_dt = date_range[1]
-            site_url = build_sacco_alert_url(st_dt,end_dt,site_sensor,datatype=datatype)
+            site_url = build_sacco_alert_url(st_dt,end_dt,site_sensor, datatype=datatype)
             data_exists = check_for_no_data(site_url)
             if data_exists:
-                data_df = download_station_data(st_dt,end_dt,site_url,datatype)
+                data_df = download_station_data(st_dt,end_dt,site_url, datatype)
                 if 'site_notes' not in locals():
-                    site_notes = get_station_notes(site_url,datatype)
+                    site_notes = get_station_notes(site_url, datatype)
             else:
                 print('Data does not exist for url:\n{0}'.format(site_url))
                 break
@@ -123,7 +122,7 @@ def get_station_data(start_datetime, end_datetime, site_sensor, ascending=False,
             data_df = download_station_data(start_datetime, end_datetime, site_url, datatype)
             print('       +got data')
             try:
-                site_notes = get_station_notes(site_url,datatype)
+                site_notes = get_station_notes(site_url, datatype)
                 print('       +got notes')
                 station_dict['notes'] = site_notes
             except:
@@ -239,6 +238,22 @@ def create_end_url_datetime(dt, end_of_day=True):
     return url_dt
 
 
+def get_or_create_stn_attr():
+    filepath = os.path.abspath(os.path.join(__file__ , '..'))
+    stn_attr_pickle_path = os.path.join(filepath, 'sacco_alert_stn_attr.p')
+    try:
+        mod_date = modification_date(stn_attr_pickle_path)
+        if mod_date < dt.datetime.now() - relativedelta(hours=23):
+            station_attributes = get_site_url_attr_quick()
+            pickle.dump(station_attributes, open(stn_attr_pickle_path, 'wb'))    
+        else:
+            station_attributes = pickle.load(open(stn_attr_pickle_path, 'rb'))
+    except OSError:
+        station_attributes = get_site_url_attr_quick()
+        pickle.dump(station_attributes, open(stn_attr_pickle_path, 'wb'))
+    return station_attributes
+
+
 def build_sacco_alert_url(start_datetime, end_datetime, site_sensor, datatype='stream'):
     """
     Sacramento County ALERT stream sensors urls to download data
@@ -250,17 +265,23 @@ def build_sacco_alert_url(start_datetime, end_datetime, site_sensor, datatype='s
     Returns:
         data_url (str): query url
     """
-    if datatype == 'precipitation':
-        site_sensor = site_sensor.split('-')[0]
-    base_url = 'http://www.sacflood.org'
-    site_attr = get_site_url_attr(site_sensor,datatype)
-    st_url_dt = create_st_url_datetime(start_datetime)
-    end_url_dt = create_end_url_datetime(end_datetime)
-    data_url = (base_url + '/sensor.php?time_zone=US%2FPacific&site_id={0}&site={1}&device_id={2}&device={3}&bin=86400&range=Custom+Range'
-                            '&lengend=true&thresholds=true&refresh=&show_raw=true&show_quality=true&data_start={4}&'
-                            'data_end={5}'.format(site_attr['site_id'],site_attr['site'],site_attr['device_id'],
-                                                 site_attr['device'],st_url_dt,end_url_dt))
-    #print data_url
+    site_sensor = site_sensor.split('-')[0] if datatype == 'precipitation' else site_sensor
+    site_attr = get_site_url_attr_quick()[datatype][site_sensor]
+    query_params = ['time_zone=US%2FPacific', 
+                    'site_id={0}'.format(site_attr['site_id']), 
+                    'site={0}'.format(site_attr['site']), 
+                    'device_id={0}'.format(site_attr['device_id']), 
+                    'device={0}'.format(site_attr['device']), 
+                    'bin=86400', 
+                    'range=Custom+Range'
+                    'legend=true',
+                    'thresholds=true',
+                    'refresh=',
+                    'show_raw=true',
+                    'show_quality=true',
+                    'data_start={0}'.format(create_st_url_datetime(start_datetime)),
+                    'data_end={0}'.format(create_end_url_datetime(end_datetime))]
+    data_url = 'http://www.sacflood.org/sensor.php?' + '&'.join(query_params)
     return data_url
 
 
@@ -273,9 +294,9 @@ def split_date_range_increments_lt_1year(start_datetime, end_datetime):
     while another_page == True: 
         new_start = end_dt - dt.timedelta(364)
         if new_start > start_datetime:
-            dates_list.append([new_start,end_dt])
+            dates_list.append([new_start, end_dt])
         else: 
-            dates_list.append([st_dt,end_dt])
+            dates_list.append([st_dt, end_dt])
             another_page = False
         next_end = end_dt - dt.timedelta(365)
         end_dt = next_end
@@ -285,23 +306,6 @@ def split_date_range_increments_lt_1year(start_datetime, end_datetime):
 def modification_date(filename):
     t = os.path.getmtime(filename)
     return dt.datetime.fromtimestamp(t)
-
-
-def get_or_create_stn_attr():
-    yester = dt.datetime.now() - relativedelta(hours=23)
-    taskapp_path =  os.path.abspath(os.path.join(__file__ , '..'))
-    stn_attr_pickle_path = os.path.join(taskapp_path, 'sacco_alert_stn_attr.p')
-    try:
-        mod_date = modification_date(stn_attr_pickle_path)
-        if mod_date < yester:
-            station_attributes = get_site_url_attr_quick()
-            pickle.dump(station_attributes, open(stn_attr_pickle_path, 'wb'))    
-        else:
-            station_attributes = pickle.load(open(stn_attr_pickle_path, 'rb'))
-    except OSError:
-        station_attributes = get_site_url_attr_quick()
-        pickle.dump(station_attributes, open(stn_attr_pickle_path, 'wb'))
-    return station_attributes
 
 
 def get_or_create_lat_lon():
@@ -443,16 +447,10 @@ def get_website_url_links_from_text_label(url, website_text_label=None):
     return desired_links
 
 
-def get_site_url_attr(site_sensor, datatype):
-    station_attributes = get_or_create_stn_attr()
-    return station_attributes[datatype][site_sensor]
-
-
-def check_for_no_data(data_url):
-    web_text = open_url_get_text(data_url)
-    soup_all = BeautifulSoup(web_text,'lxml')
-    # soup = BeautifulSoup(web_text,'lxml',parseOnlyThese=SoupStrainer('div',{'class':'app-alert fade in alert alert-info'}))
-    soup = BeautifulSoup(web_text,'lxml',parse_only=SoupStrainer('div',{'class':'app-alert fade in alert alert-info'}))
+def check_for_no_data(data_url): 
+    soup = BeautifulSoup(open_url_get_text(data_url), 
+                         'lxml', 
+                         parse_only=SoupStrainer('div', {'class': 'app-alert fade in alert alert-info'}))
     if 'No data' in soup.text:
         return False
     else:
@@ -460,42 +458,35 @@ def check_for_no_data(data_url):
 
 
 def open_url_get_text(data_url): 
-    main_alert_page = 'http://www.sacflood.org/home.php' 
+    main_alert_page = 'http://www.sacflood.org/home.php'
     cj = CookieJar()
     opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-    main_response = opener.open(main_alert_page)
+    # main_response = opener.open(main_alert_page)
     data_response = opener.open(data_url)
-    web_text = data_response.read()
-    return web_text
+    return data_response.read()
 
 
 def get_station_notes(data_url, datatype):
     notes_dict = {}
     web_text = open_url_get_text(data_url)
-    soup_all = BeautifulSoup(web_text,'lxml')
+    
     if datatype == 'stream':
-        # soup = BeautifulSoup(web_text,'lxml',parseOnlyThese=SoupStrainer('p',{'class':'list-group-item-text'}))
-        soup = BeautifulSoup(web_text,'lxml',parse_only=SoupStrainer('p',{'class':'list-group-item-text'}))
-        note_headers_soup = soup.findAll('strong')
-        for nh in note_headers_soup:
+        soup = BeautifulSoup(web_text, 
+                             'lxml', 
+                             parse_only=SoupStrainer('p', {'class': 'list-group-item-text'}))
+        for nh in soup.findAll('strong'):
             header = nh.text
             header_note_raw = nh.nextSibling
             header_note = header_note_raw.split('&nbsp;')[-1]
             notes_dict[header] = header_note
     else:
-        stable = soup_all.find('table')
-        tbl = pd.read_html(str(stable),header=1,index_col=0)
-        notes_df = tbl[0]
+        soup_all = BeautifulSoup(web_text, 'lxml')
+        notes_df = pd.read_html(str(soup_all.find('table')),header=1,index_col=0)[0]
         notes_dict['precip_freq_est_inches'] = notes_df
     return notes_dict
-    
 
-def check_dates_correct_order(start_datetime, end_datetime):
-    if start_datetime >= end_datetime:
-        dates_correct_order = False
-    else:
-        dates_correct_order = True
-    return dates_correct_order
+
+
 
 
 if __name__ == '__main__':
