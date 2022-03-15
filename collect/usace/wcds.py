@@ -25,6 +25,8 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     Returns:
         result (dict): query result dictionary with 'data' and 'info' keys
     """
+    # reservoir code is case-sensitive
+    reservoir = reservoir.lower()
 
     # USACE-SPK Folsom page
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
@@ -73,6 +75,9 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
     Returns:
         result (dict): query result dictionary with data and info keys
     """
+    # reservoir code is case-sensitive
+    reservoir = reservoir.lower()
+
     # Check that user chosen water year is within range with data
     earliest_time = dt.datetime.strptime('1994-10-01', '%Y-%m-%d')
 
@@ -161,7 +166,7 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_he
     Returns:
         result (dict): query result dictionary with data and info keys
     """
-    return get_data(reservoir, start_time, end_time, interval=interval, clean_column_headers=clean_column_headers)
+    return get_data(reservoir.lower(), start_time, end_time, interval=interval, clean_column_headers=clean_column_headers)
 
 
 def _cleaned_columns_map(columns):
