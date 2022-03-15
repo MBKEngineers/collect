@@ -92,6 +92,10 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     cnrfc_id:  CNRFC station id (5 letter id) (e.g. FOLC1)
     convert CSV data to DataFrame, separating historical from forecast inflow series
 
+    Note: as of March 2022, deterministic forecasts retrieved with the graphicalRVF or
+          graphicalRelease URLs return CSVs of 3 different formats with headers that 
+          may also include stage information
+
     Arguments:
         cnrfc_id (str): the forecast location ID
         truncate_historical (bool): flag for whether to trim historical timeseries from record
@@ -105,13 +109,23 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
 
     # default deterministic URL and index name
     url = 'https://www.cnrfc.noaa.gov/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
-    date_column_header = 'Date/Time (Pacific Time)'
+    date_column_header = 'Valid Date/Time (Pacific)'
+    specified_dtypes = {date_column_header: str, 
+                        'Stage (Feet)': float,
+                        f'{flow_prefix}Flow (CFS)': float, 
+                        'Trend': str,
+                        'Issuance Date/Time (Pacific)': str,
+                        'Threshold Exceedance Status': str,
+                        'Observed/Forecast': str}
 
     # use restricted site url for certain forecast locations
     if cnrfc_id in RESTRICTED:
         url = 'https://www.cnrfc.noaa.gov/restricted/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
         date_column_header = 'ArrayDate/Time (Pacific Time)'
-    
+        specified_dtypes = {date_column_header: str, 
+                            f'{flow_prefix}Flow (CFS)': float, 
+                            'Trend': str}
+
     # get forecast file from csv url
     csvdata = _get_forecast_csv(url)
 
@@ -119,15 +133,15 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     df = pd.read_csv(csvdata, 
                      header=0, 
                      parse_dates=True,
-                     index_col=0,
                      float_precision='high',
-                     dtype={date_column_header: str, 
-                            f'{flow_prefix}Flow (CFS)': float, 
-                            'Trend': str})
+                     dtype=specified_dtypes)
+
+    df.set_index(date_column_header, inplace=True)
+    df.index = pd.to_datetime(df.index)
 
     # add timezone info
     df.index.name = 'PDT/PST'
-    
+
     # Trend value is null for first historical and first forecast entry; select forecast entry
     first_ordinate = df.where(df['Trend'].isnull()).dropna(subset=[f'{flow_prefix}Flow (CFS)']).last_valid_index()
 
@@ -688,9 +702,20 @@ def _get_cnrfc_restricted_content(url):
 
 
 def _get_forecast_csv(url):
+    """
 
+    Arguments:
+        url (str): the URL address for the specified forecast product
+    Returns:
+        csvdata (io.BytesIO): the forecast data as in-memory CSV
+    """
     # data source
     filename = url.split('/')[-1]
+
+    # check for credentials
+    if not os.getenv('CNRFC_USER'):
+        raise NotImplementedError(''.join(['Must specify CNRFC_USER and CNRFC_PASSWORD environment',
+                                           ' variables for access to restricted site.']))
 
     # cnrfc authorization header
     basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
