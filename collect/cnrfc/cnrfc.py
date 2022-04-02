@@ -224,7 +224,7 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
 
     return {'data': df, 'info': {'url': url, 
                                  'type': 'Deterministic Forecast', 
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
                                  'watershed': watershed, 
                                  'units': units,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
@@ -295,7 +295,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     
     # get issue time of most recent hourly inflow forecast (no support for daily yet)
     date_string = _default_date_string(None)
-    # time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
+    time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
 
     # forecast data url
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_hefs_csv_{1}.csv'.format(cnrfc_id, duration)
@@ -319,7 +319,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     return {'data': df, 'info': {'url': url, 
                                  'watershed': get_watershed(cnrfc_id), 
                                  'type': '{0} Ensemble Forecast'.format(duration.title()),
-                                 # 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
                                  'duration': duration,
@@ -373,11 +373,11 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
 
     # get date/time stamp from ensemble download page
-    # time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
+    time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
     
     return {'data': df, 'info': {'url': url, 
                                  'watershed': watershed, 
-                                 # 'issue_time': time_issued,
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
                                  'duration': duration,
@@ -413,8 +413,9 @@ def get_watershed_forecast_issue_time(duration, watershed, date_string=None, det
         if file_name.format(date_string, watershed, duration) in td.text:
             issue_time = parser.parse(td.next_sibling.text).astimezone(PACIFIC)
             return issue_time
-    else:
-        raise ValueError('No valid issue time for URL.')
+
+    return None
+    # raise ValueError('No valid issue time for URL.')
 
 
 def get_watershed(cnrfc_id):
