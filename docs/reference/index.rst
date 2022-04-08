@@ -13,13 +13,8 @@ collect
    
    alert
    cnrfc
-   cvo
    dwr
-   ewrims
    nid
-   noaa
-   nrcs
-   srwp
    telemetry
    usace
    usgs
