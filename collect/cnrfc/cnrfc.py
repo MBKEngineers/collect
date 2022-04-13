@@ -50,10 +50,61 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
 
         # parse fixed-width text-formatted table
         df = pd.read_fwf(buf, 
-                         header=[1, 2, 3, 4, 5], 
+                         header=[0, 1, 2, 3, 4], 
                          skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 16], 
                          na_values=['<i>Missing</i>', 'Missing'])
+
+    # clean columns and fix spelling in source
+    df.columns = clean_fixed_width_headers(df.columns)
+    df.rename({x: x.replace('Foreacst', 'Forecast').replace('Foreacast', 'Forecast') 
+               for x in df.columns}, axis=1, inplace=True)
+
+    # clean missing data rows
+    df.dropna(subset=['Date (mm/dd/YYYY)'], inplace=True)
+    df.drop(df.last_valid_index(), axis=0, inplace=True)
+
+    # parse dates
+    df.index = pd.to_datetime(df['Date (mm/dd/YYYY)'])
+    df.index.name = 'Date'
+
+    # parse summary from pre-table notes
+    notes = result.splitlines()[:10]
+    summary = {}
+    for line in notes[2:]:
+        if bool(line.strip()):
+            k, v = line.strip().split(': ')
+            summary.update({k: v.strip()})
     
+    return {'data': df, 'info': {'url': url,
+                                 'type': 'Seasonal Trend Tabular (Apr-Jul)',
+                                 'title': notes[0],
+                                 'summary': summary,
+                                 'units': 'TAF',
+                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
+
+def get_water_year_trend_tabular(cnrfc_id, water_year):
+    """
+    CNRFC Ensemble Product 9
+    """
+
+    url = '?'.join(['https://www.cnrfc.noaa.gov/ensembleProductTabular.php', 
+                    'id={}&prodID=9&year={}'.format(cnrfc_id, water_year)])
+    #example: https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=FOLC1&prodID=9&year=2022#
+   
+    # retrieve from public CNRFC webpage
+    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml').find('pre').text.replace('#', '')
+
+    print(result)
+
+    # in-memory file buffer
+    with io.StringIO(result) as buf:
+
+        # parse fixed-width text-formatted table
+        df = pd.read_fwf(buf, 
+                         header=[0, 1, 2, 3], 
+                         skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17], 
+                         na_values=['<i>Missing</i>', 'Missing'])
+
     # clean columns and fix spelling in source
     df.columns = clean_fixed_width_headers(df.columns)
     df.rename({x: x.replace('Foreacst', 'Forecast').replace('Foreacast', 'Forecast') 
