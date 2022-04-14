@@ -142,7 +142,7 @@ def get_water_year_trend_tabular(cnrfc_id, water_year):
             summary.update({k: v.strip()})
     
     return {'data': df, 'info': {'url': url,
-                                 'type': 'Seasonal Trend Tabular (Apr-Jul)',
+                                 'type': 'Water Year Trend Tabular',
                                  'title': notes[0],
                                  'summary': summary,
                                  'units': 'TAF',
