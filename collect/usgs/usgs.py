@@ -11,26 +11,26 @@ import pandas as pd
 import requests
 
 
-def get_usgs_data(station_id, sensor, start_time, end_time, interval='instantaneous'):
+def get_data(station_id, sensor, start_time, end_time, interval='instantaneous'):
     """
     Download timeseries data from USGS database; return as dataframe
     
-    argument             | type          |  example
-    
-        station_id       |  int or str   |  11446220
-        sensor           |  str          |  '00060' (discharge)
-        start_time       |  dt.datetime  |  dt.datetime(2016, 10, 1)
-        end_time         |  dt.datetime  |  dt.datetime(2017, 10, 1)
-        interval         |  str          |  'daily'
-    
-
     Sensor Codes
-    ---------------------------------------
     00010 Temperature, water(Max.,Min.)
     00060 Discharge(Mean)
     00095 Specific cond at 25C(Mean,Ins.)
     80154 Suspnd sedmnt conc(Mean)
     80155 Suspnd sedmnt disch(Mean)
+
+    Args:
+        station_id (int or str): the USGS station code (ex: 11446220)
+        sensor (str): ex '00060' (discharge)
+        start_time (dt.datetime): ex dt.datetime(2016, 10, 1)
+        end_time (dt.datetime): ex dt.datetime(2017, 10, 1)
+        interval (str): ex 'daily'
+    Returns:
+        (dict)
+
     """
     if interval == 'instantaneous':
         format_start = start_time.isoformat()
@@ -89,9 +89,19 @@ def get_usgs_data(station_id, sensor, start_time, end_time, interval='instantane
     return {'data': frame, 'info': info}
 
 
+def get_usgs_data(station_id, sensor, start_time, end_time, interval='instantaneous'):
+    return get_data(station_id, sensor, start_time, end_time, interval=interval)
+
+
 def get_peak_streamflow(station_id):
     """
     Download annual peak timeseries data from USGS database; return as dataframe
+    
+    Args:
+        station_id (int or str): the USGS station code
+
+    Returns:
+        (dict)
     """
 
     # construct query url

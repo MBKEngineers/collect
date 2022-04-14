@@ -68,7 +68,7 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
     df.rename({x: x.replace('Foreacst', 'Forecast').replace('Foreacast', 'Forecast') 
                for x in df.columns}, axis=1, inplace=True)
 
-    # clean missing data rows
+    # clean missing data rows   
     df.dropna(subset=['Date (mm/dd/YYYY)'], inplace=True)
     df.drop(df.last_valid_index(), axis=0, inplace=True)
 
@@ -149,23 +149,48 @@ def get_water_year_trend_tabular(cnrfc_id, water_year):
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
+def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=False):
     """
     Adapted from SAFCA portal project
     ---
-    reads the url and returns a pandas dataframe from a file or the cnrfc url
+    reads the url and returns a pandas dataframe from a file or the CNRFC url
     cnrfc_id:  CNRFC station id (5 letter id) (e.g. FOLC1)
     convert CSV data to DataFrame, separating historical from forecast inflow series
+
+    Note: as of March 2022, deterministic forecasts retrieved with the graphicalRVF or
+          graphicalRelease URLs return CSVs of 3 different formats with headers that 
+          may also include stage information
+
+    Arguments:
+        cnrfc_id (str): the forecast location ID
+        truncate_historical (bool): flag for whether to trim historical timeseries from record
+        release (bool): flag for whether to query deterministic release forecast
+    Returns:
+        (dict): dictionary result with dataframe containing forecast data and additional metadata
     """
+    # forecast type
+    forecast_type = 'Release' if release else 'RVF'
+    flow_prefix = 'Release ' if release else ''
+
     # default deterministic URL and index name
-    url = 'https://www.cnrfc.noaa.gov/graphicalRVF_csv.php?id={0}'.format(cnrfc_id)
-    date_column_header = 'Date/Time (Pacific Time)'
+    url = 'https://www.cnrfc.noaa.gov/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
+    date_column_header = 'Valid Date/Time (Pacific)'
+    specified_dtypes = {date_column_header: str, 
+                        'Stage (Feet)': float,
+                        f'{flow_prefix}Flow (CFS)': float, 
+                        'Trend': str,
+                        'Issuance Date/Time (Pacific)': str,
+                        'Threshold Exceedance Status': str,
+                        'Observed/Forecast': str}
 
     # use restricted site url for certain forecast locations
     if cnrfc_id in RESTRICTED:
-        url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id={0}'.format(cnrfc_id)
+        url = 'https://www.cnrfc.noaa.gov/restricted/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
         date_column_header = 'ArrayDate/Time (Pacific Time)'
-    
+        specified_dtypes = {date_column_header: str, 
+                            f'{flow_prefix}Flow (CFS)': float, 
+                            'Trend': str}
+
     # get forecast file from csv url
     csvdata = _get_forecast_csv(url)
 
@@ -173,20 +198,20 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
     df = pd.read_csv(csvdata, 
                      header=0, 
                      parse_dates=True,
-                     index_col=0,
                      float_precision='high',
-                     dtype={date_column_header: str, 
-                            'Flow (CFS)': float, 
-                            'Trend': str})
+                     dtype=specified_dtypes)
+
+    df.set_index(date_column_header, inplace=True)
+    df.index = pd.to_datetime(df.index)
 
     # add timezone info
     df.index.name = 'PDT/PST'
-    
+
     # Trend value is null for first historical and first forecast entry; select forecast entry
-    first_ordinate = df.where(df['Trend'].isnull()).dropna(subset=['Flow (CFS)']).last_valid_index()
+    first_ordinate = df.where(df['Trend'].isnull()).dropna(subset=[f'{flow_prefix}Flow (CFS)']).last_valid_index()
 
     # deterministic forecast inflow series
-    df['forecast'] = df.loc[(df.index >= first_ordinate), 'Flow (CFS)']
+    df['forecast'] = df.loc[(df.index >= first_ordinate), f'{flow_prefix}Flow (CFS)']
 
     # optional limit for start of historical data (2 days before start of forecast)
     if truncate_historical:
@@ -196,13 +221,13 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False):
         mask = True
 
     # historical inflow series
-    df['historical'] = df.loc[(df['forecast'].isnull()) & mask]['Flow (CFS)']
+    df['historical'] = df.loc[(df['forecast'].isnull()) & mask][f'{flow_prefix}Flow (CFS)']
 
     # additional issuance, plot-type information
     time_issued, next_issue_time, title, plot_type = get_forecast_meta_deterministic(cnrfc_id)
 
     return {'data': df, 'info': {'url': url,
-                                 'type': 'Deterministic Forecast',
+                                 'type': f'Deterministic {flow_prefix}Forecast',
                                  'title': title,
                                  'plot_type': plot_type,                                 
                                  'first_ordinate': first_ordinate.strftime('%Y-%m-%d %H:%M'),
@@ -264,26 +289,30 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
 
     return {'data': df, 'info': {'url': url, 
                                  'type': 'Deterministic Forecast', 
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
                                  'watershed': watershed, 
                                  'units': units,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False):
+def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=False):
     """
     Get issuance time from the deterministic inflow forecast page
     
     Arguments:
         cnrfc_id (str): the 5-character CNRFC forecast location code
         first_ordinate (bool): flag for whether to extract first forecast timestep
+        release (bool): flag for whether to query deterministic release forecast
     Returns:
         (tuple): tuple of forecast issuance time, next issuance time (as datetimes) and plot_type (None)
     """
+    # defaults
     issue_time, next_issue_time, plot_type = None, None, None
-    
+
     # request page with CNRFC credentials and parse HTML content
-    url = 'https://www.cnrfc.noaa.gov/{1}graphicalRVF_tabular.php?id={0}'.format(cnrfc_id, 'restricted/' if cnrfc_id in RESTRICTED else '')
+    url = 'https://www.cnrfc.noaa.gov/{1}graphical{2}_tabular.php?id={0}'.format(cnrfc_id, 
+                                                                        'restricted/' if cnrfc_id in RESTRICTED else '',
+                                                                        'Release' if release else 'RVF')
     soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
@@ -331,7 +360,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     
     # get issue time of most recent hourly inflow forecast (no support for daily yet)
     date_string = _default_date_string(None)
-    # time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
+    time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
 
     # forecast data url
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_hefs_csv_{1}.csv'.format(cnrfc_id, duration)
@@ -355,7 +384,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     return {'data': df, 'info': {'url': url, 
                                  'watershed': get_watershed(cnrfc_id), 
                                  'type': '{0} Ensemble Forecast'.format(duration.title()),
-                                 # 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
                                  'duration': duration,
@@ -409,11 +438,11 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
 
     # get date/time stamp from ensemble download page
-    # time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
+    time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
     
     return {'data': df, 'info': {'url': url, 
                                  'watershed': watershed, 
-                                 # 'issue_time': time_issued,
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
                                  'duration': duration,
@@ -449,8 +478,9 @@ def get_watershed_forecast_issue_time(duration, watershed, date_string=None, det
         if file_name.format(date_string, watershed, duration) in td.text:
             issue_time = parser.parse(td.next_sibling.text).astimezone(PACIFIC)
             return issue_time
-    else:
-        raise ValueError('No valid issue time for URL.')
+
+    return None
+    # raise ValueError('No valid issue time for URL.')
 
 
 def get_watershed(cnrfc_id):
@@ -725,9 +755,20 @@ def _get_cnrfc_restricted_content(url):
 
 
 def _get_forecast_csv(url):
+    """
 
+    Arguments:
+        url (str): the URL address for the specified forecast product
+    Returns:
+        csvdata (io.BytesIO): the forecast data as in-memory CSV
+    """
     # data source
     filename = url.split('/')[-1]
+
+    # check for credentials
+    if not os.getenv('CNRFC_USER'):
+        raise NotImplementedError(''.join(['Must specify CNRFC_USER and CNRFC_PASSWORD environment',
+                                           ' variables for access to restricted site.']))
 
     # cnrfc authorization header
     basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))

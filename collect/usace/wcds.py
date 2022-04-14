@@ -9,7 +9,7 @@ import io
 import re
 import pandas as pd
 import requests
-from collect.utils import get_water_year
+from collect import utils
 
 
 def get_water_year_data(reservoir, water_year, interval='d'):
@@ -25,6 +25,8 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     Returns:
         result (dict): query result dictionary with 'data' and 'info' keys
     """
+    # reservoir code is case-sensitive
+    reservoir = reservoir.lower()
 
     # USACE-SPK Folsom page
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
@@ -59,9 +61,10 @@ def get_water_year_data(reservoir, water_year, interval='d'):
                      'water year': water_year, 
                      'interval':interval}}
 
-    
-def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True): #trim this to start and end
+
+def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True):
     """
+    TODO:  trim this to start and end
     Scrape water year operations data from reservoir page on USACE-SPK's WCDS.
     
     Arguments:
@@ -72,10 +75,13 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_he
     Returns:
         result (dict): query result dictionary with data and info keys
     """
+    # reservoir code is case-sensitive
+    reservoir = reservoir.lower()
+
     # Check that user chosen water year is within range with data
     earliest_time = dt.datetime.strptime('1994-10-01', '%Y-%m-%d')
 
-    if start_time.tzinfo._tzname in ['US/Pacific', 'PST', 'PDT']:
+    if start_time.tzname() in ['US/Pacific', 'PST', 'PDT']:
         earliest_time = start_time.tzinfo.localize(earliest_time)
 
     if start_time < earliest_time:
@@ -84,7 +90,7 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_he
 
     # Make new dataframe
     frames = []
-    for water_year in range(get_water_year(start_time), get_water_year(end_time) + 1):
+    for water_year in range(utils.get_water_year(start_time), utils.get_water_year(end_time) + 1):
         frames.append(get_water_year_data(reservoir, water_year, interval)['data'])
 
     df = pd.concat(frames)
@@ -148,6 +154,21 @@ def get_wcds_reservoirs():
     return pd.read_csv(csv_data, header=0, delimiter='|', index_col='WCDS_ID')
 
 
+def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True):
+    """
+    alias for wcds.get_data function, to support backwards compatibility
+
+    Arguments:
+        reservoir (str): three-letter reservoir code
+        start_time (datetime.datetime): query start datetime
+        end_time (datetime.datetime): query end datetime
+        interval (str): data interval
+    Returns:
+        result (dict): query result dictionary with data and info keys
+    """
+    return get_data(reservoir.lower(), start_time, end_time, interval=interval, clean_column_headers=clean_column_headers)
+
+
 def _cleaned_columns_map(columns):
     """
     strips units and parentheses from WCDS column headers, since reservoir columns headers are not consistent
@@ -158,4 +179,64 @@ def _cleaned_columns_map(columns):
         (dict): map of original column names to simplified column names
     """
     return {x: re.sub(r'(\(.*\))', '', x).replace('  ', ' ').strip() for x in columns}
+
+
+def get_release_report(reservoir):
+    """
+    download release change data reports from https://www.spk-wc.usace.army.mil/reports/release_changes.html
+    each reservoir release change report is provided via email; as such, there is no one standard format
+    for the timeseries of release changes; email content is provided in string format
     
+    Arguments:
+        reservoir (str): three-letter reservoir code, lowercase
+    Returns:
+        (dict): dictionary containing the release change email and other reservoir info
+    """
+    info = {'reservoir': reservoir, 
+            'url': f'https://www.spk-wc.usace.army.mil/reports/getreport.html?report=release/rel-{reservoir}'}
+
+    # reservoir code is case-sensitive
+    reservoir = reservoir.lower()
+
+    # USACE-SPK release report email source data
+    url = f'https://www.spk-wc.usace.army.mil/reports/release/rel-{reservoir}'
+
+    # request data from url
+    response = utils.get_session_response(url).content
+    raw = response.decode('utf-8')
+
+    # check for header matching pattern with pipe delimiters
+    header = re.findall(r'(\|\s+From\|\s+To\|.*\r\n)', raw)
+    if len(header) > 0:
+        # determine column labels from pipe-deplimited header row
+        column_headers = ['Description', *[x.strip() for x in header[0].split('|')  if bool(x.strip())]]
+
+        # extract table contents from between header and footer
+        table = raw.split(header[0])[-1].split(':'*10)[0]
+        df = pd.read_csv(io.StringIO(table), header=None, delimiter='|', usecols=list(range(len(column_headers))))
+        df.columns = column_headers
+
+        # create a date/time index
+        df.index = df.loc[:, 'Description'].apply(lambda x: dt.datetime.strptime(re.findall(r'Change for\s+(\d{1,2}\w{3}\d{4} @ \d{4}).*', x)[0], '%d%b%Y @ %H%M'))
+        df.index.name = 'Date/Time'
+
+        # extract the email comment footer
+        comment = re.findall(r':{10,60}\s+(.*\s+.*)\s+:{10,60}', raw)
+        comment = ' '.join([x.strip() for x in comment[0].split('\r\n')]) if len(comment) > 0 else ''
+
+        # generation time
+        generated = re.findall(r'(Release Notification Generated \d{1,2}\w{3}\d{4} @ \d{4} hours)', raw)
+
+        # units
+        units = re.findall(r'All flows reported in (\w+).\s+', raw)
+
+        # return release change data
+        return {'data': df, 
+                'info': {**info, 
+                         'comment': comment,
+                         'units': units[0] if len(units) > 0 else '', 
+                         'generated': generated[0] if len(generated) > 0 else '', 
+                         'raw': raw}}
+
+    # default without dataframe parsing
+    return {'data': raw, 'info': info}

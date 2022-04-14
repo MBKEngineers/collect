@@ -5,6 +5,23 @@ The utilities module of MBK Engineers' collect project
 """
 # -*- coding: utf-8 -*-
 import requests
+from requests.packages.urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
+
+
+def get_session_response(url):
+    """
+    Arguments:
+        url (str): valid web URL
+    Returns:
+        (requests.models.Response): the response object with site content specified by URL
+    """
+    session = requests.Session()
+    retries = Retry(total=5,
+                    backoff_factor=0.1,
+                    status_forcelist=[500, 502, 503, 504])
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+    return session.get(url, verify=False)
 
 
 def get_web_status(url):

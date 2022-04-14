@@ -217,14 +217,12 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
         df (pandas.DataFrame): the queried timeseries for a single sensor as a DataFrame
     """
     raw = get_station_data(station, start, end, sensors=[sensor], duration=duration)
-
     if bool(sensor) and bool(duration):
-        df = raw.loc[raw['SENSOR_NUMBER']==sensor].loc[raw['DURATION']==duration]
+        df = raw.loc[(raw['SENSOR_NUMBER']==sensor) & (raw['DURATION']==duration)]
     elif bool(sensor):
         df = raw.loc[raw['SENSOR_TYPE']==sensor]
     else:
         raise ValueError('sensor `{}` is not valid for station `{}`'.format(sensor, station))
-    
     return df
 
 
@@ -452,4 +450,4 @@ def get_data(station, start, end, sensor='', duration=''):
         result (dict): dictionary of pandas.DataFrame and metadata dict
     """
     df = get_sensor_frame(station, start, end, sensor, duration)
-    return {'data': df, 'info': get_station_metadata(station)}
+    return {'data': df, **get_station_metadata(station)}
