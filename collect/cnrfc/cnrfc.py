@@ -35,12 +35,21 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def get_seasonal_trend_tabular(cnrfc_id, water_year):
     """
-    CNRFC Ensemble Product 7
+    CNRFC Ensemble Product 7, includes Apr-Jul Forecast 90%, 75%, 50%, 25%, and 10% Exceedance, NWS Apr-Jul Forecast,  
+    Raw Obs Apr-Jul To Date, Raw Avg Apr-Jul To Date, Raw Daily Observation
     adapted from data accessed in py_water_supply_reporter.py
+    example url: https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=HLEC1&prodID=7&year=2013
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+        water_year (str/int): water year for forecast
+    Returns:
+        (dict): data and info
     """
 
-    url = '?'.join(['https://www.cnrfc.noaa.gov/ensembleProductTabular.php', 
-                    'id={}&prodID=7&year={}'.format(cnrfc_id, water_year)])
+    url = get_ensemble_product_url(product_id=7, cnrfc_id=cnrfc_id, data_format='Tabular')
+    url += '&year={0}'.format(water_year)
+
+    assert int(water_year) >= 2011, "Ensemble Forecast Product 7 not available before 2011"
    
     # retrieve from public CNRFC webpage
     result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml').find('pre').text.replace('#', '')
@@ -84,17 +93,23 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
 
 def get_water_year_trend_tabular(cnrfc_id, water_year):
     """
-    CNRFC Ensemble Product 9
+    CNRFC Ensemble Product 9, which includes WY Forecast 90% Exceedance, 75% Exceedance, 50% Exceedance, 25% Exceedance, 
+    10% Exceedance, Raw WY To Date Observation, Raw WY To Date Average, Raw Daily Observation
+    #example url: https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=FOLC1&prodID=9&year=2022#
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+        water_year (str/int): water year for forecast
+    Returns:
+        (dict): data and info
     """
 
-    url = '?'.join(['https://www.cnrfc.noaa.gov/ensembleProductTabular.php', 
-                    'id={}&prodID=9&year={}'.format(cnrfc_id, water_year)])
-    #example: https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=FOLC1&prodID=9&year=2022#
+    url = get_ensemble_product_url(product_id=9, cnrfc_id=cnrfc_id, data_format='Tabular')
+    url += '&year={0}'.format(water_year)
+
+    assert int(water_year) >= 2013, "Ensemble Forecast Product 9 not available before 2013"
    
     # retrieve from public CNRFC webpage
     result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml').find('pre').text.replace('#', '')
-
-    print(result)
 
     # in-memory file buffer
     with io.StringIO(result) as buf:
@@ -482,11 +497,11 @@ def get_ensemble_first_forecast_ordinate(url=None, df=None):
     return df.index.tolist()[0].to_pydatetime()
 
 
-def get_ensemble_product_url(product_id, cnrfc_id):
+def get_ensemble_product_url(product_id, cnrfc_id, data_format=''):
     """
     return the URL for the product display
     """
-    return 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id={1}&prodID={0}'.format(product_id, cnrfc_id)
+    return 'https://www.cnrfc.noaa.gov/ensembleProduct{2}.php?id={1}&prodID={0}'.format(product_id, cnrfc_id, data_format)
 
 
 def get_ensemble_product_1(cnrfc_id):
@@ -582,19 +597,6 @@ def get_ensemble_product_6(cnrfc_id):
                                  'units': 'TAF',
                                  'notes': notes,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
-
-
-def get_ensemble_product_9(cnrfc_id):
-    """
-    
-    """
-    raise NotImplementedError
-
-    url = get_ensemble_product_url(9, cnrfc_id)
-    get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
-                                   'type': 'Water Year Trend Plot',
-                                   'units': 'TAF'}}
 
 
 def get_ensemble_product_10(cnrfc_id):
