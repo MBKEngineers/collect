@@ -29,10 +29,10 @@ def url_maker_doutdly(date):
     """
 
     # construct the station url
-  text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
-  final = text + date + ".pdf"
+    text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
+    final = text + date + ".pdf"
 
-  return str(final)
+    return str(final)
 
 # inputs start and end date that is in datetime format
 def months_between(start_date, end_date):
@@ -81,17 +81,17 @@ def df_generator(ls):
 
     Function is specific to dout
     """
-  ls = np.array(ls)
-  ls1 = ls[0]
+    ls = np.array(ls)
+    ls1 = ls[0]
 
-  # Change from array to dataframe, generate new columns
-  df = pd.DataFrame(ls1,columns=["Date", "SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
+    # Change from array to dataframe, generate new columns
+    df = pd.DataFrame(ls1,columns=["Date", "SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
     "NDCU", "CLT","TRA","CCC","BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT","NDOI_daily","outflow_7_dy_avg","outflow_mnth_avg","exf_inf_daily",
     "exf_inf_3dy","exf_inf_14dy"])
-  
-  df = df.dropna()
-  df = df.reindex()
-  return df
+
+    df = df.dropna()
+    df = df.reindex()
+    return df
 
 def validate(date_text):
     """
@@ -113,25 +113,25 @@ def data_cleaner(df):
     Returns:
         dataframe of strings converted to floats for data analysis
     """
-  cols = df.columns
-  n_rows = len(df)
-  n_cols = len(cols)
-  # Going through each cell to change the numbering format
-  # ie going from 1,001 to 1001
-  # Also converting from string to integer
-  df[cols] = df[cols].astype(str)
-  for i in range(n_rows):
-    for j in range(n_cols):
-      df.iloc[i][j] = df.iloc[i][j].replace(',','')
-      df.iloc[i][j] = df.iloc[i][j].replace('%','')
+    cols = df.columns
+    n_rows = len(df)
+    n_cols = len(cols)
+    # Going through each cell to change the numbering format
+    # ie going from 1,001 to 1001
+    # Also converting from string to integer
+    df[cols] = df[cols].astype(str)
+    for i in range(n_rows):
+        for j in range(n_cols):
+            df.iloc[i][j] = df.iloc[i][j].replace(',','')
+            df.iloc[i][j] = df.iloc[i][j].replace('%','')
 
-  df[cols] = df[cols].astype(float)
+    df[cols] = df[cols].astype(float)
 
-  # Hardcoding it for the last 3 columns since we know that it is in percentages
-  df.iloc[:,-3:] = df.iloc[:,-3:]/100
-  return df
+    # Hardcoding it for the last 3 columns since we know that it is in percentages
+    df.iloc[:,-3:] = df.iloc[:,-3:]/100
+    return df
 
-def file_getter(start, end):
+def file_getter_dout(start, end):
     """
     Arguements:
         range of dates including start and end month
@@ -141,53 +141,53 @@ def file_getter(start, end):
         dataframe of date range 
 
     """
-  # Check if date is in the right format
-  # validate(start)
-  # validate(end)
+    # Check if date is in the right format
+    # validate(start)
+    # validate(end)
 
-  # Convert into string
-  start = str(start)
-  end = str(end)
+    # Convert into string
+    start = str(start)
+    end = str(end)
 
-  # Defining dates
-  s_year,s_month,s_day = start.split("/")
-  e_year,e_month,e_day = end.split("/")
+    # Defining dates
+    s_year,s_month,s_day = start.split("/")
+    e_year,e_month,e_day = end.split("/")
 
-  start_date = datetime.date(int(s_year), int(s_month), int(s_day))
-  end_date = datetime.date(int(e_year), int(e_month), int(e_day))
+    start_date = datetime.date(int(s_year), int(s_month), int(s_day))
+    end_date = datetime.date(int(e_year), int(e_month), int(e_day))
 
-  today_date = date.today()
-  today_month = int(today_date.strftime('%m'))
-  today_year = int(today_date.strftime('%Y'))
+    today_date = date.today()
+    today_month = int(today_date.strftime('%m'))
+    today_year = int(today_date.strftime('%Y'))
 
-  # Defining variables
-  foo = []
-  foo_dtime = []
-  urls = []
-  result = pd.DataFrame()
-  current_month = 'https://www.usbr.gov/mp/cvo/vungvari/doutdly.pdf'
+    # Defining variables
+    foo = []
+    foo_dtime = []
+    urls = []
+    result = pd.DataFrame()
+    current_month = 'https://www.usbr.gov/mp/cvo/vungvari/doutdly.pdf'
 
-  # The date where pdf gets small
-  small_pdf = datetime.datetime.strptime('0117', '%m%y')
+    # The date where pdf gets small
+    small_pdf = datetime.datetime.strptime('0117', '%m%y')
 
-  # Getting list of dates for url
-  for month in months_between(start_date, end_date):
-    dates = month.strftime("%m%y")
-    new_month = datetime.datetime.strptime(dates, '%m%y')
-    foo_dtime.append(new_month)
-    foo.append(dates)
-  
-  # Using the list of dates, grab a url for each date
-  for foos in foo:
-    url = url_maker_doutdly(foos)
-    urls.append(url)
+    # Getting list of dates for url
+    for month in months_between(start_date, end_date):
+        dates = month.strftime("%m%y")
+        new_month = datetime.datetime.strptime(dates, '%m%y')
+        foo_dtime.append(new_month)
+        foo.append(dates)
 
-  # Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
-  if today_month == int(e_month) & today_year == int(e_year):
-    urls[-1] = current_month
+    # Using the list of dates, grab a url for each date
+    for foos in foo:
+        url = url_maker_doutdly(foos)
+        urls.append(url)
 
-  # Using the url, grab the pdf and concatenate it based off dates
-  for j in range(len(urls)):
+    # Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
+    if today_month == int(e_month) & today_year == int(e_year):
+        urls[-1] = current_month
+
+    # Using the url, grab the pdf and concatenate it based off dates
+    for j in range(len(urls)):
       if foo_dtime[j] > small_pdf:
         # means the pdf is in newer format
           pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [175.19, 20.76,450.78 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
@@ -205,43 +205,42 @@ def file_getter(start, end):
           pdf_df = df_generator(pdf1)
           result = pd.concat([result,pdf_df])
 
-  result['Date'] = pd.to_datetime(result['Date'])
+    result['Date'] = pd.to_datetime(result['Date'])
 
-  # Extract date range 
-  new_start_date = start_date.strftime("%m-%d-%y")
-  new_end_date = end_date.strftime("%m-%d-%y")
+    # Extract date range 
+    new_start_date = start_date.strftime("%m-%d-%y")
+    new_end_date = end_date.strftime("%m-%d-%y")
 
-  mask = (result['Date'] >= new_start_date) & (result['Date'] <= new_end_date)
-  new_df = result.loc[mask]
+    mask = (result['Date'] >= new_start_date) & (result['Date'] <= new_end_date)
+    new_df = result.loc[mask]
 
-  #Set DateTime Index
-  new_df.set_index('Date', inplace = True)
-  
-  new_df = data_cleaner(new_df)
+    #Set DateTime Index
+    new_df.set_index('Date', inplace = True)
 
-  # Setting up the multi columns
-  bottom_level =["SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
+    new_df = data_cleaner(new_df)
+
+    # Setting up the multi columns
+    bottom_level =["SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
            "NDCU", 
            "CLT","TRA","CCC","BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT",
            "NDOI_daily","outflow_7_dy_avg","outflow_mnth_avg",
            "exf_inf_daily","exf_inf_3dy","exf_inf_14dy"]
 
-  top_level = ['delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow',
+    top_level = ['delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow',
          'NDCU',
          'delta_exports','delta_exports','delta_exports','delta_exports','delta_exports','delta_exports','delta_exports',
          'outflow_index','outflow_index','outflow_index',
          'exp_inf','exp_inf','exp_inf']
-  arrays = [top_level,bottom_level]
-  tuples = list(zip(*arrays))
+    arrays = [top_level,bottom_level]
+    tuples = list(zip(*arrays))
 
 
 
 
 
-  new_df.columns = pd.MultiIndex.from_tuples(tuples)
-  data.to_csv('dout_smallpdf_v3.csv')  
+    new_df.columns = pd.MultiIndex.from_tuples(tuples)
+    # new_df.to_csv('dout_smallpdf_v3.csv')  
 
-  return new_df 
-  #return dates
-
+    return new_df 
+    #return dates
 
