@@ -300,9 +300,6 @@ def file_getter_dout(start, end):
     #return dates
 
 
-data = file_getter_dout('2019/10/05','2020/12/07')
-
-print(data)
 #json derulo
 '''
 data.index = data.index.strftime('%Y-%m-%d %H:%M')
