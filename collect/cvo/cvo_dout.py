@@ -208,7 +208,7 @@ def file_getter_dout(start, end):
 
         if foo_dtime[j] > small_pdf:
             # catches scenario that goes up to current date
-            if  blown_up_start <= foo_dtime[j] <= blown_up_end:
+            if  (blown_up_start <= foo_dtime[j] <= blown_up_end) or (datetime.datetime.strptime('0319',"%m%y") <= foo_dtime[j] <= datetime.datetime.strptime('0819',"%m%y")):
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [290.19, 20.76,750.78 ,1300.67], pages = 1, guess = False,  pandas_options={'header':None})
                 pdf_df = df_generator(pdf1)
                 result = pd.concat([result,pdf_df])
@@ -299,9 +299,12 @@ def file_getter_dout(start, end):
     return new_df 
     #return dates
 
+# data = file_getter_dout('2019/01/01','2022/03/29')
 
+# print(data)
 #json derulo
 '''
+file_getter_dout
 data.index = data.index.strftime('%Y-%m-%d %H:%M')
 
 data['NDCU']['NDCU'].to_json(path_or_buf = "ndcu_v1.json", orient = 'index', date_format = 'iso')
