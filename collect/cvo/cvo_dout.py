@@ -293,7 +293,3 @@ def file_getter_dout(start, end):
     return new_df 
     #return dates
 
-start_date = '2010/10/15'
-end_date = '2012/03/23'
-
-data = file_getter_dout(start_date, end_date)
