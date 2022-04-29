@@ -1,5 +1,5 @@
 """
-collect.cvo.cvo_shadop
+collect.cvo.cvo_kesdop
 ============================================================
 access cvo data
 """
@@ -220,12 +220,12 @@ def file_getter_kesdop(start, end):
             'Release_CFS','Release_CFS','Release_CFS',
             'Evap_cfs']
     bottom_level =["elev",
-               "reservoir","change",
-               "cfs",
-               "spring", 
-               "shasta", 
-               "power","spill","fishtrap",
-               "evap"]
+    "storage","change",
+    "inflow",
+    "spring_release", 
+    "shasta_release", 
+    "power","spill","fishtrap",
+    "evap_cfs"]
 
     arrays = [top_level,bottom_level]
     tuples = list(zip(*arrays))
