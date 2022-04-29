@@ -193,9 +193,14 @@ def file_getter_dout(start, end):
         url = url_maker_doutdly(foos)
         urls.append(url)
 
+    e_month = int(e_month)
+    e_year = int(e_year)
     # Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
-    if today_month == int(e_month) & today_year == int(e_year):
+    if today_month == e_month and today_year == e_year:
+        test = 1
         urls[-1] = current_month
+    else:
+        pass
 
     # Using the url, grab the pdf and concatenate it based off dates
     for j in range(len(urls)):
@@ -260,7 +265,6 @@ def file_getter_dout(start, end):
     # Extract date range 
     new_start_date = start_date.strftime("%m-%d-%y")
     new_end_date = end_date.strftime("%m-%d-%y")
-
     mask = (result['Date'] >= new_start_date) & (result['Date'] <= new_end_date)
     new_df = result.loc[mask]
 
@@ -294,3 +298,5 @@ def file_getter_dout(start, end):
     return new_df 
     #return dates
 
+data = file_getter_dout('2021/10/05','2022/04/29')
+print(data)
