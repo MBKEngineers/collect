@@ -25,12 +25,21 @@ def url_maker_doutdly(date):
         date (str): the date but in MMYY format, ex 0520
     Returns:
         url (str): the url for requesting the file
-        Specific to dout data
+        if date is before including 2011 march, give the prn link
+        if not give in pdf format
     """
 
     # construct the station url
-    text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
-    final = text + date + ".pdf"
+    change = datetime.date(2010, 12, 1)
+    bar = datetime.date(2000+int(date[2:4]), int(date[0:2]),1)
+
+    if bar <= change:
+        text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
+        final = text + date + ".prn"
+    else:
+        text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
+        final = text + date + ".pdf"
+
 
     return str(final)
 
@@ -169,6 +178,8 @@ def file_getter_dout(start, end):
 
     # The date where pdf gets small
     small_pdf = datetime.datetime.strptime('0117', '%m%y')
+    prn_date = datetime.datetime.strptime('1210', '%m%y')
+    special_date = datetime.datetime.strptime('0111',"%m%y")
 
     # Getting list of dates for url
     for month in months_between(start_date, end_date):
@@ -188,24 +199,62 @@ def file_getter_dout(start, end):
 
     # Using the url, grab the pdf and concatenate it based off dates
     for j in range(len(urls)):
-      if foo_dtime[j] > small_pdf:
-        # means the pdf is in newer format
-          pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [175.19, 20.76,450.78 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
-          pdf_df = df_generator(pdf1)
-          if urls[j] == current_month:
-              # drop the last row, invalid date
-              pdf_df = pdf_df.drop(pdf_df.tail(1).index,inplace=True)
-              result = pd.concat([result,pdf_df])
-          else:
-              result = pd.concat([result,pdf_df])
-          
-        
-      else:
-          pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,360 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
-          pdf_df = df_generator(pdf1)
-          result = pd.concat([result,pdf_df])
 
-    result['Date'] = pd.to_datetime(result['Date'])
+        if foo_dtime[j] > small_pdf:
+            # means the pdf is in newer format
+            pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [175.19, 20.76,450.78 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
+            pdf_df = df_generator(pdf1)
+
+            # catches scenario that goes up to current date
+            if urls[j] == current_month:
+            # drop the last row, invalid date
+                pdf_df = pdf_df.drop(pdf_df.tail(1).index,inplace=True)
+                result = pd.concat([result,pdf_df])
+            else:
+                result = pd.concat([result,pdf_df])
+            
+        elif prn_date < foo_dtime[j] <= small_pdf:
+            if foo_dtime[j] == special_date:
+                pdf1 = read_pdf("https://www.usbr.gov/mp/cvo/vungvari/dout0111.pdf", encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,350 ,733.67], pages = 1, guess = False,  pandas_options={'header':None})
+                pdf_df = df_generator(pdf1)
+                result = pd.concat([result,pdf_df])
+            else:
+                pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,360 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
+                pdf_df = df_generator(pdf1)
+                result = pd.concat([result,pdf_df])
+
+
+        else:
+            test = pd.read_fwf(urls[j], skiprows=10, skipfooter=2,
+                   names=["Date", "SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
+    "NDCU", "CLT","TRA","CCC","BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT","NDOI_daily","outflow_7_dy_avg","outflow_mnth_avg","exf_inf_daily",
+    "exf_inf_3dy","exf_inf_14dy"],
+                  index_col=False,
+                  colspecs = [ (0, 9)
+                              ,(9, 16)
+                              ,(16, 23)
+                              ,(27,35)
+                              ,(35, 43)
+                              ,(43, 50)
+                              ,(50,57)
+                            ,(57,64)
+                            ,(64,71)
+                            ,(71,81)
+                            ,(81,87)
+                            ,(88,95)
+                            ,(95,102)
+                            ,(102,109)
+                            ,(109,116)
+                            ,(116,123)
+                            ,(124,132)
+                            ,(132,140)
+                            ,(140,148)
+                            ,(148,156)
+                            ,(156,163)
+                            ,(163,168)
+                            ,(169,178)])
+            result = pd.concat([result,test])
+
 
     # Extract date range 
     new_start_date = start_date.strftime("%m-%d-%y")
@@ -244,3 +293,7 @@ def file_getter_dout(start, end):
     return new_df 
     #return dates
 
+start_date = '2010/10/15'
+end_date = '2012/03/23'
+
+data = file_getter_dout(start_date, end_date)
