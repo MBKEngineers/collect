@@ -180,7 +180,8 @@ def file_getter_dout(start, end):
     small_pdf = datetime.datetime.strptime('0117', '%m%y')
     prn_date = datetime.datetime.strptime('1210', '%m%y')
     special_date = datetime.datetime.strptime('0111',"%m%y")
-
+    blown_up_start = datetime.datetime.strptime('0120',"%m%y")
+    blown_up_end = datetime.datetime.strptime('0820',"%m%y")
     # Getting list of dates for url
     for month in months_between(start_date, end_date):
         dates = month.strftime("%m%y")
@@ -206,18 +207,18 @@ def file_getter_dout(start, end):
     for j in range(len(urls)):
 
         if foo_dtime[j] > small_pdf:
-            # means the pdf is in newer format
-            pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [175.19, 20.76,450.78 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
-            pdf_df = df_generator(pdf1)
-
             # catches scenario that goes up to current date
-            if urls[j] == current_month:
-            # drop the last row, invalid date
-                # pdf_df = pdf_df.drop(pdf_df.tail(1).index,inplace=True)
+            if  blown_up_start <= foo_dtime[j] <= blown_up_end:
+                pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [290.19, 20.76,750.78 ,1300.67], pages = 1, guess = False,  pandas_options={'header':None})
+                pdf_df = df_generator(pdf1)
                 result = pd.concat([result,pdf_df])
             else:
+                pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [175.19, 20.76,450.78 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
+                pdf_df = df_generator(pdf1)
                 result = pd.concat([result,pdf_df])
-            
+        
+
+
         elif prn_date < foo_dtime[j] <= small_pdf:
             if foo_dtime[j] == special_date:
                 pdf1 = read_pdf("https://www.usbr.gov/mp/cvo/vungvari/dout0111.pdf", encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,350 ,733.67], pages = 1, guess = False,  pandas_options={'header':None})
@@ -298,3 +299,13 @@ def file_getter_dout(start, end):
     return new_df 
     #return dates
 
+
+data = file_getter_dout('2019/10/05','2020/12/07')
+
+print(data)
+#json derulo
+'''
+data.index = data.index.strftime('%Y-%m-%d %H:%M')
+
+data['NDCU']['NDCU'].to_json(path_or_buf = "ndcu_v1.json", orient = 'index', date_format = 'iso')
+'''
