@@ -199,6 +199,7 @@ def file_getter_dout(start, end):
 
     # Using the url, grab the pdf and concatenate it based off dates
     for j in range(len(urls)):
+        print(j)
 
         if foo_dtime[j] > small_pdf:
             # means the pdf is in newer format
