@@ -199,7 +199,6 @@ def file_getter_dout(start, end):
 
     # Using the url, grab the pdf and concatenate it based off dates
     for j in range(len(urls)):
-        print(j)
 
         if foo_dtime[j] > small_pdf:
             # means the pdf is in newer format
@@ -256,11 +255,12 @@ def file_getter_dout(start, end):
                             ,(169,178)])
             result = pd.concat([result,test])
 
+    result['Date'] = pd.to_datetime(result['Date'])
 
     # Extract date range 
     new_start_date = start_date.strftime("%m-%d-%y")
     new_end_date = end_date.strftime("%m-%d-%y")
-
+    
     mask = (result['Date'] >= new_start_date) & (result['Date'] <= new_end_date)
     new_df = result.loc[mask]
 
@@ -294,3 +294,5 @@ def file_getter_dout(start, end):
     return new_df 
     #return dates
 
+data = file_getter_dout('2017/10/05','2018/01/07')
+print(data)
