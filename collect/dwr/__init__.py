@@ -1,12 +1,8 @@
 """
 collect.dwr
 ============================================================
-access CDEC gage data, forecasts and water supply info
+access DWR gage data, forecasts and water supply info
 """
 # -*- coding: utf-8 -*-
-
-from .b120 import *
-# from .casgem import *
-from .cawdl import *
-from .cdec import *
-from .wsi import *
+from . import b120, cawdl, cdec, swp, wsi
+# from . import casgem
