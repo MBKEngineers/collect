@@ -28,5 +28,8 @@
    .. automodule:: collect.dwr.info
       :members:
 
+   .. automodule:: collect.dwr.swp
+      :members:
+
    .. automodule:: collect.dwr.wsi
       :members:
