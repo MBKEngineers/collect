@@ -1,5 +1,5 @@
 """
-collect.dwr.delta_conditions
+collect.dwr.swp.delta_conditions
 ============================================================
 access DWR Delta Conditions PDF
 """
@@ -105,7 +105,7 @@ def get_raw_text(report, filename=None, preserve_white_space=True):
     f.seek(0)
 
     # parse PDF and extract as string
-    content = pdftotext.PDF(f)[0]
+    content = pdftotext.PDF(f, raw=False, physical=True)[0]
 
     # optionally export the raw report as text
     if filename:
@@ -122,12 +122,12 @@ def get_raw_text(report, filename=None, preserve_white_space=True):
     return content
 
 
-def get_delta_daily_data():
+def get_delta_daily_data(export_as='dict'):
     """
     fetch and return SWP OCO's daily delta operations report
     
     Arguments:
-        report (str): designates which report to retrieve
+        export_as (str): designates which format to use for returned data
     Returns:
         result (dict): the report contents and metadata
     """
@@ -137,24 +137,44 @@ def get_delta_daily_data():
     rx = re.compile(r'(?P<date>\d{1,2}/\d{1,2}/\d{4})')   
     date = rx.search(content).group('date')
 
+    # parse the report date
+    date_reformat = dt.datetime.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
+
     # report information
     meta =  {
+        'date': date_reformat,
         'filename': 'Delta-Operations-Daily-Summary.pdf',
         'title': 'EXECUTIVE OPERATIONS SUMMARY ON {}'.format(date),
         'contact': 'OCO_Export_Management@water.ca.gov',
         'retrieved': dt.datetime.now().strftime('%Y-%m-%d'),
         'raw': content,
     }
-    
+
     # pattern to match delta and storage variables
     rx = re.compile(r'(?:\s+)(?P<key>.*)\s+(?P<operator>=|\~{1}|>|<)\s+(?P<value>.+)')
 
+    def _parse_entry(match):
+        value = match.group('value')
+
+        units_match = re.findall(r'(cfs|TAF|km|%|% \(14-day avg\))$', value)
+        units = units_match[0] if bool(units_match) else ''
+
+        if bool(units):
+            value = value.rstrip(units).strip().replace(',', '')
+
+        if match.group('operator') == '=':
+            if bool(units):
+                return {'value': float(value), 'units': units}
+            return {'value': value, 'units': units}
+        return {'value': ' '.join([match.group('operator'), value]), 'units': units}
+
     # extract all groups matching this regular expression pattern
-    extract = {match.group('key').strip(): [match.group('operator'), match.group('value')]
+    extract = {match.group('key').strip(): _parse_entry(match)
                for match in rx.finditer(content)}
 
     # structured dictionary template organizes the categories of the report
     result = {
+        # 'date': date_reformat, 
         'Scheduled Exports for Today': {
             'Clifton Court Inflow': [], 
             'Jones Pumping Plant': []
@@ -187,21 +207,22 @@ def get_delta_daily_data():
         }
     }
 
+    # create dataframe
+    df = pd.DataFrame(index=[date_reformat])
+
     # update nested dictionary from extraction
-    for v in result.values():
+    for x, v in result.items():
         if isinstance(v, dict):
             for k in v.keys():
                 v.update({k: extract[k]})
 
-    # parse the report date
-    date_reformat = dt.datetime.strptime(date, '%m/%d/%Y').strftime('%Y-%m-%d')
+                # update frame
+                df[x, k, extract[k]['units']] = extract[k]['value']
 
-    # add formatted date to dicts
-    result.update({'date': date_reformat})
-    meta.update({'date': date_reformat})
+    df.columns = pd.MultiIndex.from_tuples(df.columns)
 
     # return formatted report extraction
-    return {'info': meta, 'data': result}
+    return {'info': meta, 'data': result if export_as == 'dict' else df}
 
 
 def get_barker_slough_data():
@@ -257,7 +278,7 @@ def get_oco_tabular_data(report):
     f.seek(0)
 
     # parse PDF and extract as string
-    content = list(pdftotext.PDF(f))
+    content = list(pdftotext.PDF(f, raw=False, physical=True))
 
     # report information
     meta =  {
@@ -349,10 +370,3 @@ def get_oco_tabular_data(report):
 
     # return string content
     return {'info': meta, 'data': pd.concat(frames, axis=1)}
-
-
-if __name__ == '__main__':
-
-    # df = get_oco_tabular_data('Miscellaneous Monitoring Data (daily)')['data']
-    # df = get_oco_tabular_data('Miscellaneous Monitoring Data (daily)')['data']
-    df = get_oco_tabular_data('Water Quality Summary (daily)')['data']
