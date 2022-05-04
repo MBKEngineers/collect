@@ -1,7 +1,7 @@
 """
-collect.dwr.swp.delta_conditions
-============================================================
-access DWR Delta Conditions PDF
+collect.dwr.swp
+======================================================================
+access select DWR delta conditions PDFs and State Water Project files
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
