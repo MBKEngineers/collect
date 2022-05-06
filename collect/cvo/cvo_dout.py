@@ -133,7 +133,20 @@ def data_cleaner(df):
         for j in range(n_cols):
             df.iloc[i][j] = df.iloc[i][j].replace(',','')
             df.iloc[i][j] = df.iloc[i][j].replace('%','')
-
+            df.iloc[i][j] = df.iloc[i][j].replace('(','')
+            df.iloc[i][j] = df.iloc[i][j].replace(')','')
+    
+    cols = df.columns
+    n_rows = len(df)
+    n_cols = len(cols)
+    df[cols] = df[cols].astype(str)
+    for i in range(n_rows):
+        for j in range(n_cols):
+            df.iloc[i][j] = df.iloc[i][j].replace(',','')
+            df.iloc[i][j] = df.iloc[i][j].replace('%','')
+            df.iloc[i][j] = df.iloc[i][j].replace('(','')
+            df.iloc[i][j] = df.iloc[i][j].replace(')','')
+  
     df[cols] = df[cols].astype(float)
 
     # Hardcoding it for the last 3 columns since we know that it is in percentages
@@ -182,6 +195,7 @@ def file_getter_dout(start, end):
     special_date = datetime.datetime.strptime('0111',"%m%y")
     blown_up_start = datetime.datetime.strptime('0120',"%m%y")
     blown_up_end = datetime.datetime.strptime('0820',"%m%y")
+
     # Getting list of dates for url
     for month in months_between(start_date, end_date):
         dates = month.strftime("%m%y")
@@ -238,27 +252,27 @@ def file_getter_dout(start, end):
                   index_col=False,
                   colspecs = [ (0, 9)
                               ,(9, 16)
-                              ,(16, 23)
-                              ,(27,35)
-                              ,(35, 43)
-                              ,(43, 50)
+                              ,(16, 25)
+                              ,(25,34)
+                              ,(34, 42)
+                              ,(42, 50)
                               ,(50,57)
                             ,(57,64)
                             ,(64,71)
                             ,(71,81)
-                            ,(81,87)
+                            ,(81,88)
                             ,(88,95)
                             ,(95,102)
                             ,(102,109)
-                            ,(109,116)
-                            ,(116,123)
+                            ,(109,115)
+                            ,(115,124)
                             ,(124,132)
                             ,(132,140)
-                            ,(140,148)
-                            ,(148,156)
+                            ,(140,147)
+                            ,(147,156)
                             ,(156,163)
-                            ,(163,168)
-                            ,(169,178)])
+                            ,(163,169)
+                            ,(169,177)])
             result = pd.concat([result,test])
 
     result['Date'] = pd.to_datetime(result['Date'])
@@ -299,7 +313,28 @@ def file_getter_dout(start, end):
     return new_df 
     #return dates
 
-# data = file_getter_dout('2019/01/01','2022/04/29')
+
+test_cases = ['2005/01/01','2004/01/01',
+'2003/01/01','2002/01/01','2001/01/01']
+test_end = ['2008/01/01','2007/01/01','2006/01/01',
+'2005/01/01','2004/01/01']
+
+# data = file_getter_dout('2006/04/15','2006/04/20')
+
+'''
+,'2012/01/01','2011/01/01','2010/01/01','2009/01/01',
+'2008/01/01','2007/01/01','2006/01/01','2005/01/01','2004/01/01',
+'2003/01/01','2002/01/01','2001/01/01'
+'''
+# testing = ['2022/01/01','2021/01/01']
+
+for i in range(len(test_cases)):
+    start_test_date = test_cases[i]
+    start_test_end = test_end[i]
+    data = file_getter_dout(start_test_date,start_test_end)
+    print(f"It works for {start_test_date} to {start_test_end}")
+
+
 
 # print(data)
 #json derulo
