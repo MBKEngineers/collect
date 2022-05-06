@@ -328,11 +328,11 @@ test_end = ['2008/01/01','2007/01/01','2006/01/01',
 '''
 # testing = ['2022/01/01','2021/01/01']
 
-for i in range(len(test_cases)):
-    start_test_date = test_cases[i]
-    start_test_end = test_end[i]
-    data = file_getter_dout(start_test_date,start_test_end)
-    print(f"It works for {start_test_date} to {start_test_end}")
+# for i in range(len(test_cases)):
+#     start_test_date = test_cases[i]
+#     start_test_end = test_end[i]
+#     data = file_getter_dout(start_test_date,start_test_end)
+#     print(f"It works for {start_test_date} to {start_test_end}")
 
 
 
