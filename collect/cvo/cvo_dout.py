@@ -161,6 +161,9 @@ def file_getter_dout(start, end):
 
     Returns:
         dataframe of date range 
+        date of the when the file was published
+        datetime of all the months selected
+        url of all the months selected
 
     """
     # Check if date is in the right format
@@ -186,6 +189,7 @@ def file_getter_dout(start, end):
     foo = []
     foo_dtime = []
     urls = []
+    date_published = []
     result = pd.DataFrame()
     current_month = 'https://www.usbr.gov/mp/cvo/vungvari/doutdly.pdf'
 
@@ -216,6 +220,30 @@ def file_getter_dout(start, end):
         urls[-1] = current_month
     else:
         pass
+    
+    ### Get the dates when data was published
+    for j in range(len(urls)):
+
+        if foo_dtime[j] > small_pdf:
+            # catches scenario that goes up to current date
+            if  (blown_up_start <= foo_dtime[j] <= blown_up_end) or (datetime.datetime.strptime('0319',"%m%y") <= foo_dtime[j] <= datetime.datetime.strptime('0819',"%m%y")):
+                pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True,area = [900, 850,1200.78 ,1400.67], pages = 1,  pandas_options={'header':None})
+                pdf_time= pd.to_datetime(pdf1[0][0])
+                date_published.append(pdf_time)
+            else:
+                pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True,area = [566, 566,700 ,800], pages = 1,  pandas_options={'header':None})
+                pdf_time= pd.to_datetime(pdf1[0][0])
+                date_published.append(pdf_time)
+        
+        elif prn_date < foo_dtime[j] <= small_pdf:
+          pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True,area = [566, 566,700 ,800], pages = 1,  pandas_options={'header':None})
+          pdf_time= pd.to_datetime(pdf1[0][0])
+          date_published.append(pdf_time)
+
+        else:
+          test = pd.read_fwf(urls[j], skipfooter=43,index_col=False,colspecs = [(0, 9)])
+          pdf_time = pd.to_datetime(test.columns[0])
+          date_published.append(pdf_time)
 
     # Using the url, grab the pdf and concatenate it based off dates
     for j in range(len(urls)):
@@ -231,8 +259,6 @@ def file_getter_dout(start, end):
                 pdf_df = df_generator(pdf1)
                 result = pd.concat([result,pdf_df])
         
-
-
         elif prn_date < foo_dtime[j] <= small_pdf:
             if foo_dtime[j] == special_date:
                 pdf1 = read_pdf("https://www.usbr.gov/mp/cvo/vungvari/dout0111.pdf", encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,350 ,733.67], pages = 1, guess = False,  pandas_options={'header':None})
@@ -309,8 +335,11 @@ def file_getter_dout(start, end):
 
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
     # new_df.to_csv('dout_smallpdf_v3.csv')  
-
-    return new_df 
+    
+    return {'data': new_df, 'info': {'url': urls,
+                                 'title': " U.S. Bureau of Reclamation - Central Valley Operations Office Delta Outflow Computation",
+                                 'units': 'cfs',
+                                 'date published': date_published}}
     #return dates
 
 
