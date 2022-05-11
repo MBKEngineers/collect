@@ -108,9 +108,9 @@ def data_cleaner(df):
     df[cols] = df[cols].astype(str)
 
     for i in range(n_rows):
-	    for j in range(n_cols):
-		    df.iloc[i][j] = df.iloc[i][j].replace(',','')
-		    df.iloc[i][j] = df.iloc[i][j].replace('%','')
+        for j in range(n_cols):
+            df.iloc[i][j] = df.iloc[i][j].replace(',','') 
+            df.iloc[i][j] = df.iloc[i][j].replace('%','')
     df[cols] = df[cols].astype(float)
 
     return df
@@ -157,8 +157,8 @@ def file_getter_shadop(start, end):
 
 	# Using the list of dates, grab a url for each date
     for foos in foo:
-	    url = url_maker(foos)
-	    urls.append(url)
+        url = url_maker(foos)
+        urls.append(url)
 
 	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
     if today_month == int(e_month):
@@ -168,37 +168,46 @@ def file_getter_shadop(start, end):
     count = 0
     for links in urls:
 		# Finding out if it is in feburary or not
-	    month = links[-8:-6]
-	    if month == '02':
-		    pdf1 = read_pdf(links,
+        month = links[-8:-6]
+        if month == '02':
+            pdf1 = read_pdf(links,
 		        stream=True, area = [140,30,435,881], pages = 1, guess = False,  pandas_options={'header':None})
-	    else:
-		    pdf1 = read_pdf(links,
-		        stream=True, area = [140,30,460,881], pages = 1, guess = False,  pandas_options={'header':None})
+        
+        elif links == current_month:
+            today_day = int(today_date.strftime('%d'))
+            # today date-1 since the file does not include current date
+            bottom = 150 + (today_day-1)*10
+            pdf1 = read_pdf(links,
+		        stream=True, 
+                area = [145, 45,bottom,881], 
+                pages = 1, guess = False,  pandas_options={'header':None})
 
-	    pdf_df = df_generator_shadop(pdf1)
+        else:
+            pdf1 = read_pdf(links,
+		        stream=True, area = [140,30,460,881], pages = 1, guess = False,  pandas_options={'header':None})
+        pdf_df = df_generator_shadop(pdf1)
 
 		# change the dates in pdf_df to datetime
-	    default_time = '00:00:00'
-	    correct_dates = []
-	    for i in range(len(pdf_df['Date'])):
-	        day = pdf_df['Date'][i]
-	        day = str(day)
+        default_time = '00:00:00'
+        correct_dates = []
+        for i in range(len(pdf_df['Date'])):
+            day = pdf_df['Date'][i]
+            day = str(day)
+            if len(day) !=2:
+                day = '0' + day
+                pdf_df['Date'][i] = day
+            else:
+                pass
 
-	        if len(day) !=2:
-	            day = '0' + day
-	            pdf_df['Date'][i] = day
-	        else:
-	        	pass
 
-        	correct_date = '20'+ foo[count][2:4] + '-' + foo[count][0:2] +'-'+ str(day) + ' '
-        	combined = correct_date + default_time
-        	datetime_object = datetime.datetime.strptime(combined, '%Y-%m-%d %H:%M:%S')
-        	correct_dates.append(datetime_object)
+            correct_date = '20'+ foo[count][2:4] + '-' + foo[count][0:2] +'-'+ str(day) + ' '
+            combined = correct_date + default_time
+            datetime_object = datetime.datetime.strptime(combined, '%Y-%m-%d %H:%M:%S')
+            correct_dates.append(datetime_object)
 
-	    pdf_df['Date'] = correct_dates
-	    result = pd.concat([result,pdf_df])
-	    count +=1
+        pdf_df['Date'] = correct_dates
+        result = pd.concat([result,pdf_df])
+        count +=1
 
 	# Extract date range 
     new_start_date = start_date.strftime("%Y-%m-%d")
@@ -232,4 +241,5 @@ def file_getter_shadop(start, end):
     return new_df
 	#return dates
 
+data = file_getter_shadop('2022/04/15','2022/05/11')
 

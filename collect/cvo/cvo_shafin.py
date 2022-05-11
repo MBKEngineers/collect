@@ -29,7 +29,7 @@ def url_maker(date):
         url (str): the url for requesting the file
         Specific to kesdop data
     """
-	text = "https://www.usbr.gov/mp/cvo/vungvari/shafin"
+	text = "https://www.usbr.gov/mp/cvo/vungvari/shafln"
 	final = text + date + ".pdf"
 
 	return str(final)
@@ -68,7 +68,7 @@ def months_between(start_date, end_date):
         else:
             month += 1
 
-def df_generator_kesdop(ls):
+def df_generator_shafin(ls):
     """
     Arguements: 
         dataframe in a [1,rows,columns] structure
@@ -84,9 +84,10 @@ def df_generator_kesdop(ls):
     ls1 = ls[0]
 
 	# Change from array to dataframe, generate new columns
-    df = pd.DataFrame(ls1,columns=["Date","britton","mccloud","iron_canyon","pit6",
-    "pit7", "res_total", "d_af","d_cfs","shasta_inf","nat_river","accum_full_1000af"])
-
+    df = pd.DataFrame(ls1,columns=["Date","britton","mccloud",
+    "iron_canyon","pit6",
+    "pit7", "res_total", "d_af",
+    "d_cfs","shasta_inf","nat_river","accum_full_1000af"])
 
     return df
 
@@ -108,9 +109,9 @@ def data_cleaner(df):
     df[cols] = df[cols].astype(str)
 
     for i in range(n_rows):
-	    for j in range(n_cols):
-		    df.iloc[i][j] = df.iloc[i][j].replace(',','')
-		    df.iloc[i][j] = df.iloc[i][j].replace('%','')
+        for j in range(n_cols):
+            df.iloc[i][j] = df.iloc[i][j].replace(',','')
+            df.iloc[i][j] = df.iloc[i][j].replace('%','')
     df[cols] = df[cols].astype(float)
 
     return df
@@ -147,7 +148,7 @@ def file_getter_kesdop(start, end):
     foo = []
     urls = []
     result = pd.DataFrame()
-    current_month = 'https://www.usbr.gov/mp/cvo/vungvari/kesdop.pdf'
+    current_month = 'https://www.usbr.gov/mp/cvo/vungvari/shafln.pdf'
 
 	# Getting list of dates for url
     for month in months_between(start_date, end_date):
@@ -157,8 +158,8 @@ def file_getter_kesdop(start, end):
 
 	# Using the list of dates, grab a url for each date
     for foos in foo:
-	    url = url_maker(foos)
-	    urls.append(url)
+        url = url_maker(foos)
+        urls.append(url)
 
 	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
     if today_month == int(e_month):
@@ -168,37 +169,48 @@ def file_getter_kesdop(start, end):
     count = 0
     for links in urls:
 		# Finding out if it is in feburary or not
-	    month = links[-8:-6]
-	    if month == '02':
-		    pdf1 = read_pdf(links,
+        month = links[-8:-6]
+        if month == '02':
+            pdf1 = read_pdf(links,
 		        stream=True, area = [140, 30,420,881], pages = 1, guess = False,  pandas_options={'header':None})
-	    else:
-		    pdf1 = read_pdf(links,
-		        stream=True, area = [140, 30,440,881], pages = 1, guess = False,  pandas_options={'header':None})
+        
+        elif links == current_month:
+            today_day = int(today_date.strftime('%d'))
+            bottom = 150 + (today_day-1)*10
 
-	    pdf_df = df_generator_shadop(pdf1)
+            pdf1 = read_pdf(links,
+		        stream=True, 
+                area = [140, 30,bottom,881], 
+                pages = 1, guess = False,  pandas_options={'header':None})
+
+        
+        else:
+            pdf1 = read_pdf(links,
+		        stream=True, area = [140, 30,440,881], pages = 1, guess = False,  pandas_options={'header':None})
+                
+        pdf_df = df_generator_shafin(pdf1)
 
 		# change the dates in pdf_df to datetime
-	    default_time = '00:00:00'
-	    correct_dates = []
-	    for i in range(len(pdf_df['Date'])):
-	        day = pdf_df['Date'][i]
-	        day = str(day)
+        default_time = '00:00:00'
+        correct_dates = []
+        for i in range(len(pdf_df['Date'])):
+            day = pdf_df['Date'][i]
+            day = str(day)
+            
+            if len(day) !=2:
+                day = '0' + day
+                pdf_df['Date'][i] = day
+            else:
+                pass
 
-	        if len(day) !=2:
-	            day = '0' + day
-	            pdf_df['Date'][i] = day
-	        else:
-	        	pass
+            correct_date = '20'+ foo[count][2:4] + '-' + foo[count][0:2] +'-'+ str(day) + ' '
+            combined = correct_date + default_time
+            datetime_object = datetime.datetime.strptime(combined, '%Y-%m-%d %H:%M:%S')
+            correct_dates.append(datetime_object)
 
-        	correct_date = '20'+ foo[count][2:4] + '-' + foo[count][0:2] +'-'+ str(day) + ' '
-        	combined = correct_date + default_time
-        	datetime_object = datetime.datetime.strptime(combined, '%Y-%m-%d %H:%M:%S')
-        	correct_dates.append(datetime_object)
-
-	    pdf_df['Date'] = correct_dates
-	    result = pd.concat([result,pdf_df])
-	    count +=1
+        pdf_df['Date'] = correct_dates
+        result = pd.concat([result,pdf_df])
+        count +=1
 
 	# Extract date range 
     new_start_date = start_date.strftime("%Y-%m-%d")
@@ -214,7 +226,7 @@ def file_getter_kesdop(start, end):
 
     top_level = ['Storage_AF','Storage_AF','Storage_AF','Storage_AF','Storage_AF',
             'Res',
-            'change','change'
+            'change','change',
             'Shasta_inflow',
             'Nat_river',
             'accum_full_1000af']
@@ -234,3 +246,4 @@ def file_getter_kesdop(start, end):
 	#return dates
 
 
+data = file_getter_kesdop('2001/04/15','2022/05/11')
