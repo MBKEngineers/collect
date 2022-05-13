@@ -16,142 +16,8 @@ import numpy as np
 import tabula 
 from tabula import read_pdf
 
+from collect.cvo.cvo_common import url_maker, months_between, df_generator, validate, data_cleaner
 
-# input as a string
-# Takes month and year to create the url link to grab the PDF from
-def url_maker_doutdly(date):
-    """
-    Arguments:
-        date (str): the date but in MMYY format, ex 0520
-    Returns:
-        url (str): the url for requesting the file
-        if date is before including 2011 march, give the prn link
-        if not give in pdf format
-    """
-
-    # construct the station url
-    change = datetime.date(2010, 12, 1)
-    bar = datetime.date(2000+int(date[2:4]), int(date[0:2]),1)
-
-    if bar <= change:
-        text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
-        final = text + date + ".prn"
-    else:
-        text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
-        final = text + date + ".pdf"
-
-
-    return str(final)
-
-# inputs start and end date that is in datetime format
-def months_between(start_date, end_date):
-    """
-    Given two instances of ``datetime.date``, generate a list of dates on
-    the 1st of every month between the two dates (inclusive).
-
-    e.g. "5 Jan 2020" to "17 May 2020" would generate:
-
-        1 Jan 2020, 1 Feb 2020, 1 Mar 2020, 1 Apr 2020, 1 May 2020
-
-    """
-    if start_date > end_date:
-        raise ValueError("Start date {start_date} is not before end date {end_date}")
-
-    year = start_date.year
-    month = start_date.month
-
-    while (year, month) <= (end_date.year, end_date.month):
-        yield datetime.date(year, month, 1)
-
-        # Move to the next month.  If we're at the end of the year, wrap around
-        # to the start of the next.
-        #
-        # Example: Nov 2017
-        #       -> Dec 2017 (month += 1)
-        #       -> Jan 2018 (end of year, month = 1, year += 1)
-        #
-        if month == 12:
-            month = 1
-            year += 1
-        else:
-            month += 1
-
-
-
-def df_generator(ls):
-    """
-    Arguements: 
-        dataframe in a [1,rows,columns] structure
-        Change to an array and reshape it
-
-        Minor adjustment for dout files
-    Returns:
-        dataframe in a [rows,columns] structure, changes column names to the correct ones
-
-    Function is specific to dout
-    """
-    ls = np.array(ls)
-    ls1 = ls[0]
-
-    # Change from array to dataframe, generate new columns
-    df = pd.DataFrame(ls1,columns=["Date", "SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
-    "NDCU", "CLT","TRA","CCC","BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT","NDOI_daily","outflow_7_dy_avg","outflow_mnth_avg","exf_inf_daily",
-    "exf_inf_3dy","exf_inf_14dy"])
-
-    df = df.dropna()
-    df = df.reindex()
-    return df
-
-def validate(date_text):
-    """
-    Arguements:
-        date in datetime format
-    Returns:
-        Checks if date is in the correct format of YYYY/MM/DD
-    """
-    try:
-        datetime.datetime.strptime(date_text, '%Y/%m/%d')
-    except ValueError:
-        raise ValueError("Incorrect data format, should be YYYY/MM/DD")
-
-def data_cleaner(df):
-    """
-    Arguements:
-        dataframe that was retreieved from file_getter function
-
-    Returns:
-        dataframe of strings converted to floats for data analysis
-    """
-    cols = df.columns
-    n_rows = len(df)
-    n_cols = len(cols)
-    # Going through each cell to change the numbering format
-    # ie going from 1,001 to 1001
-    # Also converting from string to integer
-    df[cols] = df[cols].astype(str)
-    for i in range(n_rows):
-        for j in range(n_cols):
-            df.iloc[i][j] = df.iloc[i][j].replace(',','')
-            df.iloc[i][j] = df.iloc[i][j].replace('%','')
-            df.iloc[i][j] = df.iloc[i][j].replace('(','')
-            df.iloc[i][j] = df.iloc[i][j].replace(')','')
-    
-    cols = df.columns
-    n_rows = len(df)
-    n_cols = len(cols)
-    df[cols] = df[cols].astype(str)
-    for i in range(n_rows):
-        for j in range(n_cols):
-            df.iloc[i][j] = df.iloc[i][j].replace(',','')
-            df.iloc[i][j] = df.iloc[i][j].replace('%','')
-            df.iloc[i][j] = df.iloc[i][j].replace('(','')
-            df.iloc[i][j] = df.iloc[i][j].replace(')','')
-  
-    df[cols] = df[cols].astype(float)
-
-    # Hardcoding it for the last 3 columns since we know that it is in percentages
-    df.iloc[:,-3:] = df.iloc[:,-3:]/100
-    return df
 
 def file_getter_dout(start, end):
     """
@@ -209,7 +75,7 @@ def file_getter_dout(start, end):
 
     # Using the list of dates, grab a url for each date
     for foos in foo:
-        url = url_maker_doutdly(foos)
+        url = url_maker(foos,'dout')
         urls.append(url)
 
     e_month = int(e_month)
@@ -252,21 +118,21 @@ def file_getter_dout(start, end):
             # catches scenario that goes up to current date
             if  (blown_up_start <= foo_dtime[j] <= blown_up_end) or (datetime.datetime.strptime('0319',"%m%y") <= foo_dtime[j] <= datetime.datetime.strptime('0819',"%m%y")):
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [290.19, 20.76,750.78 ,1300.67], pages = 1, guess = False,  pandas_options={'header':None})
-                pdf_df = df_generator(pdf1)
+                pdf_df = df_generator(pdf1,'dout')
                 result = pd.concat([result,pdf_df])
             else:
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [175.19, 20.76,450.78 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
-                pdf_df = df_generator(pdf1)
+                pdf_df = df_generator(pdf1,'dout')
                 result = pd.concat([result,pdf_df])
         
         elif prn_date < foo_dtime[j] <= small_pdf:
             if foo_dtime[j] == special_date:
                 pdf1 = read_pdf("https://www.usbr.gov/mp/cvo/vungvari/dout0111.pdf", encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,350 ,733.67], pages = 1, guess = False,  pandas_options={'header':None})
-                pdf_df = df_generator(pdf1)
+                pdf_df = df_generator(pdf1,'dout')
                 result = pd.concat([result,pdf_df])
             else:
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,360 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
-                pdf_df = df_generator(pdf1)
+                pdf_df = df_generator(pdf1,'dout')
                 result = pd.concat([result,pdf_df])
 
 
@@ -312,7 +178,7 @@ def file_getter_dout(start, end):
     #Set DateTime Index
     new_df.set_index('Date', inplace = True)
 
-    new_df = data_cleaner(new_df)
+    new_df = data_cleaner(new_df,'dout')
 
     # Setting up the multi columns
     bottom_level =["SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
@@ -348,8 +214,8 @@ test_cases = ['2005/01/01','2004/01/01',
 test_end = ['2008/01/01','2007/01/01','2006/01/01',
 '2005/01/01','2004/01/01']
 
-# data = file_getter_dout('2006/04/15','2006/04/20')
-
+data = file_getter_dout('2007/04/15','2008/04/20')
+print(data)
 '''
 ,'2012/01/01','2011/01/01','2010/01/01','2009/01/01',
 '2008/01/01','2007/01/01','2006/01/01','2005/01/01','2004/01/01',
