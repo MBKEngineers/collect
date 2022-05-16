@@ -11,6 +11,39 @@ import pandas as pd
 import requests
 
 
+def get_query_url(station_id, sensor, start_time, end_time, interval):
+    """
+    construct the station/sensor query URL for USGS JSON data service
+
+    Arguments:
+        station_id (int or str): the USGS station code (ex: 11446220)
+        sensor (str): the timeseries sensor code, ex: '00060' (discharge)
+        start_time (dt.datetime): start of timeseries window
+        end_time (dt.datetime): end of timeseries window
+        interval (str): the data interval, lowercase, ex: 'daily' or 'instantaneous'
+    Returns:
+        url (str): the query url representing the specified station and parameters
+    """
+    interval_code = {'instantaneous': 'i', 'daily': 'd'}[interval]
+
+    if interval == 'instantaneous':
+        format_start = start_time.isoformat()
+        format_end = end_time.isoformat()
+
+    elif interval == 'daily':
+        format_start = start_time.strftime('%Y-%m-%d')
+        format_end = end_time.strftime('%Y-%m-%d')
+
+    # construct query URL
+    url = '&'.join([f'https://waterservices.usgs.gov/nwis/{interval_code}v/?format=json',
+                    f'sites={station_id}',
+                    f'startDT={format_start}',
+                    f'endDT={format_end}',
+                    f'parameterCd={sensor}',
+                    'siteStatus=all'])
+    return url
+
+
 def get_data(station_id, sensor, start_time, end_time, interval='instantaneous'):
     """
     Download timeseries data from USGS database; return as dataframe
@@ -22,39 +55,20 @@ def get_data(station_id, sensor, start_time, end_time, interval='instantaneous')
     80154 Suspnd sedmnt conc(Mean)
     80155 Suspnd sedmnt disch(Mean)
 
-    Args:
+    Arguments:
         station_id (int or str): the USGS station code (ex: 11446220)
         sensor (str): ex '00060' (discharge)
         start_time (dt.datetime): ex dt.datetime(2016, 10, 1)
         end_time (dt.datetime): ex dt.datetime(2017, 10, 1)
         interval (str): ex 'daily'
     Returns:
-        (dict)
-
+        (dict): result dictionary containing key value pairs for 'data' (timeseries dataframe) and 'info' (request metadata)
     """
-    if interval == 'instantaneous':
-        format_start = start_time.isoformat()
-        format_end = end_time.isoformat()
-
-    elif interval == 'daily':
-        format_start = start_time.strftime('%Y-%m-%d')
-        format_end = end_time.strftime('%Y-%m-%d')
+    # force lowercase interval
+    interval = interval.lower()
 
     # construct query URL
-    url = '&'.join([
-        'https://waterservices.usgs.gov/nwis/{interval}v/?format=json',
-        'sites={station_id}',
-        'startDT={start_time}',
-        'endDT={end_time}',
-        'parameterCd={sensor}',
-        'siteStatus=all'
-    ]).format(
-        interval={'instantaneous':'i', 'daily':'d'}[interval],
-        station_id=station_id, 
-        start_time=format_start, 
-        end_time=format_end,
-        sensor=sensor
-    )
+    url = get_query_url(station_id, sensor, start_time, end_time, interval)
 
     # get gage data as json
     data = requests.get(url, verify=False).json()
@@ -97,11 +111,10 @@ def get_peak_streamflow(station_id):
     """
     Download annual peak timeseries data from USGS database; return as dataframe
     
-    Args:
+    Arguments:
         station_id (int or str): the USGS station code
-
     Returns:
-        (dict)
+        (dict): result dictionary containing key value pairs for 'data' (peak streamflow dataframe) and 'info' (request metadata)
     """
 
     # construct query url
