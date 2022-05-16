@@ -146,7 +146,8 @@ def get_b120_update_data(date_suffix=''):
     """
 
     # main B120 page (new DWR format)
-    url = 'https://cdec.water.ca.gov/b120up.html'#.format(date_suffix)
+    # available Feb, Mar, Apr, May, Jun
+    url = 'http://cdec.water.ca.gov/b120up{}.html'.format(date_suffix)
 
     if not validate_date_suffix(date_suffix, min_year=2018):
         raise errors.B120SourceError('B120 updates in this format not available before Feb. 2018.')
@@ -247,17 +248,15 @@ def get_120_archived_reports(year, month):
     buf.seek(0)
 
     # parse fixed-width file
-    wy_df = pd.read_fwf(buf, header=[1, 2, 3], skiprows=[4,])
+    wy_df = pd.read_fwf(buf, header=None, skiprows=[0,1,2,3,4,])
     wy_df.dropna(inplace=True)
 
     # clean columns
-    headers = clean_fixed_width_headers(wy_df.columns)
-    headers[0] = 'Hydrologic Region'
+    headers = ['Hydrologic Region','Oct thru Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Water Year','90%% Exceedance','Delete','10%% Exceedance','WY %% Avg']
     wy_df.columns = headers
 
-    # separate 80% probability range
-    wy_df['90% Exceedance'] = wy_df['80% Probability Range'].str.split('-', expand=True)[0]
-    wy_df['10% Exceedance'] = wy_df['80% Probability Range'].str.split('-', expand=True)[1]
+    wy_df.drop(['Delete'], axis=1, inplace=True)
+    wy_df['80%% Probability Range'] = wy_df['90%% Exceedance'].map(str) + ' - ' + wy_df['10%% Exceedance'].map(str)
 
     # caption
     caption = []
