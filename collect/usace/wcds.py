@@ -10,6 +10,7 @@ import re
 import pandas as pd
 import requests
 from collect import utils
+import json
 
 
 def get_water_year_data(reservoir, water_year, interval='d'):
@@ -56,11 +57,11 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     df.set_index('ISO 8601 Date Time', inplace=True)
     df.index = pd.to_datetime(df.index)
 
-    return {'data': df, 
-            'info': {'reservoir': reservoir,
+    result = {'data': df, 
+            'info': {'reservoir': get_reservoir_metadata(reservoir, water_year, interval),
                      'water year': water_year, 
                      'interval':interval}}
-
+    return result
 
 def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True):
     """
@@ -100,11 +101,12 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
     if clean_column_headers:
         df.rename(_cleaned_columns_map(df.columns), axis=1, inplace=True)
 
-    # return timeseries data and record metadata
-    return {'data': df, 
+    result = {'data': df, 
             'info': {'reservoir': reservoir, 
                      'interval': interval, 
                      'notes': 'daily data value occurs on midnight of entry date'}}
+    # return timeseries data and record metadata
+    return result
 
 
 def get_wcds_reservoirs():
@@ -240,3 +242,17 @@ def get_release_report(reservoir):
 
     # default without dataframe parsing
     return {'data': raw, 'info': info}
+
+def get_reservoir_metadata(reservoir, water_year, interval='d'):
+    # reservoir code is case-sensitive
+    reservoir = reservoir.lower()
+
+    # USACE-SPK Folsom page
+    url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.meta'
+    
+    # Read url data
+    response = requests.get(url, verify=False)
+    text = response.text
+    site_info = json.loads(text)
+    return site_info
+
