@@ -849,6 +849,11 @@ def _get_forecast_csv(url):
 def get_forecast_csvdata(url):
     return _get_forecast_csv(url)
 
+def get_rating_curve(cnrfc_id, ):
+    url = f'https://www.cnrfc.noaa.gov/data/ratings/{cnrfc_id}_rating.js'
+    data = requests.get(url).content
+    return data
+
 
 def _default_date_string(date_string):
     """
