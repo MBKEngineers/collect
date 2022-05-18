@@ -7,13 +7,11 @@ Some will have multiple args to differentiate between the CVO data that is being
 '''
 
 # -*- coding: utf-8 -*-
-import io
-import re
+
 import datetime
 from datetime import date 
 from pandas.core.indexes.datetimes import date_range
 
-import requests
 import pandas as pd
 import numpy as np
 import tabula 
@@ -120,10 +118,11 @@ def df_generator(ls,url):
 
     Function is specific to shadop
     """
-    if url == 'kesdop':
-        ls = np.array(ls)
-        ls1 = ls[0]
 
+    ls = np.array(ls)
+    ls1 = ls[0]
+
+    if url == 'kesdop':
         # Change from array to dataframe, generate new columns
         df = pd.DataFrame(ls1,columns=[ "Date","elev","storage","change","inflow",
         "spring_release", "shasta_release", "power","spill","fishtrap","evap_cfs"])
@@ -132,21 +131,12 @@ def df_generator(ls,url):
         return df
 
     elif url == 'shadop':
-        ls = np.array(ls)
-        ls1 = ls[0]
-
-        # Change from array to dataframe, generate new columns
         df = pd.DataFrame(ls1,columns=[ "Date","elev","in_lake","change","inflow_cfs",
         "power", "spill", "outlet","evap_cfs","evap_in","precip_in"])
-
 
         return df
 
     elif url == 'shafin':
-        ls = np.array(ls)
-        ls1 = ls[0]
-
-        # Change from array to dataframe, generate new columns
         df = pd.DataFrame(ls1,columns=["Date","britton","mccloud",
         "iron_canyon","pit6",
         "pit7", "res_total", "d_af",
@@ -154,13 +144,7 @@ def df_generator(ls,url):
 
         return df
 
-
     elif url == 'dout':
-
-        ls = np.array(ls)
-        ls1 = ls[0]
-
-        # Change from array to dataframe, generate new columns
         df = pd.DataFrame(ls1,columns=["Date", "SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
         "NDCU", "CLT","TRA","CCC","BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT","NDOI_daily","outflow_7_dy_avg","outflow_mnth_avg","exf_inf_daily",
         "exf_inf_3dy","exf_inf_14dy"])
@@ -193,16 +177,6 @@ def data_cleaner(df,url):
         # ie going from 1,001 to 1001
         # Also converting from string to integer
         df[cols] = df[cols].astype(str)
-        for i in range(n_rows):
-            for j in range(n_cols):
-                df.iloc[i][j] = df.iloc[i][j].replace(',','')
-                df.iloc[i][j] = df.iloc[i][j].replace('%','')
-                df.iloc[i][j] = df.iloc[i][j].replace('(','')
-                df.iloc[i][j] = df.iloc[i][j].replace(')','')
-        
-        cols = df.columns
-        n_rows = len(df)
-        n_cols = len(cols)
         df[cols] = df[cols].astype(str)
         for i in range(n_rows):
             for j in range(n_cols):

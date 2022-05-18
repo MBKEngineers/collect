@@ -4,13 +4,11 @@ collect.cvo.cvo_dout
 access cvo data
 """
 # -*- coding: utf-8 -*-
-import io
-import re
+
 import datetime
 from datetime import date 
 from pandas.core.indexes.datetimes import date_range
 
-import requests
 import pandas as pd
 import numpy as np
 import tabula 
@@ -214,7 +212,7 @@ test_cases = ['2005/01/01','2004/01/01',
 test_end = ['2008/01/01','2007/01/01','2006/01/01',
 '2005/01/01','2004/01/01']
 
-data = file_getter_dout('2007/04/15','2008/04/20')
+data = file_getter_dout('2009/04/15','2014/04/20')
 print(data)
 '''
 ,'2012/01/01','2011/01/01','2010/01/01','2009/01/01',
