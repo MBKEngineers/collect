@@ -99,14 +99,9 @@ def file_getter_dout(start, end):
                 pdf_time= pd.to_datetime(pdf1[0][0])
                 date_published.append(pdf_time)
         
-        elif prn_date < foo_dtime[j] <= small_pdf:
+        else:
           pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True,area = [566, 566,700 ,800], pages = 1,  pandas_options={'header':None})
           pdf_time= pd.to_datetime(pdf1[0][0])
-          date_published.append(pdf_time)
-
-        else:
-          test = pd.read_fwf(urls[j], skipfooter=43,index_col=False,colspecs = [(0, 9)])
-          pdf_time = pd.to_datetime(test.columns[0])
           date_published.append(pdf_time)
 
     # Using the url, grab the pdf and concatenate it based off dates
@@ -124,6 +119,7 @@ def file_getter_dout(start, end):
                 result = pd.concat([result,pdf_df])
         
         elif prn_date < foo_dtime[j] <= small_pdf:
+            # Weird date where pdf gets slightly longer
             if foo_dtime[j] == special_date:
                 pdf1 = read_pdf("https://www.usbr.gov/mp/cvo/vungvari/dout0111.pdf", encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,350 ,733.67], pages = 1, guess = False,  pandas_options={'header':None})
                 pdf_df = df_generator(pdf1,'dout')
@@ -193,10 +189,6 @@ def file_getter_dout(start, end):
     arrays = [top_level,bottom_level]
     tuples = list(zip(*arrays))
 
-
-
-
-
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
     # new_df.to_csv('dout_smallpdf_v3.csv')  
     
@@ -212,8 +204,7 @@ test_cases = ['2005/01/01','2004/01/01',
 test_end = ['2008/01/01','2007/01/01','2006/01/01',
 '2005/01/01','2004/01/01']
 
-data = file_getter_dout('2009/04/15','2014/04/20')
-print(data)
+data = file_getter_dout('2015/04/15','2022/04/20')
 '''
 ,'2012/01/01','2011/01/01','2010/01/01','2009/01/01',
 '2008/01/01','2007/01/01','2006/01/01','2005/01/01','2004/01/01',
