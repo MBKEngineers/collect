@@ -154,10 +154,11 @@ def df_generator(ls,url):
         return df
 
 def validate(date_text):
-    try:
-        datetime.datetime.strptime(date_text, '%Y/%m/%d')
-    except ValueError:
-        raise ValueError("Incorrect data format, should be YYYY/MM/DD")
+    if isinstance(date_text,datetime.datetime):
+        pass
+    else:
+        print("Please give in datetime format")
+        quit()
 
 
 # Making everything to a function
