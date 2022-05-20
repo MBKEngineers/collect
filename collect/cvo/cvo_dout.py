@@ -21,7 +21,7 @@ def file_getter_dout(start, end):
     """
     Arguements:
         range of dates including start and end month
-        Given in YYYY/MM/DD format
+        Given in datetime format
 
     Returns:
         dataframe of date range 
@@ -31,27 +31,16 @@ def file_getter_dout(start, end):
 
     """
     # Check if date is in the right format
-    # validate(start)
-    # validate(end)
-
-    # Convert into string
-    start = str(start)
-    end = str(end)
-
-    # Defining dates
-    s_year,s_month,s_day = start.split("/")
-    e_year,e_month,e_day = end.split("/")
-
-    start_date = datetime.date(int(s_year), int(s_month), int(s_day))
-    end_date = datetime.date(int(e_year), int(e_month), int(e_day))
+    validate(start)
+    validate(end)
 
     today_date = date.today()
     today_month = int(today_date.strftime('%m'))
     today_year = int(today_date.strftime('%Y'))
 
     # Defining variables
-    foo = []
-    foo_dtime = []
+    date_list = []
+    date_list_dtime = []
     urls = []
     date_published = []
     result = pd.DataFrame()
@@ -65,32 +54,28 @@ def file_getter_dout(start, end):
     blown_up_end = datetime.datetime.strptime('0820',"%m%y")
 
     # Getting list of dates for url
-    for month in months_between(start_date, end_date):
+    for month in months_between(start, end):
+        # converting to dates like 0511, 0718 etc, mmyy
         dates = month.strftime("%m%y")
+        # converting to dates like 0511, 0718 to a datetime format
         new_month = datetime.datetime.strptime(dates, '%m%y')
-        foo_dtime.append(new_month)
-        foo.append(dates)
+        date_list_dtime.append(new_month)
+        date_list.append(dates)
 
-    # Using the list of dates, grab a url for each date
-    for foos in foo:
-        url = url_maker(foos,'dout')
+        url = url_maker(dates,'dout')
         urls.append(url)
 
-    e_month = int(e_month)
-    e_year = int(e_year)
     # Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
-    if today_month == e_month and today_year == e_year:
-        test = 1
+    if today_month == int(end.strftime('%m')) and today_year == int(end.strftime('%Y')):
         urls[-1] = current_month
     else:
         pass
     
     ### Get the dates when data was published
     for j in range(len(urls)):
-
-        if foo_dtime[j] > small_pdf:
+        if date_list_dtime[j] > small_pdf:
             # catches scenario that goes up to current date
-            if  (blown_up_start <= foo_dtime[j] <= blown_up_end) or (datetime.datetime.strptime('0319',"%m%y") <= foo_dtime[j] <= datetime.datetime.strptime('0819',"%m%y")):
+            if  (blown_up_start <= date_list_dtime[j] <= blown_up_end) or (datetime.datetime.strptime('0319',"%m%y") <= date_list_dtime[j] <= datetime.datetime.strptime('0819',"%m%y")):
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True,area = [900, 850,1200.78 ,1400.67], pages = 1,  pandas_options={'header':None})
                 pdf_time= pd.to_datetime(pdf1[0][0])
                 date_published.append(pdf_time)
@@ -107,9 +92,9 @@ def file_getter_dout(start, end):
     # Using the url, grab the pdf and concatenate it based off dates
     for j in range(len(urls)):
 
-        if foo_dtime[j] > small_pdf:
+        if date_list_dtime[j] > small_pdf:
             # catches scenario that goes up to current date
-            if  (blown_up_start <= foo_dtime[j] <= blown_up_end) or (datetime.datetime.strptime('0319',"%m%y") <= foo_dtime[j] <= datetime.datetime.strptime('0819',"%m%y")):
+            if  (blown_up_start <= date_list_dtime[j] <= blown_up_end) or (datetime.datetime.strptime('0319',"%m%y") <= date_list_dtime[j] <= datetime.datetime.strptime('0819',"%m%y")):
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [290.19, 20.76,750.78 ,1300.67], pages = 1, guess = False,  pandas_options={'header':None})
                 pdf_df = df_generator(pdf1,'dout')
                 result = pd.concat([result,pdf_df])
@@ -118,9 +103,9 @@ def file_getter_dout(start, end):
                 pdf_df = df_generator(pdf1,'dout')
                 result = pd.concat([result,pdf_df])
         
-        elif prn_date < foo_dtime[j] <= small_pdf:
+        elif prn_date < date_list_dtime[j] <= small_pdf:
             # Weird date where pdf gets slightly longer
-            if foo_dtime[j] == special_date:
+            if date_list_dtime[j] == special_date:
                 pdf1 = read_pdf("https://www.usbr.gov/mp/cvo/vungvari/dout0111.pdf", encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,350 ,733.67], pages = 1, guess = False,  pandas_options={'header':None})
                 pdf_df = df_generator(pdf1,'dout')
                 result = pd.concat([result,pdf_df])
@@ -164,8 +149,8 @@ def file_getter_dout(start, end):
     result['Date'] = pd.to_datetime(result['Date'])
 
     # Extract date range 
-    new_start_date = start_date.strftime("%m-%d-%y")
-    new_end_date = end_date.strftime("%m-%d-%y")
+    new_start_date = start.strftime("%m-%d-%y")
+    new_end_date = end.strftime("%m-%d-%y")
     mask = (result['Date'] >= new_start_date) & (result['Date'] <= new_end_date)
     new_df = result.loc[mask]
 
@@ -174,54 +159,45 @@ def file_getter_dout(start, end):
 
     new_df = data_cleaner(new_df,'dout')
 
-    # Setting up the multi columns
-    bottom_level =["SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
-           "NDCU", 
-           "CLT","TRA","CCC","BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT",
-           "NDOI_daily","outflow_7_dy_avg","outflow_mnth_avg",
-           "exf_inf_daily","exf_inf_3dy","exf_inf_14dy"]
-
-    top_level = ['delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow','delta_inflow',
-         'NDCU',
-         'delta_exports','delta_exports','delta_exports','delta_exports','delta_exports','delta_exports','delta_exports',
-         'outflow_index','outflow_index','outflow_index',
-         'exp_inf','exp_inf','exp_inf']
-    arrays = [top_level,bottom_level]
-    tuples = list(zip(*arrays))
-
+    # tuple format: (top, bottom)
+    tuples = (('delta_inflow','SactoR_pd'),('delta_inflow','SRTP_pd'),('delta_inflow','Yolo_pd'),('delta_inflow','East_side_stream_pd'),('delta_inflow','Joaquin_pd'),('delta_inflow','Joaquin_7dy'),('delta_inflow','Joaquin_mth'),('delta_inflow','total_delta_inflow'),
+ ('NDCU','NDCU'),
+ ('delta_exports','CLT'),('delta_exports','TRA'),('delta_exports','CCC'),('delta_exports','BBID'),('delta_exports','NBA'),('delta_exports','total_delta_exports'),('delta_exports','3_dy_avg_TRA_CLT'),
+ ('outflow_index','NDOI_daily'),('outflow_index','outflow_7_dy_avg'),('outflow_index','outflow_mnth_avg'),
+ ('exp_inf','exf_inf_daily'),('exp_inf','exf_inf_3dy'),('exp_inf','exf_inf_14dy'))
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
     # new_df.to_csv('dout_smallpdf_v3.csv')  
-    
+
     return {'data': new_df, 'info': {'url': urls,
                                  'title': " U.S. Bureau of Reclamation - Central Valley Operations Office Delta Outflow Computation",
                                  'units': 'cfs',
                                  'date published': date_published}}
     #return dates
 
+# if __name__ == '__main__':
 
-test_cases = ['2005/01/01','2004/01/01',
-'2003/01/01','2002/01/01','2001/01/01']
-test_end = ['2008/01/01','2007/01/01','2006/01/01',
-'2005/01/01','2004/01/01']
 
-data = file_getter_dout('2015/04/15','2022/04/20')
+start_date = datetime.datetime(2021,1,10)
+end_date = datetime.datetime(2022,4,20)
+data = file_getter_dout(start_date,end_date)
+print(data)
 '''
 ,'2012/01/01','2011/01/01','2010/01/01','2009/01/01',
 '2008/01/01','2007/01/01','2006/01/01','2005/01/01','2004/01/01',
 '2003/01/01','2002/01/01','2001/01/01'
 '''
-# testing = ['2022/01/01','2021/01/01']
+    # testing = ['2022/01/01','2021/01/01']
 
-# for i in range(len(test_cases)):
-#     start_test_date = test_cases[i]
-#     start_test_end = test_end[i]
-#     data = file_getter_dout(start_test_date,start_test_end)
-#     print(f"It works for {start_test_date} to {start_test_end}")
+    # for i in range(len(test_cases)):
+    #     start_test_date = test_cases[i]
+    #     start_test_end = test_end[i]
+    #     data = file_getter_dout(start_test_date,start_test_end)
+    #     print(f"It works for {start_test_date} to {start_test_end}")
 
 
 
-# print(data)
-#json derulo
+    # print(data)
+    #json derulo
 '''
 file_getter_dout
 data.index = data.index.strftime('%Y-%m-%d %H:%M')

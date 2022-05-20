@@ -4,13 +4,10 @@ collect.cvo.cvo_shafin
 access cvo data
 """
 # -*- coding: utf-8 -*-
-import io
-import re
 import datetime
 from datetime import date 
 from pandas.core.indexes.datetimes import date_range
 
-import requests
 import pandas as pd
 import numpy as np
 import tabula 
@@ -32,40 +29,32 @@ def file_getter_kesdop(start, end):
         dataframe of date range 
 
     """
-
-    # Convert into string
-    start = str(start)
-    end = str(end)
-
-	# Defining dates
-    s_year,s_month,s_day = start.split("/")
-    e_year,e_month,e_day = end.split("/")
-
-    start_date = date(int(s_year), int(s_month), int(s_day))
-    end_date = date(int(e_year), int(e_month), int(e_day))
+      # Check if date is in the right format
+    validate(start)
+    validate(end)
 
     today_date = date.today()
     today_month = int(today_date.strftime('%m'))
 
     # Defining variables
-    foo = []
+    date_list = []
     urls = []
     result = pd.DataFrame()
     current_month = 'https://www.usbr.gov/mp/cvo/vungvari/shafln.pdf'
 
 	# Getting list of dates for url
-    for month in months_between(start_date, end_date):
+    for month in months_between(start, end):
         dates = month.strftime("%m%y")
-        foo.append(dates)
+        date_list.append(dates)
 
 
 	# Using the list of dates, grab a url for each date
-    for foos in foo:
-        url = url_maker(foos,'shafin')
+    for date in date_list:
+        url = url_maker(date,'shafin')
         urls.append(url)
 
 	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
-    if today_month == int(e_month):
+    if today_month == int(end.strftime('%m')):
         urls[-1] = current_month
 
 	# Using the url, grab the pdf and concatenate it based off dates
@@ -106,7 +95,7 @@ def file_getter_kesdop(start, end):
             else:
                 pass
 
-            correct_date = '20'+ foo[count][2:4] + '-' + foo[count][0:2] +'-'+ str(day) + ' '
+            correct_date = '20'+ date_list[count][2:4] + '-' + date_list[count][0:2] +'-'+ str(day) + ' '
             combined = correct_date + default_time
             datetime_object = datetime.datetime.strptime(combined, '%Y-%m-%d %H:%M:%S')
             correct_dates.append(datetime_object)
@@ -116,8 +105,8 @@ def file_getter_kesdop(start, end):
         count +=1
 
 	# Extract date range 
-    new_start_date = start_date.strftime("%Y-%m-%d")
-    new_end_date = end_date.strftime("%Y-%m-%d")
+    new_start_date = start.strftime("%Y-%m-%d")
+    new_end_date = end.strftime("%Y-%m-%d")
 
     mask = (result['Date'] >= new_start_date) & (result['Date'] <= new_end_date)
     new_df = result.loc[mask]
@@ -127,22 +116,13 @@ def file_getter_kesdop(start, end):
 
     new_df = data_cleaner(new_df,'shafin')
 
-    top_level = ['Storage_AF','Storage_AF','Storage_AF','Storage_AF','Storage_AF',
-            'Res',
-            'change','change',
-            'Shasta_inflow',
-            'Nat_river',
-            'accum_full_1000af']
-            
-    bottom_level =["britton","mccloud","iron_canyon","pit6","pit7",
-    "res_total", 
-    "d_af","d_cfs",
-    "shasta_inf",
-    "nat_river",
-    "accum_full_1000af"]
+    tuples = (('Storage_AF','britton'),('Storage_AF','mccloud'),('Storage_AF','iron_canyon'),('Storage_AF','pit6'),('Storage_AF','pit7'),
+    ('Res','res_total'),
+    ('change','d_af'),('change','d_cfs'),
+    ('Shasta_inflow','shasta_inf'),
+    ('Nat_river','nat_river'),
+    ('accum_full_1000af','accum_full_1000af'))
 
-    arrays = [top_level,bottom_level]
-    tuples = list(zip(*arrays))
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
 
     return new_df

@@ -4,13 +4,10 @@ collect.cvo.cvo_shadop
 access cvo data
 """
 # -*- coding: utf-8 -*-
-import io
-import re
 import datetime
 from datetime import date 
 from pandas.core.indexes.datetimes import date_range
 
-import requests
 import pandas as pd
 import numpy as np
 import tabula 
@@ -32,40 +29,28 @@ def file_getter_shadop(start, end):
         dataframe of date range 
 
     """
-
-    # Convert into string
-    start = str(start)
-    end = str(end)
-
-	# Defining dates
-    s_year,s_month,s_day = start.split("/")
-    e_year,e_month,e_day = end.split("/")
-
-    start_date = date(int(s_year), int(s_month), int(s_day))
-    end_date = date(int(e_year), int(e_month), int(e_day))
-
     today_date = date.today()
     today_month = int(today_date.strftime('%m'))
 
     # Defining variables
-    foo = []
+    date_list = []
     urls = []
     result = pd.DataFrame()
     current_month = 'https://www.usbr.gov/mp/cvo/vungvari/shadop.pdf'
 
 	# Getting list of dates for url
-    for month in months_between(start_date, end_date):
+    for month in months_between(start, end):
         dates = month.strftime("%m%y")
-        foo.append(dates)
+        date_list.append(dates)
 
 
 	# Using the list of dates, grab a url for each date
-    for foos in foo:
-        url = url_maker(foos,'shadop')
+    for date in date_list:
+        url = url_maker(date,'shadop')
         urls.append(url)
 
 	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
-    if today_month == int(e_month):
+    if today_month == int(end.strftime('%m')):
         urls[-1] = current_month
 
 	# Using the url, grab the pdf and concatenate it based off dates
@@ -103,8 +88,7 @@ def file_getter_shadop(start, end):
             else:
                 pass
 
-
-            correct_date = '20'+ foo[count][2:4] + '-' + foo[count][0:2] +'-'+ str(day) + ' '
+            correct_date = '20'+ date_list[count][2:4] + '-' + date_list[count][0:2] +'-'+ str(day) + ' '
             combined = correct_date + default_time
             datetime_object = datetime.datetime.strptime(combined, '%Y-%m-%d %H:%M:%S')
             correct_dates.append(datetime_object)
@@ -114,8 +98,8 @@ def file_getter_shadop(start, end):
         count +=1
 
 	# Extract date range 
-    new_start_date = start_date.strftime("%Y-%m-%d")
-    new_end_date = end_date.strftime("%Y-%m-%d")
+    new_start_date = start.strftime("%Y-%m-%d")
+    new_end_date = end.strftime("%Y-%m-%d")
 
     mask = (result['Date'] >= new_start_date) & (result['Date'] <= new_end_date)
     new_df = result.loc[mask]
@@ -124,26 +108,34 @@ def file_getter_shadop(start, end):
     new_df.set_index('Date', inplace = True)
 
     new_df = data_cleaner(new_df,'shadop')
+    # tuple format: (top, bottom)
 
-    top_level = ['Elevation',
-	            'Storage_1000AF','Storage_1000AF',
-	            'CFS',
-	            'Release_CFS','Release_CFS','Release_CFS',
-	            'Evaporation','Evaporation',
-	            'Precip_in']
-    bottom_level =["elev",
-	               "in_lake","change",
-	               "inflow_cfs",
-	               "power", "spill", "outlet",
-	               "evap_cfs","evap_in",
-	               "precip_in"]
-
-    arrays = [top_level,bottom_level]
-    tuples = list(zip(*arrays))
+    tuples = (('Elevation','elev'),
+    ('Storage_1000AF','in_lake'),('Storage_1000AF','change'),
+    ('CFS','inflow_cfs'),
+    ('Release_CFS','power'),('Release_CFS','spill'),('Release_CFS','outlet'),
+    ('Evaporation','evap_cfs'),('Evaporation','evap_in'),
+    ('Precip_in','precip_in'))
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
 
-    return new_df
-	#return dates
+    return {'data': new_df, 'info': {'url': urls,
+                                 'title': "Keswick Reservoir Daily Operations",
+                                 'units': 'cfs',
+                                 'date published': today_date}}
 
-data = file_getter_shadop('2021/04/15','2022/05/11')
-print (data)
+
+
+
+if __name__ == '__main__':
+
+    test_cases = ['2005/01/01','2004/01/01',
+    '2003/01/01','2002/01/01','2001/01/01']
+    test_end = ['2008/01/01','2007/01/01','2006/01/01',
+    '2005/01/01','2004/01/01']
+
+    data = file_getter_shadop('2022/01/15','2022/04/20')
+    '''
+    ,'2012/01/01','2011/01/01','2010/01/01','2009/01/01',
+    '2008/01/01','2007/01/01','2006/01/01','2005/01/01','2004/01/01',
+    '2003/01/01','2002/01/01','2001/01/01'
+    '''
