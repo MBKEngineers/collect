@@ -57,10 +57,29 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     df.set_index('ISO 8601 Date Time', inplace=True)
     df.index = pd.to_datetime(df.index)
 
-    result = {'data': df, 
-            'info': {'reservoir': get_reservoir_metadata(reservoir, water_year, interval),
-                     'water year': water_year, 
-                     'interval':interval}}
+    # Define variable for reservoir metadata
+    raw = get_reservoir_metadata(reservoir, water_year, interval)
+    data_headers = raw['allheaders']
+
+    if 'ymarkers' in raw and 'Gross Pool(elev NGVD29)' in raw['ymarkers']:
+        result =  {'data': df, 
+                   'info': {'reservoir': raw['title'],
+                            'water year': water_year, 
+                            'interval':interval,
+                            'gross pool': raw['ymarkers']['Gross Pool']['value'],
+                            'gross pool (elev)': raw['ymarkers']['Gross Pool(elev NGVD29)']['value'],
+                            'data headers': data_headers},
+                    'metadata': raw}
+    else:
+        result =  {'data': df, 
+                   'info': {'reservoir': raw['title'],
+                            'water year': water_year, 
+                            'interval':interval,
+                            'gross pool': raw['ymarkers']['Gross Pool']['value'],
+                            'gross pool (elev)': raw['ymarkers']['Gross Pool(elev)']['value'],
+                            'data headers': data_headers},
+                    'metadata': raw}
+
     return result
 
 def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True):
@@ -92,7 +111,12 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
     # Make new dataframe
     frames = []
     for water_year in range(utils.get_water_year(start_time), utils.get_water_year(end_time) + 1):
-        frames.append(get_water_year_data(reservoir, water_year, interval)['data'])
+            frames.append(get_water_year_data(reservoir, water_year, interval)['data'])
+    
+    # Make dictionary for every water year within selection
+    metadata = {}    
+    for water_year in range(utils.get_water_year(start_time), utils.get_water_year(end_time) + 1):
+            metadata[water_year] = get_water_year_data(reservoir, water_year, interval)['info']['data headers']
 
     df = pd.concat(frames)
     df.index.name = 'ISO 8601 Date Time'
@@ -101,10 +125,24 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
     if clean_column_headers:
         df.rename(_cleaned_columns_map(df.columns), axis=1, inplace=True)
 
-    result = {'data': df, 
-            'info': {'reservoir': reservoir, 
-                     'interval': interval, 
-                     'notes': 'daily data value occurs on midnight of entry date'}}
+    # Check if headers are equal
+    m_start_time = utils.get_water_year(start_time)
+    m_end_time = utils.get_water_year(end_time)
+
+    if metadata[m_start_time] ==  metadata[m_end_time]:
+        result = {'data': df, 
+                  'info': {'reservoir': get_water_year_data(reservoir, m_end_time, interval)['info']['reservoir'], 
+                           'interval': interval, 
+                           'notes': 'daily data value occurs on midnight of entry date',
+                           'data headers': metadata[m_start_time]}}
+    else:
+        result = {'data': df, 
+                  'info': {'reservoir': get_water_year_data(reservoir, m_end_time, interval)['info']['reservoir'], 
+                           'interval': interval, 
+                           'notes': 'daily data value occurs on midnight of entry date',
+                           'data headers at start time': metadata_list[m_start_time],
+                           'data headers at end time': metadata_list[m_end_time]}}
+
     # return timeseries data and record metadata
     return result
 
