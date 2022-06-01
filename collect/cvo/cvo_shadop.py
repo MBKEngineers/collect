@@ -10,7 +10,6 @@ from pandas.core.indexes.datetimes import date_range
 
 import pandas as pd
 import numpy as np
-import tabula 
 from tabula import read_pdf
 
 from collect.cvo.cvo_common import url_maker, months_between, df_generator, validate, data_cleaner
@@ -45,8 +44,8 @@ def file_getter_shadop(start, end):
 
 
 	# Using the list of dates, grab a url for each date
-    for date in date_list:
-        url = url_maker(date,'shadop')
+    for date_url in date_list:
+        url = url_maker(date_url,'shadop')
         urls.append(url)
 
 	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
@@ -118,24 +117,14 @@ def file_getter_shadop(start, end):
     ('Precip_in','precip_in'))
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
 
+    print(new_df.head())
+
     return {'data': new_df, 'info': {'url': urls,
-                                 'title': "Keswick Reservoir Daily Operations",
+                                 'title': "Shadop Reservoir Daily Operations",
                                  'units': 'cfs',
                                  'date published': today_date}}
 
-
-
-
 if __name__ == '__main__':
-
-    test_cases = ['2005/01/01','2004/01/01',
-    '2003/01/01','2002/01/01','2001/01/01']
-    test_end = ['2008/01/01','2007/01/01','2006/01/01',
-    '2005/01/01','2004/01/01']
-
-    data = file_getter_shadop('2022/01/15','2022/04/20')
-    '''
-    ,'2012/01/01','2011/01/01','2010/01/01','2009/01/01',
-    '2008/01/01','2007/01/01','2006/01/01','2005/01/01','2004/01/01',
-    '2003/01/01','2002/01/01','2001/01/01'
-    '''
+    start_date = datetime.datetime(2021,1,10)
+    end_date = datetime.datetime(2022,4,20)
+    data = file_getter_shadop(start_date,end_date)

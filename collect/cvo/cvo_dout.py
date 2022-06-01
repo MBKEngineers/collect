@@ -11,7 +11,6 @@ from pandas.core.indexes.datetimes import date_range
 
 import pandas as pd
 import numpy as np
-import tabula 
 from tabula import read_pdf
 
 from collect.cvo.cvo_common import url_maker, months_between, df_generator, validate, data_cleaner
@@ -121,13 +120,13 @@ def file_getter_dout(start, end):
     "NDCU", "CLT","TRA","CCC","BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT","NDOI_daily","outflow_7_dy_avg","outflow_mnth_avg","exf_inf_daily",
     "exf_inf_3dy","exf_inf_14dy"],
                   index_col=False,
-                  colspecs = [ (0, 9)
-                              ,(9, 16)
-                              ,(16, 25)
-                              ,(25,34)
-                              ,(34, 42)
-                              ,(42, 50)
-                              ,(50,57)
+                  colspecs =[(0, 9)
+                            ,(9, 16)
+                            ,(16, 25)
+                            ,(25,34)
+                            ,(34, 42)
+                            ,(42, 50)
+                            ,(50,57)
                             ,(57,64)
                             ,(64,71)
                             ,(71,81)
@@ -167,6 +166,7 @@ def file_getter_dout(start, end):
  ('exp_inf','exf_inf_daily'),('exp_inf','exf_inf_3dy'),('exp_inf','exf_inf_14dy'))
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
     # new_df.to_csv('dout_smallpdf_v3.csv')  
+    print(new_df.head())
 
     return {'data': new_df, 'info': {'url': urls,
                                  'title': " U.S. Bureau of Reclamation - Central Valley Operations Office Delta Outflow Computation",
@@ -174,33 +174,11 @@ def file_getter_dout(start, end):
                                  'date published': date_published}}
     #return dates
 
-# if __name__ == '__main__':
 
+if __name__ == '__main__':
 
-start_date = datetime.datetime(2021,1,10)
-end_date = datetime.datetime(2022,4,20)
-data = file_getter_dout(start_date,end_date)
-print(data)
-'''
-,'2012/01/01','2011/01/01','2010/01/01','2009/01/01',
-'2008/01/01','2007/01/01','2006/01/01','2005/01/01','2004/01/01',
-'2003/01/01','2002/01/01','2001/01/01'
-'''
-    # testing = ['2022/01/01','2021/01/01']
+    start_date = datetime.datetime(2021,1,10)
+    end_date = datetime.datetime(2022,4,20)
 
-    # for i in range(len(test_cases)):
-    #     start_test_date = test_cases[i]
-    #     start_test_end = test_end[i]
-    #     data = file_getter_dout(start_test_date,start_test_end)
-    #     print(f"It works for {start_test_date} to {start_test_end}")
+    data = file_getter_dout(start_date,end_date)
 
-
-
-    # print(data)
-    #json derulo
-'''
-file_getter_dout
-data.index = data.index.strftime('%Y-%m-%d %H:%M')
-
-data['NDCU']['NDCU'].to_json(path_or_buf = "ndcu_v1.json", orient = 'index', date_format = 'iso')
-'''

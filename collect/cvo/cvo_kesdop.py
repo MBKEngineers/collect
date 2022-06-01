@@ -10,7 +10,6 @@ from pandas.core.indexes.datetimes import date_range
 
 import pandas as pd
 import numpy as np
-import tabula 
 from tabula import read_pdf
 
 from collect.cvo.cvo_common import url_maker, months_between, df_generator, validate, data_cleaner
@@ -44,8 +43,8 @@ def file_getter_kesdop(start, end):
 
 
 	# Using the list of dates, grab a url for each date
-    for date in date_list:
-        url= url_maker(date_list)
+    for date_url in date_list:
+        url = url_maker(date_url,'kesdop')
         urls.append(url)
 
 	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
@@ -73,7 +72,7 @@ def file_getter_kesdop(start, end):
             pdf1 = read_pdf(links,
 		        stream=True, area = [145, 30,465,881 ], pages = 1, guess = False,  pandas_options={'header':None})
                 
-        pdf_df = df_generator(pdf1)
+        pdf_df = df_generator(pdf1,'kesdop')
 
 		# change the dates in pdf_df to datetime
         default_time = '00:00:00'
@@ -107,7 +106,7 @@ def file_getter_kesdop(start, end):
 	# Set DateTime Index
     new_df.set_index('Date', inplace = True)
 
-    new_df = data_cleaner(new_df)
+    new_df = data_cleaner(new_df,'kesdop')
     # tuple format: (top, bottom)
     tuples = (('Elevation','elev'),
     ('Storage_AF','storage'),('Storage_AF','change'),
@@ -118,6 +117,7 @@ def file_getter_kesdop(start, end):
     ('Evap_cfs','evap_cfs'))
 
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
+    print(new_df.head())
 
     return {'data': new_df, 'info': {'url': urls,
                                  'title': "Keswick Reservoir Daily Operations",
@@ -125,5 +125,8 @@ def file_getter_kesdop(start, end):
                                  'date published': today_date}}
 	#return dates
 
-data = file_getter_kesdop('2019/04/15','2022/05/11')
 
+if __name__ == '__main__':
+    start_date = datetime.datetime(2021,1,10)
+    end_date = datetime.datetime(2022,4,20)
+    data = file_getter_kesdop(start_date,end_date)

@@ -10,7 +10,6 @@ from pandas.core.indexes.datetimes import date_range
 
 import pandas as pd
 import numpy as np
-import tabula 
 from tabula import read_pdf
 
 from collect.cvo.cvo_common import url_maker, months_between, df_generator, validate, data_cleaner
@@ -19,7 +18,7 @@ from collect.cvo.cvo_common import url_maker, months_between, df_generator, vali
 # input as a range of dates
 # Takes range of dates and uses url_maker to get multiple pdfs
 # Format: 'YYYY/MM/DD'
-def file_getter_kesdop(start, end):
+def file_getter_shafin(start, end):
     """
     Arguements:
         range of dates including start and end month
@@ -49,8 +48,8 @@ def file_getter_kesdop(start, end):
 
 
 	# Using the list of dates, grab a url for each date
-    for date in date_list:
-        url = url_maker(date,'shafin')
+    for date_url in date_list:
+        url = url_maker(date_url,'shafin')
         urls.append(url)
 
 	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
@@ -125,7 +124,18 @@ def file_getter_kesdop(start, end):
 
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
 
-    return new_df
-	#return dates
+    print(new_df.head())
+
+    return {'data': new_df, 'info': {'url': urls,
+                                 'title': "Shasta Reservoir Daily Operations",
+                                 'units': 'cfs',
+                                 'date published': today_date}}
 
 
+
+if __name__ == '__main__':
+
+    start_date = datetime.datetime(2021,1,10)
+    end_date = datetime.datetime(2022,4,20)
+
+    data = file_getter_shafin(start_date,end_date)
