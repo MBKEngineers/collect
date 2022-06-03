@@ -76,17 +76,13 @@ def file_getter_dout(start, end):
             # catches scenario that goes up to current date
             if  (blown_up_start <= date_list_dtime[j] <= blown_up_end) or (datetime.datetime.strptime('0319',"%m%y") <= date_list_dtime[j] <= datetime.datetime.strptime('0819',"%m%y")):
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True,area = [900, 850,1200.78 ,1400.67], pages = 1,  pandas_options={'header':None})
-                pdf_time= pd.to_datetime(pdf1[0][0])
-                date_published.append(pdf_time)
             else:
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True,area = [566, 566,700 ,800], pages = 1,  pandas_options={'header':None})
-                pdf_time= pd.to_datetime(pdf1[0][0])
-                date_published.append(pdf_time)
-        
         else:
-          pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True,area = [566, 566,700 ,800], pages = 1,  pandas_options={'header':None})
-          pdf_time= pd.to_datetime(pdf1[0][0])
-          date_published.append(pdf_time)
+            pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True,area = [566, 566,700 ,800], pages = 1,  pandas_options={'header':None})
+        
+        pdf_time= pd.to_datetime(pdf1[0][0])
+        date_published.append(pdf_time)
 
     # Using the url, grab the pdf and concatenate it based off dates
     for j in range(len(urls)):
@@ -95,23 +91,21 @@ def file_getter_dout(start, end):
             # catches scenario that goes up to current date
             if  (blown_up_start <= date_list_dtime[j] <= blown_up_end) or (datetime.datetime.strptime('0319',"%m%y") <= date_list_dtime[j] <= datetime.datetime.strptime('0819',"%m%y")):
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [290.19, 20.76,750.78 ,1300.67], pages = 1, guess = False,  pandas_options={'header':None})
-                pdf_df = df_generator(pdf1,'dout')
-                result = pd.concat([result,pdf_df])
             else:
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [175.19, 20.76,450.78 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
-                pdf_df = df_generator(pdf1,'dout')
-                result = pd.concat([result,pdf_df])
+            
+            pdf_df = df_generator(pdf1,'dout')
+            result = pd.concat([result,pdf_df])
         
         elif prn_date < date_list_dtime[j] <= small_pdf:
             # Weird date where pdf gets slightly longer
             if date_list_dtime[j] == special_date:
                 pdf1 = read_pdf("https://www.usbr.gov/mp/cvo/vungvari/dout0111.pdf", encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,350 ,733.67], pages = 1, guess = False,  pandas_options={'header':None})
-                pdf_df = df_generator(pdf1,'dout')
-                result = pd.concat([result,pdf_df])
             else:
                 pdf1 = read_pdf(urls[j], encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,360 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
-                pdf_df = df_generator(pdf1,'dout')
-                result = pd.concat([result,pdf_df])
+            
+            pdf_df = df_generator(pdf1,'dout')
+            result = pd.concat([result,pdf_df])
 
 
         else:
