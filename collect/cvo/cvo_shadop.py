@@ -9,7 +9,6 @@ from datetime import date
 from pandas.core.indexes.datetimes import date_range
 
 import pandas as pd
-import numpy as np
 from tabula import read_pdf
 
 from collect.cvo.cvo_common import url_maker, months_between, df_generator, validate, data_cleaner
@@ -28,17 +27,23 @@ def file_getter_shadop(start, end):
         dataframe of date range 
 
     """
+    # Check if date is in the right format
+    validate(start)
+    validate(end)
+
     today_date = date.today()
-    today_month = int(today_date.strftime('%m'))
+    today_month = today_date.month
 
     # Defining variables
     date_list = []
     urls = []
+    date_published = []
     result = pd.DataFrame()
     current_month = 'https://www.usbr.gov/mp/cvo/vungvari/shadop.pdf'
 
 	# Getting list of dates for url
     for month in months_between(start, end):
+        date_published.append(month)
         dates = month.strftime("%m%y")
         date_list.append(dates)
 
@@ -49,7 +54,7 @@ def file_getter_shadop(start, end):
         urls.append(url)
 
 	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
-    if today_month == int(end.strftime('%m')):
+    if today_month == end.month:
         urls[-1] = current_month
 
 	# Using the url, grab the pdf and concatenate it based off dates
@@ -58,34 +63,27 @@ def file_getter_shadop(start, end):
 		# Finding out if it is in feburary or not
         month = links[-8:-6]
         if month == '02':
-            pdf1 = read_pdf(links,
-		        stream=True, area = [140,30,435,881], pages = 1, guess = False,  pandas_options={'header':None})
-        
+            Area = [140,30,435,540]
+            
         elif links == current_month:
-            today_day = int(today_date.strftime('%d'))
+            today_day = today_date.day
             # today date-1 since the file does not include current date
-            bottom = 150 + (today_day-1)*10
-            pdf1 = read_pdf(links,
-		        stream=True, 
-                area = [145, 45,bottom,881], 
-                pages = 1, guess = False,  pandas_options={'header':None})
+            bottom = 140 + (today_day)*10
+            Area = [145, 45,bottom,540]
 
         else:
-            pdf1 = read_pdf(links,
-		        stream=True, area = [140,30,460,881], pages = 1, guess = False,  pandas_options={'header':None})
+            Area = [140,30,460,540]
+            
+        pdf1 = read_pdf(links,
+		        stream=True, area = Area, pages = 1, guess = False,  pandas_options={'header':None})
         pdf_df = df_generator(pdf1,'shadop')
 
 		# change the dates in pdf_df to datetime
         default_time = '00:00:00'
         correct_dates = []
         for i in range(len(pdf_df['Date'])):
-            day = pdf_df['Date'][i]
-            day = str(day)
-            if len(day) !=2:
-                day = '0' + day
-                pdf_df['Date'][i] = day
-            else:
-                pass
+            day = str(pdf_df['Date'][i])
+            day = day.zfill(2)
 
             correct_date = '20'+ date_list[count][2:4] + '-' + date_list[count][0:2] +'-'+ str(day) + ' '
             combined = correct_date + default_time
@@ -122,9 +120,10 @@ def file_getter_shadop(start, end):
     return {'data': new_df, 'info': {'url': urls,
                                  'title': "Shadop Reservoir Daily Operations",
                                  'units': 'cfs',
-                                 'date published': today_date}}
+                                 'date published': date_published,
+                                 'date retrieved': today_date}}
 
 if __name__ == '__main__':
-    start_date = datetime.datetime(2021,1,10)
-    end_date = datetime.datetime(2022,4,20)
+    start_date = datetime.date(2011,1,10)
+    end_date = datetime.date(2022,4,20)
     data = file_getter_shadop(start_date,end_date)

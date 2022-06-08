@@ -14,7 +14,6 @@ from pandas.core.indexes.datetimes import date_range
 
 import pandas as pd
 import numpy as np
-import tabula 
 from tabula import read_pdf
 
 
@@ -154,7 +153,7 @@ def df_generator(ls,url):
         return df
 
 def validate(date_text):
-    if isinstance(date_text,datetime.datetime):
+    if isinstance(date_text,datetime.date):
         pass
     else:
         print("Please give in datetime format")

@@ -171,7 +171,7 @@ def file_getter_dout(start, end):
 
 if __name__ == '__main__':
 
-    start_date = datetime.datetime(2021,1,10)
+    start_date = datetime.datetime(2011,1,10)
     end_date = datetime.datetime(2022,4,20)
 
     data = file_getter_dout(start_date,end_date)
