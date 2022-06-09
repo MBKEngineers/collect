@@ -19,6 +19,7 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from collect.cnrfc.gages import *
 from collect.utils.utils import clean_fixed_width_headers, get_web_status
+from urllib.request import urlopen
 
 UTC = pytz.timezone('UTC')
 PACIFIC = pytz.timezone('America/Los_Angeles')
@@ -849,10 +850,14 @@ def _get_forecast_csv(url):
 def get_forecast_csvdata(url):
     return _get_forecast_csv(url)
 
-def get_rating_curve(cnrfc_id, ):
+def get_rating_curve(cnrfc_id):
     url = f'https://www.cnrfc.noaa.gov/data/ratings/{cnrfc_id}_rating.js'
-    data = requests.get(url).content
-    return data
+    page = urlopen(url)
+    html = page.read().decode("utf-8")
+    soup = BeautifulSoup(html, "html.parser")
+
+
+    return soup
 
 
 def _default_date_string(date_string):
