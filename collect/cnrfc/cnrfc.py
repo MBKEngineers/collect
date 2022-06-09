@@ -853,12 +853,12 @@ def get_forecast_csvdata(url):
 
 def get_rating_curve(cnrfc_id):
     
-    # retrieve data from URL
+     # retrieve data from URL
     url = f'https://www.cnrfc.noaa.gov/data/ratings/{cnrfc_id}_rating.js'
     page = urlopen(url)
     html = page.read().decode("utf-8")
     soup = BeautifulSoup(html, "html.parser")
-    
+
     # convert data into list of strings and delete first two entries because no data is contained there
     raw = soup.get_text().splitlines()
     n = 2 
@@ -873,11 +873,11 @@ def get_rating_curve(cnrfc_id):
     flow_data = list(map(float, flow_string_data))
     stage_string_data = list(map(number_extraction, stage_string_list))
     stage_data = list(map(float, stage_string_data))
-  
 
+    # list of paired values as tuples
+    data = [[stage,flow] for stage, flow in zip(stage_data, flow_data)]
 
-    return {'stage (ft)': stage_data, 
-            'flow (cfs)': flow_data}
+    return data
 
 
 
