@@ -850,14 +850,35 @@ def _get_forecast_csv(url):
 def get_forecast_csvdata(url):
     return _get_forecast_csv(url)
 
+
 def get_rating_curve(cnrfc_id):
+    
+    # retrieve data from URL
     url = f'https://www.cnrfc.noaa.gov/data/ratings/{cnrfc_id}_rating.js'
     page = urlopen(url)
     html = page.read().decode("utf-8")
     soup = BeautifulSoup(html, "html.parser")
+    
+    # convert data into list of strings and delete first two entries because no data is contained there
+    raw = soup.get_text().splitlines()
+    n = 2 
+    raw__string_list = raw[n:]
+    flow_string_list = [raw__string_list[index] for index in range(1,len(raw__string_list), 2)]
+    stage_string_list = [raw__string_list[index] for index in range(0,len(raw__string_list), 2)]
+
+    # extract data from list of strings and convert into list of floats
+    def number_extraction(string_list):
+        return  string_list[string_list.find("(")+1:string_list.find(")")]
+    flow_string_data = list(map(number_extraction, flow_string_list))
+    flow_data = list(map(float, flow_string_data))
+    stage_string_data = list(map(number_extraction, stage_string_list))
+    stage_data = list(map(float, stage_string_data))
+  
 
 
-    return soup
+    return {'stage (ft)': stage_data, 
+            'flow (cfs)': flow_data}
+
 
 
 def _default_date_string(date_string):
