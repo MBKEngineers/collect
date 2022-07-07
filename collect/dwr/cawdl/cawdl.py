@@ -57,13 +57,18 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval=None):
     Returns:
         dictionary: dictionary of 'data' and 'info' with dataframe of timeseries and station metadata
     """
-    # cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
-    cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuousdata/'
-
     if not interval and variable in ('CONDUCTIVITY', 'WATER_TEMPERATURE'):
         interval = 'POINT'
 
+    # cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
+    cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuousdata/'
     table_url = cawdl_url + 'docs/{0}/{1}/{2}_{3}_DATA.CSV'.format(site_id, water_year, variable, interval)
+    
+    if water_year == 'por':
+        if interval == 'Daily_Mean':
+            cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuous/'
+            table_url = cawdl_url + '{0}/{1}/{0}_{2}_{3}.csv'.format(site_id, water_year, variable, interval)
+            
     site_url = cawdl_url + 'index.cfm?site={0}'.format(site_id) # HAVE TO CHANGE AND ADD TO SITE INFO
 
     # read historical ground water timeseries from "recent groundwater level data" tab
@@ -95,7 +100,7 @@ def get_cawdl_surface_water_por(site_id, variable, interval=None):
     Returns:
         dictionary: dictionary of 'data' and 'info' with dataframe of timeseries and station metadata
     """
-    return get_cawdl_surface_water_data(site_id, 'POR', variable, interval)
+    return get_cawdl_surface_water_data(site_id, 'por', variable, interval)
 
 def get_cawdl_surface_water_site_report(site_id):
     """
