@@ -126,7 +126,7 @@ def file_getter_kesdop(start, end):
 	#return dates
 
 
-if __name__ == '__main__':
-    start_date = datetime.date(2021,1,10)
-    end_date = datetime.today()
-    data = file_getter_kesdop(start_date,end_date)
+# if __name__ == '__main__':
+#     start_date = datetime.datetime(2021,1,10)
+#     end_date = datetime.datetime.now()
+#     data = file_getter_kesdop(start_date,end_date)

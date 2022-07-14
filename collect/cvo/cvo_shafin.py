@@ -6,7 +6,6 @@ access cvo data
 # -*- coding: utf-8 -*-
 import datetime
 from datetime import date 
-from datetime import datetime
 
 import pandas as pd
 from tabula import read_pdf
@@ -128,14 +127,9 @@ def file_getter_shafin(start, end):
                                  'date published': date_published,
                                  'date retrieved': today_date}}
 
-start_date = datetime.date(2022,1,10)
-end_date = datetime.date(2022,7,10)
+# if __name__ == '__main__':
 
-data = file_getter_shafin(start_date,end_date)
-print(data)
-if __name__ == '__main__':
+#     start_date = datetime.datetime(2022,1,10)
+#     end_date = datetime.datetime.now()
 
-    start_date = datetime.date(2022,1,10)
-    end_date = datetime.date.today()
-
-    data = file_getter_shafin(start_date,end_date)
+#     data = file_getter_shafin(start_date,end_date)

@@ -125,14 +125,9 @@ def file_getter_shadop(start, end):
                                  'date published': date_published,
                                  'date retrieved': today_date}}
 
-# start_date = datetime.date(2022,1,10)
-# end_date = datetime.date(2022,7,10)
 
-# data = file_getter_shadop(start_date,end_date)
-# print(data)
+# if __name__ == '__main__':
 
-if __name__ == '__main__':
-
-    start_date = datetime.datetime(2021,1,10)
-    end_date = datetime.datetime.now()
-    data = file_getter_shadop(start_date,end_date)
+#     start_date = datetime.datetime(2021,1,10)
+#     end_date = datetime.datetime.now()
+#     data = file_getter_shadop(start_date,end_date)

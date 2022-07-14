@@ -160,15 +160,10 @@ def file_getter_dout(start, end):
                                  'units': 'cfs',
                                  'date published': date_published}}
     #return dates
-start_date = datetime.datetime(2020,5,10)
-end_date = datetime.datetime.now()
-
-data = file_getter_dout(start_date,end_date)
-
 # if __name__ == '__main__':
 
 #     start_date = datetime.datetime(2010,5,10)
-#     end_date = datetime.datetime(2011,4,20)
+#     end_date = datetime.datetime(now)
 
 #     data = file_getter_dout(start_date,end_date)
 
