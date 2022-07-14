@@ -32,7 +32,7 @@ def file_getter_dout(start, end):
     validate(start)
     validate(end)
 
-    today_date = date.today()
+    today_date = datetime.datetime.now()
     today_month = int(today_date.strftime('%m'))
     today_year = int(today_date.strftime('%Y'))
 
@@ -161,7 +161,7 @@ def file_getter_dout(start, end):
                                  'date published': date_published}}
     #return dates
 start_date = datetime.datetime(2020,5,10)
-end_date = datetime.datetime(2022,6,10)
+end_date = datetime.datetime.now()
 
 data = file_getter_dout(start_date,end_date)
 

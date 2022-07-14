@@ -117,7 +117,7 @@ def file_getter_shadop(start, end):
     ('Precip_in','precip_in'))
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
 
-    print(new_df.head())
+
 
     return {'data': new_df, 'info': {'url': urls,
                                  'title': "Shadop Reservoir Daily Operations",
@@ -125,13 +125,14 @@ def file_getter_shadop(start, end):
                                  'date published': date_published,
                                  'date retrieved': today_date}}
 
-start_date = datetime.date(2022,1,10)
-end_date = datetime.date(2022,7,10)
+# start_date = datetime.date(2022,1,10)
+# end_date = datetime.date(2022,7,10)
 
-data = file_getter_shadop(start_date,end_date)
-print(data)
+# data = file_getter_shadop(start_date,end_date)
+# print(data)
 
 if __name__ == '__main__':
-    start_date = datetime.date(2021,1,10)
-    end_date = datetime.today()
+
+    start_date = datetime.datetime(2021,1,10)
+    end_date = datetime.datetime.now()
     data = file_getter_shadop(start_date,end_date)
