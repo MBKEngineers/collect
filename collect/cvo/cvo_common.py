@@ -9,13 +9,12 @@ Some will have multiple args to differentiate between the CVO data that is being
 # -*- coding: utf-8 -*-
 
 import datetime
-from datetime import date 
-from pandas.core.indexes.datetimes import date_range
 
 import pandas as pd
 import numpy as np
-from tabula import read_pdf
 
+# Remove false positive warning about editing dataframes
+pd.options.mode.chained_assignment = None  # default='warn'
 
 
 ############# functions
@@ -23,11 +22,20 @@ from tabula import read_pdf
 # Takes month and year to create the url link to grab the PDF from
 def url_maker(date,url):
     '''
+    For shadop, kesdop, shafin:
     Arguments:
         date (str): the date but in MMYY format, ex 0520
         url (str): specify which pdf you're looking at
     Returns:
         url (str): the url for requesting the file
+
+    For dout:
+    Arguments:
+            date (str): the date but in MMYY format, ex 0520
+        Returns:
+            url (str): the url for requesting the file
+            if date is before including 2011 march, give the prn link
+            if not give in pdf format
     '''
     if url == 'kesdop':
         text = "https://www.usbr.gov/mp/cvo/vungvari/kesdop"
@@ -49,14 +57,6 @@ def url_maker(date,url):
 
 
     elif url == 'dout':
-        """
-        Arguments:
-            date (str): the date but in MMYY format, ex 0520
-        Returns:
-            url (str): the url for requesting the file
-            if date is before including 2011 march, give the prn link
-            if not give in pdf format
-        """
 
         # construct the station url
         change = datetime.date(2010, 12, 1)
@@ -113,7 +113,8 @@ def df_generator(ls,url):
 
         Minor adjustment for shadop files
     Returns:
-        dataframe in a [rows,columns] structure, changes column names to the correct ones
+        dataframe in a [rows,columns] structure, 
+        column names change to what is specified below
 
     Function is specific to shadop
     """
@@ -125,7 +126,6 @@ def df_generator(ls,url):
         # Change from array to dataframe, generate new columns
         df = pd.DataFrame(ls1,columns=[ "Date","elev","storage","change","inflow",
         "spring_release", "shasta_release", "power","spill","fishtrap","evap_cfs"])
-
 
         return df
 
@@ -144,8 +144,11 @@ def df_generator(ls,url):
         return df
 
     elif url == 'dout':
-        df = pd.DataFrame(ls1,columns=["Date", "SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy","Joaquin_mth", "total_delta_inflow",
-        "NDCU", "CLT","TRA","CCC","BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT","NDOI_daily","outflow_7_dy_avg","outflow_mnth_avg","exf_inf_daily",
+        df = pd.DataFrame(ls1,columns=["Date", "SactoR_pd","SRTP_pd", 
+        "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy",
+        "Joaquin_mth", "total_delta_inflow","NDCU", "CLT","TRA","CCC",
+        "BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT","NDOI_daily",
+        "outflow_7_dy_avg","outflow_mnth_avg","exf_inf_daily",
         "exf_inf_3dy","exf_inf_14dy"])
 
         df = df.dropna()
@@ -163,7 +166,13 @@ def validate(date_text):
 # Making everything to a function
 def data_cleaner(df,url):
     if url == 'dout':
+        
         """
+        This function converts data from string to floats and
+        removes any non-numeric elements 
+
+        Two seperate conditions for dout and kesdop,shadop,shafin
+
         Arguements:
             dataframe that was retreieved from file_getter function
 

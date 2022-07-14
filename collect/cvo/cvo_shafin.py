@@ -6,7 +6,7 @@ access cvo data
 # -*- coding: utf-8 -*-
 import datetime
 from datetime import date 
-from pandas.core.indexes.datetimes import date_range
+from datetime import datetime
 
 import pandas as pd
 from tabula import read_pdf
@@ -19,15 +19,17 @@ from collect.cvo.cvo_common import url_maker, months_between, df_generator, vali
 # Format: 'YYYY/MM/DD'
 def file_getter_shafin(start, end):
     """
+    Earliest PDF date: Feburary 2000
+
     Arguements:
-        range of dates including start and end month
-        Given in YYYY/MM/DD format
+        Range of dates including start and end month
+        Given in YYYY/MM/DD format and as a datetime object
 
     Returns:
         dataframe of date range 
 
     """
-      # Check if date is in the right format
+    # Check if date is in the right format
     validate(start)
     validate(end)
 
@@ -53,7 +55,8 @@ def file_getter_shafin(start, end):
         url = url_maker(date_url,'shafin')
         urls.append(url)
 
-	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
+	# Since the current month url is slightly different, 
+    # we set up a condition that replaces that url with the correct one
     if today_month == end.month:
         urls[-1] = current_month
 
@@ -107,7 +110,8 @@ def file_getter_shafin(start, end):
 
     new_df = data_cleaner(new_df,'shafin')
 
-    tuples = (('Storage_AF','britton'),('Storage_AF','mccloud'),('Storage_AF','iron_canyon'),('Storage_AF','pit6'),('Storage_AF','pit7'),
+    tuples = (('Storage_AF','britton'),('Storage_AF','mccloud'),('Storage_AF','iron_canyon'),
+    ('Storage_AF','pit6'),('Storage_AF','pit7'),
     ('Res','res_total'),
     ('change','d_af'),('change','d_cfs'),
     ('Shasta_inflow','shasta_inf'),
@@ -124,11 +128,14 @@ def file_getter_shafin(start, end):
                                  'date published': date_published,
                                  'date retrieved': today_date}}
 
+start_date = datetime.date(2022,1,10)
+end_date = datetime.date(2022,7,10)
 
-
+data = file_getter_shafin(start_date,end_date)
+print(data)
 if __name__ == '__main__':
 
-    start_date = datetime.date(2015,1,10)
-    end_date = date.today()
+    start_date = datetime.date(2022,1,10)
+    end_date = datetime.date.today()
 
     data = file_getter_shafin(start_date,end_date)

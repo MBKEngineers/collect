@@ -6,7 +6,6 @@ access cvo data
 # -*- coding: utf-8 -*-
 import datetime
 from datetime import date 
-from pandas.core.indexes.datetimes import date_range
 
 import pandas as pd
 from tabula import read_pdf
@@ -19,9 +18,11 @@ from collect.cvo.cvo_common import url_maker, months_between, df_generator, vali
 # Format: 'YYYY/MM/DD'
 def file_getter_shadop(start, end):
     """
+    Earliest PDF date: Feburary 2000
+
     Arguements:
-        range of dates including start and end month
-        Given in YYYY/MM/DD format
+        Range of dates including start and end month
+        Given in YYYY/MM/DD format and as a datetime object
 
     Returns:
         dataframe of date range 
@@ -53,7 +54,8 @@ def file_getter_shadop(start, end):
         url = url_maker(date_url,'shadop')
         urls.append(url)
 
-	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
+	# Since the current month url is slightly different, 
+    # we set up a condition that replaces that url with the correct one
     if today_month == end.month:
         urls[-1] = current_month
 
@@ -123,7 +125,13 @@ def file_getter_shadop(start, end):
                                  'date published': date_published,
                                  'date retrieved': today_date}}
 
+start_date = datetime.date(2022,1,10)
+end_date = datetime.date(2022,7,10)
+
+data = file_getter_shadop(start_date,end_date)
+print(data)
+
 if __name__ == '__main__':
-    start_date = datetime.date(2011,1,10)
-    end_date = datetime.date(2022,4,20)
+    start_date = datetime.date(2021,1,10)
+    end_date = datetime.today()
     data = file_getter_shadop(start_date,end_date)

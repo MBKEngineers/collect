@@ -6,21 +6,23 @@ access cvo data
 # -*- coding: utf-8 -*-
 import datetime
 from datetime import date 
-from pandas.core.indexes.datetimes import date_range
 
 import pandas as pd
 from tabula import read_pdf
 
 from collect.cvo.cvo_common import url_maker, months_between, df_generator, validate, data_cleaner
 
+
 # input as a range of dates
 # Takes range of dates and uses url_maker to get multiple pdfs
 # Format: 'YYYY/MM/DD'
 def file_getter_kesdop(start, end):
     """
+    Earliest PDF date: Feburary 2000
+
     Arguements:
-        range of dates including start and end month
-        Given in YYYY/MM/DD format
+        Range of dates including start and end month
+        Given in YYYY/MM/DD format and as a datetime object
 
     Returns:
         dataframe of date range
@@ -51,21 +53,24 @@ def file_getter_kesdop(start, end):
         url = url_maker(date_url,'kesdop')
         urls.append(url)
 
-	# Since the current month url is slightly different, we set up a condition that replaces that url with the correct one
+	# Since the current month url is slightly different, 
+    # we set up a condition that replaces that url with the correct one
     if today_month == end.month:
         urls[-1] = current_month
 
-	# Using the url, grab the pdf and concatenate it based off dates
+	# Using the url, store the pdf and concatenate it based off dates
     count = 0
     for links in urls:
         month = links[-8:-6]
 		# Finding out if it is in feburary or not
         if month == '02':
             Area = [145, 30,443,881]
+        # Specific to the current month
         elif links == current_month:
             today_day = today_date.day
             bottom = 150 + (today_day-1)*10
             Area = [145, 45,bottom,881]
+        # All other months
         else:
             Area = [145, 30, 465, 881]
         
@@ -123,5 +128,5 @@ def file_getter_kesdop(start, end):
 
 if __name__ == '__main__':
     start_date = datetime.date(2021,1,10)
-    end_date = date.today()
+    end_date = datetime.today()
     data = file_getter_kesdop(start_date,end_date)
