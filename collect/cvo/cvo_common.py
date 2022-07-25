@@ -4,6 +4,7 @@ collect.cvo.cvo_dout
 Functions that are used throughout the cvo scripts
 
 Some will have multiple args to differentiate between the CVO data that is being read
+
 '''
 
 # -*- coding: utf-8 -*-
@@ -17,71 +18,68 @@ import numpy as np
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
-############# functions
-# input as a string
-# Takes month and year to create the url link to grab the PDF from
-def url_maker(date,url):
+def report_type_maker(date, report_type):
     '''
-    For shadop, kesdop, shafin:
     Arguments:
         date (str): the date but in MMYY format, ex 0520
-        url (str): specify which pdf you're looking at
+        report_type (str): specify which pdf you're looking at
     Returns:
-        url (str): the url for requesting the file
-
-    For dout:
-    Arguments:
-            date (str): the date but in MMYY format, ex 0520
-        Returns:
-            url (str): the url for requesting the file
-            if date is before including 2011 march, give the prn link
-            if not give in pdf format
+        report_type (str): the report_type for requesting the file
     '''
-    if url == 'kesdop':
+
+    if report_type == 'kesdop':
         text = "https://www.usbr.gov/mp/cvo/vungvari/kesdop"
         final = text + date + ".pdf"
 
         return str(final)
 
-    elif url == 'shadop':
+    elif report_type == 'shadop':
         text = "https://www.usbr.gov/mp/cvo/vungvari/shadop"
         final = text + date + ".pdf"
 
         return str(final)
 
-    elif url == 'shafin':
+    elif report_type == 'shafin':
         text = "https://www.usbr.gov/mp/cvo/vungvari/shafln"
         final = text + date + ".pdf"
 
         return str(final)
 
+    elif report_type == 'dout':
 
-    elif url == 'dout':
-
-        # construct the station url
-        change = datetime.date(2010, 12, 1)
-        bar = datetime.date(2000+int(date[2:4]), int(date[0:2]),1)
+        # construct the station report_type
+        prn = datetime.date(2010, 12, 1)
+        txt = datetime.date(2002, 4, 1)
+        file_date = datetime.date(2000+int(date[2:4]), int(date[0:2]),1)
         
-        if bar <= change:
+        # if date is before including 2010 December, give the prn link
+        if txt < file_date <= prn:
             text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
             final = text + date + ".prn"
+
+        # if date is before including 2002 April, give the txt link
+        elif file_date <= txt:
+            text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
+            final = text + date + ".txt"
+
+        # if not give in pdf format
         else:
             text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
             final = text + date + ".pdf"
 
         return str(final)
 
+
 def months_between(start_date, end_date):
     """
-    Given two instances of ``datetime.date``, generate a list of dates on
+    Given two instances of ``datetime.datetime``, generate a list of dates on
     the 1st of every month between the two dates (inclusive).
 
-    Inputs start and end date
-
-    e.g. "5 Jan 2020" to "17 May 2020" would generate:
-
-        1 Jan 2020, 1 Feb 2020, 1 Mar 2020, 1 Apr 2020, 1 May 2020
-
+    Arguments:
+        start_date (datetime.datetime):  start date given by user input
+        end_date (datetime.datetime): end date given by user input
+    Yields:
+       (datetime.date): all dates between the date range in mmyy format
     """
     if start_date > end_date:
         raise ValueError(f"Start date {start_date} is not before end date {end_date}")
@@ -104,58 +102,60 @@ def months_between(start_date, end_date):
             year += 1
         else:
             month += 1
+            
 
-def df_generator(ls,url):
+def load_pdf_to_dataframe(ls,report_type):
     """
-    Arguements: 
-        dataframe in a [1,rows,columns] structure
-        Change to an array and reshape it
+    Changes dataframe to an array and reshape it
+    column names change to what is specified below
 
-        Minor adjustment for shadop files
+    Arguments:
+        ls (dataframe):  dataframe in a [1,rows,columns] structure
+        report_type (string): name of report
+
     Returns:
-        dataframe in a [rows,columns] structure, 
-        column names change to what is specified below
+        df (dataframe): in a [rows,columns] structure, 
 
-    Function is specific to shadop
     """
-
+    # changing structure of dataframe
     ls = np.array(ls)
     ls1 = ls[0]
 
-    if url == 'kesdop':
+    if report_type == 'kesdop':
         # Change from array to dataframe, generate new columns
-        df = pd.DataFrame(ls1,columns=[ "Date","elev","storage","change","inflow",
-        "spring_release", "shasta_release", "power","spill","fishtrap","evap_cfs"])
+        df = pd.DataFrame(ls1,columns=["Date", "elev", "storage", "change", "inflow",
+                                        "spring_release", "shasta_release", "power", 
+                                        "spill", "fishtrap", "evap_cfs"])
 
-        return df
+    elif report_type == 'shadop':
+        df = pd.DataFrame(ls1,columns=["Date", "elev", "in_lake", "change", "inflow_cfs", 
+                                        "power", "spill", "outlet", "evap_cfs", "evap_in", 
+                                        "precip_in"])
 
-    elif url == 'shadop':
-        df = pd.DataFrame(ls1,columns=[ "Date","elev","in_lake","change","inflow_cfs",
-        "power", "spill", "outlet","evap_cfs","evap_in","precip_in"])
+    elif report_type == 'shafin':
+        df = pd.DataFrame(ls1,columns=["Date", "britton", "mccloud", "iron_canyon", "pit6",
+                                        "pit7", "res_total", "d_af", "d_cfs", "shasta_inf", 
+                                        "nat_river", "accum_full_1000af"])
 
-        return df
+    elif report_type == 'dout':
+        df = pd.DataFrame(ls1,columns=["Date", "SactoR_pd", "SRTP_pd", "Yolo_pd", "East_side_stream_pd", 
+                                        "Joaquin_pd", "Joaquin_7dy","Joaquin_mth", "total_delta_inflow", 
+                                        "NDCU", "CLT", "TRA", "CCC", "BBID", "NBA", "total_delta_exports", 
+                                        "3_dy_avg_TRA_CLT", "NDOI_daily","outflow_7_dy_avg", 
+                                        "outflow_mnth_avg", "exf_inf_daily","exf_inf_3dy", "exf_inf_14dy"])
 
-    elif url == 'shafin':
-        df = pd.DataFrame(ls1,columns=["Date","britton","mccloud",
-        "iron_canyon","pit6",
-        "pit7", "res_total", "d_af",
-        "d_cfs","shasta_inf","nat_river","accum_full_1000af"])
+    return df.dropna().reindex()
 
-        return df
 
-    elif url == 'dout':
-        df = pd.DataFrame(ls1,columns=["Date", "SactoR_pd","SRTP_pd", 
-        "Yolo_pd","East_side_stream_pd","Joaquin_pd","Joaquin_7dy",
-        "Joaquin_mth", "total_delta_inflow","NDCU", "CLT","TRA","CCC",
-        "BBID","NBA","total_delta_exports","3_dy_avg_TRA_CLT","NDOI_daily",
-        "outflow_7_dy_avg","outflow_mnth_avg","exf_inf_daily",
-        "exf_inf_3dy","exf_inf_14dy"])
+def validate_user_date(date_text):
+    """
+    Checks if users date is in valid format
+    Arguments:
+        date_text (user input): date of user input
+    Returns:
+        None: if user input is not datetime the process will end
+    """
 
-        df = df.dropna()
-        df = df.reindex()
-        return df
-
-def validate(date_text):
     if isinstance(date_text,datetime.date):
         pass
     else:
@@ -163,55 +163,37 @@ def validate(date_text):
         quit()
 
 
-# Making everything to a function
-def data_cleaner(df,url):
-    if url == 'dout':
-        
-        """
-        This function converts data from string to floats and
-        removes any non-numeric elements 
+def data_cleaner(df,report_type):
+    """
+    This function converts data from string to floats and
+    removes any non-numeric elements 
 
-        Two seperate conditions for dout and kesdop,shadop,shafin
+    Two seperate conditions for dout and kesdop,shadop,shafin
 
-        Arguements:
-            dataframe that was retreieved from file_getter function
+    Arguements:
+        dataframe that was retreieved from file_getter function
 
-        Returns:
-            dataframe of strings converted to floats for data analysis
-        """
-        cols = df.columns
-        n_rows = len(df)
-        n_cols = len(cols)
-        # Going through each cell to change the numbering format
-        # ie going from 1,001 to 1001
-        # Also converting from string to integer
-        df[cols] = df[cols].astype(str)
-        df[cols] = df[cols].astype(str)
-        for i in range(n_rows):
-            for j in range(n_cols):
-                df.iloc[i][j] = df.iloc[i][j].replace(',','')
-                df.iloc[i][j] = df.iloc[i][j].replace('%','')
-                df.iloc[i][j] = df.iloc[i][j].replace('(','')
-                df.iloc[i][j] = df.iloc[i][j].replace(')','')
-    
-        df[cols] = df[cols].astype(float)
+    Returns:
+        dataframe of strings converted to floats for data analysis
+    """
+    if report_type == 'dout':
+        for key, value in df.iteritems():
+            value = value.astype(str)
+            value = value.replace(to_replace = r'[,\/]',value = '', regex =True)
+            value = value.replace(to_replace = r'[%\/]',value = '', regex =True)
+            value = value.replace(to_replace = r'[(\/]',value = '', regex =True)
+            value = value.replace(to_replace = r'[)\/]',value = '', regex =True)
 
-        # Hardcoding it for the last 3 columns since we know that it is in percentages
-        df.iloc[:,-3:] = df.iloc[:,-3:]/100
+            df.loc[:,key] = value.astype(float)
+
         return df
+
     else:
-        cols = df.columns
-        n_rows = len(df)
-        n_cols = len(cols)
-        # Going through each cell to change the numbering format
-        # ie going from 1,001 to 1001
-        # Also converting from string to integer 
-        df[cols] = df[cols].astype(str)
-        for i in range(n_rows):
-            for j in range(n_cols):
-                df.iloc[i][j] = df.iloc[i][j].replace(',','')
-                df.iloc[i][j] = df.iloc[i][j].replace('%','')
+        for key, value in df.iteritems():
+            value = value.astype(str)
+            value = value.replace(to_replace = r'[,\/]',value = '', regex =True)
+            value = value.replace(to_replace = r'[%\/]',value = '', regex =True)
 
-        df[cols] = df[cols].astype(float)
-
+            df.loc[:,key] = value.astype(float)
+    
         return df
