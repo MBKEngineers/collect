@@ -53,7 +53,7 @@ def file_getter_shafln(start, end):
             # set the bottom boundary for tabula read_pdf function
             today_day = today_date.day
             bottom = 145 + (today_day)*10
-            Area = [140, 30,bottom,540]
+            area = [140, 30,bottom,540]
 
         else:
             # Using the list of dates, grab a url for each date
@@ -79,23 +79,12 @@ def file_getter_shafln(start, end):
         # append dataframes for each month
         frames.append(pdf_df)
 
-    # 
+    # concatenate and set index for all appended dataframes
     df = pd.concat(frames).set_index('Date').truncate(before=start, after=end) 
 
+    # clean data and convert to multi-level columns
     new_df = data_cleaner(df,'shafln')
 
-        # tuple format: (top, bottom)
-
-    tuples = (("Storage_AF","britton"),("Storage_AF","mccloud"),("Storage_AF","iron_canyon"),
-                ("Storage_AF","pit6"),("Storage_AF","pit7"),
-                ("Res","res_total"),
-                ("change","d_af"),("change","d_cfs"),
-                ("Shasta_inflow","shasta_inf"),
-                ("Nat_river","nat_river"),
-                ("accum_full_1000af","accum_full_1000af"))
-    new_df.columns = pd.MultiIndex.from_tuples(tuples)
-
-    print(new_df.head())
 
     return {'data': new_df, 'info': {'url': urls,
                                  'title': "Shasta Reservoir Daily Operations",
@@ -109,3 +98,5 @@ if __name__ == '__main__':
     end_date = datetime.date.today()
 
     data = file_getter_shafln(start_date,end_date)
+
+

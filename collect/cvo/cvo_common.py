@@ -204,5 +204,35 @@ def data_cleaner(df,report_type):
             value = value.replace(to_replace = r'[%\/]',value = '', regex =True)
 
             df.loc[:,key] = value.astype(float)
-    
+
+        if report_type == 'shafln':
+            tuples = (("Storage_AF","britton"),("Storage_AF","mccloud"),("Storage_AF","iron_canyon"),
+                        ("Storage_AF","pit6"),("Storage_AF","pit7"),
+                        ("Res","res_total"),
+                        ("change","d_af"),("change","d_cfs"),
+                        ("Shasta_inflow","shasta_inf"),
+                        ("Nat_river","nat_river"),
+                        ("accum_full_1000af","accum_full_1000af"))
+            df.columns = pd.MultiIndex.from_tuples(tuples)
+
+        elif report_type == 'kesdop':
+            tuples = (("Elevation","elev"),
+                        ("Storage_AF","storage"),("Storage_AF","change"),
+                        ("CFS","inflow"),
+                        ("Spring_release","spring_release"),
+                        ("Shasta_release","shasta_release"),
+                        ("Release_CFS","power"),("Release_CFS","spill"),("Release_CFS","fishtrap"),
+                        ("Evap_cfs","evap_cfs"))
+            df.columns = pd.MultiIndex.from_tuples(tuples)
+
+        else:
+            tuples = (('Elevation','elev'),
+                        ('Storage_1000AF','in_lake'),('Storage_1000AF','change'),
+                        ('CFS','inflow_cfs'),
+                        ('Release_CFS','power'),('Release_CFS','spill'),('Release_CFS','outlet'),
+                        ('Evaporation','evap_cfs'),('Evaporation','evap_in'),
+                        ('Precip_in','precip_in'))
+            df.columns = pd.MultiIndex.from_tuples(tuples)
+
+
         return df

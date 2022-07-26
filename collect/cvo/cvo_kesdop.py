@@ -52,7 +52,7 @@ def file_getter_kesdop(start, end, report_type = 'kesdop'):
             # set the bottom boundary for tabula read_pdf function
             today_day = today_date.day
             bottom = 150 + (today_day-1)*10
-            Area = [145, 45,bottom,881]
+            area = [145, 45,bottom,881]
 
         else:
             # Using the list of dates, grab a url for each date
@@ -78,22 +78,11 @@ def file_getter_kesdop(start, end, report_type = 'kesdop'):
         # append dataframes for each month
         frames.append(pdf_df)
 
-    # 
+    # concatenate and set index for all appended dataframes
     df = pd.concat(frames).set_index('Date').truncate(before=start, after=end) 
-    
+
+    # clean data and convert to multi-level columns
     new_df = data_cleaner(df,'kesdop')
-
-    # tuple format: (top, bottom)
-
-    tuples = (("Elevation","elev"),
-                ("Storage_AF","storage"),("Storage_AF","change"),
-                ("CFS","inflow"),
-                ("Spring_release","spring_release"),
-                ("Shasta_release","shasta_release"),
-                ("Release_CFS","power"),("Release_CFS","spill"),("Release_CFS","fishtrap"),
-                ("Evap_cfs","evap_cfs"))
-    new_df.columns = pd.MultiIndex.from_tuples(tuples)
-
 
     return {'data': new_df, 'info': {'url': urls,
                                  'title': "Kesdop Reservoir Daily Operations",

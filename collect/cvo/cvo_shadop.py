@@ -80,21 +80,11 @@ def file_getter_shadop(start, end, report_type = 'shadop'):
         # append dataframes for each month
         frames.append(pdf_df)
 
-    # 
+    # concatenate and set index for all appended dataframes
     df = pd.concat(frames).set_index('Date').truncate(before=start, after=end) 
-    
+
+    # clean data and convert to multi-level columns
     new_df = data_cleaner(df,'shadop')
-
-    # tuple format: (top, bottom)
-
-    tuples = (('Elevation','elev'),
-                ('Storage_1000AF','in_lake'),('Storage_1000AF','change'),
-                ('CFS','inflow_cfs'),
-                ('Release_CFS','power'),('Release_CFS','spill'),('Release_CFS','outlet'),
-                ('Evaporation','evap_cfs'),('Evaporation','evap_in'),
-                ('Precip_in','precip_in'))
-    new_df.columns = pd.MultiIndex.from_tuples(tuples)
-
 
     return {'data': new_df, 'info': {'url': urls,
                                  'title': "Shadop Reservoir Daily Operations",
@@ -108,4 +98,4 @@ if __name__ == '__main__':
     start_date = datetime.date(2021,1,10)
     end_date = datetime.date.today()
     data = file_getter_shadop(start_date,end_date)
-    print(data)
+
