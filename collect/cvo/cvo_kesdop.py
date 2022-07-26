@@ -10,13 +10,13 @@ from datetime import date
 import pandas as pd
 from tabula import read_pdf
 
-from collect.cvo.cvo_common import url_maker, months_between, df_generator, validate, data_cleaner
+from collect.cvo.cvo_common import report_type_maker, months_between, load_pdf_to_dataframe, validate_user_date, data_cleaner
 
 
 # input as a range of dates
-# Takes range of dates and uses url_maker to get multiple pdfs
+# Takes range of dates and uses report_type_maker to get multiple pdfs
 # Format: 'YYYY/MM/DD'
-def file_getter_kesdop(start, end):
+def file_getter_kesdop(start, end, report_type = 'kesdop'):
     """
     Earliest PDF date: Feburary 2000
 
@@ -28,105 +28,82 @@ def file_getter_kesdop(start, end):
         dataframe of date range
     """
     # Check if date is in the right format
-    validate(start)
-    validate(end)
+    validate_user_date(start)
+    validate_user_date(end)
 
     today_date = date.today()
-    today_month = today_date.month
 
     # Defining variables
-    date_list = []
+    dates_published = list(months_between(start, end))
+    frames = []
     urls = []
-    date_published = []
-    result = pd.DataFrame()
-    current_month = 'https://www.usbr.gov/mp/cvo/vungvari/kesdop.pdf'
 
 	# Getting list of dates for url
-    for month in months_between(start, end):
-        date_published.append(month)
-        dates = month.strftime("%m%y")
-        date_list.append(dates)
+    for dt_month in dates_published:
+        
+        # set the default bottom boundary for tabula read_pdf function
+        area = [145, 30, 465, 881]
 
+        # Set up a condition that replaces url with correct one each loop
+        if dt_month.strftime('%Y-%m-%d') == today_date.strftime('%Y-%m-01'):
+            url = 'https://www.usbr.gov/mp/cvo/vungvari/shadop.pdf'
+            urls.append(url)
 
-	# Using the list of dates, grab a url for each date
-    for date_url in date_list:
-        url = url_maker(date_url,'kesdop')
-        urls.append(url)
-
-	# Since the current month url is slightly different, 
-    # we set up a condition that replaces that url with the correct one
-    if today_month == end.month:
-        urls[-1] = current_month
-
-	# Using the url, store the pdf and concatenate it based off dates
-    count = 0
-    for links in urls:
-        month = links[-8:-6]
-		# Finding out if it is in feburary or not
-        if month == '02':
-            Area = [145, 30,443,881]
-        # Specific to the current month
-        elif links == current_month:
+            # set the bottom boundary for tabula read_pdf function
             today_day = today_date.day
             bottom = 150 + (today_day-1)*10
             Area = [145, 45,bottom,881]
-        # All other months
+
         else:
-            Area = [145, 30, 465, 881]
-        
-        pdf1 = read_pdf(links,
-            stream=True, area = Area, pages = 1, guess = False,  pandas_options={'header':None})
-                
-        pdf_df = df_generator(pdf1,'kesdop')
+            # Using the list of dates, grab a url for each date
+            url = report_type_maker(dt_month.strftime('%m%y'), 'kesdop')
+            urls.append(url)
 
-		# change the dates in pdf_df to datetime
-        default_time = '00:00:00'
-        correct_dates = []
-        for i in range(len(pdf_df['Date'])):
-            day = str(pdf_df['Date'][i])
-            day = day.zfill(2)
+            # set the bottom boundary for tabula read_pdf function for February months
+            if dt_month.month == 2:
+                area = [145, 30, 443, 881]
 
-            correct_date = '20'+ date_list[count][2:4] + '-' + date_list[count][0:2] +'-'+ str(day) + ' '
-            combined = correct_date + default_time
-            datetime_object = datetime.datetime.strptime(combined, '%Y-%m-%d %H:%M:%S')
-            correct_dates.append(datetime_object)
+        # using the url, read pdf based off area coordinates
+        pdf1 = read_pdf(url, 
+                        stream=True, 
+                        area = area, 
+                        pages = 1, 
+                        guess = False, 
+                        pandas_options={'header':None})
+        pdf_df = load_pdf_to_dataframe(pdf1,'kesdop')
 
-        pdf_df['Date'] = correct_dates
-        result = pd.concat([result,pdf_df])
-        count +=1
+        # change the dates in pdf_df to date objects
+        pdf_df['Date'] = pdf_df['Date'].apply(lambda x: datetime.date(dt_month.year, dt_month.month, x))
 
-	# Extract date range 
-    new_start_date = start.strftime("%Y-%m-%d")
-    new_end_date = end.strftime("%Y-%m-%d")
+        # append dataframes for each month
+        frames.append(pdf_df)
 
-    mask = (result['Date'] >= new_start_date) & (result['Date'] <= new_end_date)
-    new_df = result.loc[mask]
+    # 
+    df = pd.concat(frames).set_index('Date').truncate(before=start, after=end) 
+    
+    new_df = data_cleaner(df,'kesdop')
 
-	# Set DateTime Index
-    new_df.set_index('Date', inplace = True)
-
-    new_df = data_cleaner(new_df,'kesdop')
     # tuple format: (top, bottom)
-    tuples = (('Elevation','elev'),
-    ('Storage_AF','storage'),('Storage_AF','change'),
-    ('CFS','inflow'),
-    ('Spring_release','spring_release'),
-    ('Shasta_release','shasta_release'),
-    ('Release_CFS','power'),('Release_CFS','spill'),('Release_CFS','fishtrap'),
-    ('Evap_cfs','evap_cfs'))
 
+    tuples = (("Elevation","elev"),
+                ("Storage_AF","storage"),("Storage_AF","change"),
+                ("CFS","inflow"),
+                ("Spring_release","spring_release"),
+                ("Shasta_release","shasta_release"),
+                ("Release_CFS","power"),("Release_CFS","spill"),("Release_CFS","fishtrap"),
+                ("Evap_cfs","evap_cfs"))
     new_df.columns = pd.MultiIndex.from_tuples(tuples)
-    print(new_df.head())
+
 
     return {'data': new_df, 'info': {'url': urls,
-                                 'title': "Keswick Reservoir Daily Operations",
+                                 'title': "Kesdop Reservoir Daily Operations",
                                  'units': 'cfs',
-                                 'date published': date_published,
+                                 'date published': dates_published,
                                  'date retrieved': today_date}}
-	#return dates
 
 
-# if __name__ == '__main__':
-#     start_date = datetime.datetime(2021,1,10)
-#     end_date = datetime.datetime.now()
-#     data = file_getter_kesdop(start_date,end_date)
+if __name__ == '__main__':
+    start_date = datetime.date(2021,7,10)
+    end_date = datetime.date.today()
+    data = file_getter_kesdop(start_date,end_date)
+    print(data)

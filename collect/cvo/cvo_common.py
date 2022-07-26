@@ -1,15 +1,15 @@
-'''
-collect.cvo.cvo_dout
+"""
+collect.cvo.common
 ==========================================================================
 Functions that are used throughout the cvo scripts
 
 Some will have multiple args to differentiate between the CVO data that is being read
-
-'''
+"""
 
 # -*- coding: utf-8 -*-
 
 import datetime
+from datetime import date
 
 import pandas as pd
 import numpy as np
@@ -26,7 +26,7 @@ def report_type_maker(date, report_type):
     Returns:
         report_type (str): the report_type for requesting the file
     '''
-
+    
     if report_type == 'kesdop':
         text = "https://www.usbr.gov/mp/cvo/vungvari/kesdop"
         final = text + date + ".pdf"
@@ -39,7 +39,7 @@ def report_type_maker(date, report_type):
 
         return str(final)
 
-    elif report_type == 'shafin':
+    elif report_type == 'shafln':
         text = "https://www.usbr.gov/mp/cvo/vungvari/shafln"
         final = text + date + ".pdf"
 
@@ -117,32 +117,44 @@ def load_pdf_to_dataframe(ls,report_type):
         df (dataframe): in a [rows,columns] structure, 
 
     """
+
+    # establishing column names
+    kesdop_col_names =["Date", "elev", "storage", "change", "inflow",
+                        "spring_release", "shasta_release", "power", 
+                        "spill", "fishtrap", "evap_cfs"]
+
+    shadop_col_names =["Date", "elev", "in_lake", "change", "inflow_cfs", 
+                        "power", "spill", "outlet", "evap_cfs", "evap_in", 
+                        "precip_in"]
+
+    shafln_col_names =["Date", "britton", "mccloud", "iron_canyon", "pit6",
+                        "pit7", "res_total", "d_af", "d_cfs", "shasta_inf", 
+                        "nat_river", "accum_full_1000af"]
+
+    dout_col_names =["Date", "SactoR_pd", "SRTP_pd", "Yolo_pd", "East_side_stream_pd", 
+                    "Joaquin_pd", "Joaquin_7dy","Joaquin_mth", "total_delta_inflow", 
+                    "NDCU", "CLT", "TRA", "CCC", "BBID", "NBA", "total_delta_exports", 
+                    "3_dy_avg_TRA_CLT", "NDOI_daily","outflow_7_dy_avg", 
+                    "outflow_mnth_avg", "exf_inf_daily","exf_inf_3dy", "exf_inf_14dy"]
+
+
+
     # changing structure of dataframe
     ls = np.array(ls)
     ls1 = ls[0]
 
     if report_type == 'kesdop':
         # Change from array to dataframe, generate new columns
-        df = pd.DataFrame(ls1,columns=["Date", "elev", "storage", "change", "inflow",
-                                        "spring_release", "shasta_release", "power", 
-                                        "spill", "fishtrap", "evap_cfs"])
+        df = pd.DataFrame(ls1,columns=kesdop_col_names)
 
     elif report_type == 'shadop':
-        df = pd.DataFrame(ls1,columns=["Date", "elev", "in_lake", "change", "inflow_cfs", 
-                                        "power", "spill", "outlet", "evap_cfs", "evap_in", 
-                                        "precip_in"])
+        df = pd.DataFrame(ls1,columns=shadop_col_names)
 
-    elif report_type == 'shafin':
-        df = pd.DataFrame(ls1,columns=["Date", "britton", "mccloud", "iron_canyon", "pit6",
-                                        "pit7", "res_total", "d_af", "d_cfs", "shasta_inf", 
-                                        "nat_river", "accum_full_1000af"])
+    elif report_type == 'shafln':
+        df = pd.DataFrame(ls1,columns=shafln_col_names)
 
     elif report_type == 'dout':
-        df = pd.DataFrame(ls1,columns=["Date", "SactoR_pd", "SRTP_pd", "Yolo_pd", "East_side_stream_pd", 
-                                        "Joaquin_pd", "Joaquin_7dy","Joaquin_mth", "total_delta_inflow", 
-                                        "NDCU", "CLT", "TRA", "CCC", "BBID", "NBA", "total_delta_exports", 
-                                        "3_dy_avg_TRA_CLT", "NDOI_daily","outflow_7_dy_avg", 
-                                        "outflow_mnth_avg", "exf_inf_daily","exf_inf_3dy", "exf_inf_14dy"])
+        df = pd.DataFrame(ls1,columns=dout_col_names)
 
     return df.dropna().reindex()
 
@@ -156,11 +168,8 @@ def validate_user_date(date_text):
         None: if user input is not datetime the process will end
     """
 
-    if isinstance(date_text,datetime.date):
-        pass
-    else:
-        print("Please give in datetime format")
-        quit()
+    #if condition returns True, then nothing happens:
+    assert isinstance(date_text,datetime.date) == True , "Please give in date format"
 
 
 def data_cleaner(df,report_type):
@@ -168,7 +177,7 @@ def data_cleaner(df,report_type):
     This function converts data from string to floats and
     removes any non-numeric elements 
 
-    Two seperate conditions for dout and kesdop,shadop,shafin
+    Two seperate conditions for dout and kesdop,shadop,shafln
 
     Arguements:
         dataframe that was retreieved from file_getter function
