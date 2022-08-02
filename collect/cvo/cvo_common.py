@@ -140,8 +140,11 @@ def load_pdf_to_dataframe(ls,report_type):
 
 
     # changing structure of dataframe
-    ls = np.array(ls)
-    ls1 = ls[0]
+    
+    ls1 = np.array(ls)
+    dims = ls1.ndim
+    if dims > 2:
+        ls1 = ls1[0]
 
     if report_type == 'kesdop':
         # Change from array to dataframe, generate new columns
@@ -195,6 +198,15 @@ def data_cleaner(df,report_type):
 
             df.loc[:,key] = value.astype(float)
 
+        tuples = (("delta_inflow","SactoR_pd"),("delta_inflow","SRTP_pd"),("delta_inflow","Yolo_pd"),
+            ("delta_inflow","East_side_stream_pd"),("delta_inflow","Joaquin_pd"),("delta_inflow","Joaquin_7dy"),
+            ("delta_inflow","Joaquin_mth"),("delta_inflow","total_delta_inflow"),("NDCU","NDCU"),
+            ("delta_exports","CLT"),("delta_exports","TRA"),("delta_exports","CCC"),("delta_exports","BBID"),
+            ("delta_exports","NBA"),("delta_exports","total_delta_exports"),("delta_exports","3_dy_avg_TRA_CLT"),
+            ("outflow_index","NDOI_daily"),("outflow_index","outflow_7_dy_avg"),("outflow_index","outflow_mnth_avg"),
+            ("exp_inf","exf_inf_daily"),("exp_inf","exf_inf_3dy"),("exp_inf","exf_inf_14dy"))
+        df.columns = pd.MultiIndex.from_tuples(tuples)
+        
         return df
 
     else:

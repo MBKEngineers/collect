@@ -5,7 +5,6 @@ access cvo data
 """
 # -*- coding: utf-8 -*-
 import datetime
-from datetime import date 
 
 import pandas as pd
 from tabula import read_pdf
@@ -31,7 +30,7 @@ def file_getter_kesdop(start, end, report_type = 'kesdop'):
     validate_user_date(start)
     validate_user_date(end)
 
-    today_date = date.today()
+    today_date = datetime.date.today()
 
     # Defining variables
     dates_published = list(months_between(start, end))
@@ -46,17 +45,17 @@ def file_getter_kesdop(start, end, report_type = 'kesdop'):
 
         # Set up a condition that replaces url with correct one each loop
         if dt_month.strftime('%Y-%m-%d') == today_date.strftime('%Y-%m-01'):
-            url = 'https://www.usbr.gov/mp/cvo/vungvari/shadop.pdf'
+            url = 'https://www.usbr.gov/mp/cvo/vungvari/kesdop.pdf'
             urls.append(url)
 
             # set the bottom boundary for tabula read_pdf function
             today_day = today_date.day
             bottom = 150 + (today_day-1)*10
             area = [145, 45,bottom,881]
-
+        
         else:
             # Using the list of dates, grab a url for each date
-            url = report_type_maker(dt_month.strftime('%m%y'), 'kesdop')
+            url = report_type_maker(dt_month.strftime('%m%y'), report_type)
             urls.append(url)
 
             # set the bottom boundary for tabula read_pdf function for February months
@@ -70,7 +69,7 @@ def file_getter_kesdop(start, end, report_type = 'kesdop'):
                         pages = 1, 
                         guess = False, 
                         pandas_options={'header':None})
-        pdf_df = load_pdf_to_dataframe(pdf1,'kesdop')
+        pdf_df = load_pdf_to_dataframe(pdf1,report_type)
 
         # change the dates in pdf_df to date objects
         pdf_df['Date'] = pdf_df['Date'].apply(lambda x: datetime.date(dt_month.year, dt_month.month, x))
@@ -90,7 +89,9 @@ def file_getter_kesdop(start, end, report_type = 'kesdop'):
                                  'date published': dates_published,
                                  'date retrieved': today_date}}
 
-
+start_date = datetime.date(2021,7,10)
+end_date = datetime.date.today()
+data = file_getter_kesdop(start_date,end_date)
 if __name__ == '__main__':
     start_date = datetime.date(2021,7,10)
     end_date = datetime.date.today()
