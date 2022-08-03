@@ -5,7 +5,6 @@ access cvo data
 """
 # -*- coding: utf-8 -*-
 
-import datetime
 from datetime import datetime
 import dateutil.parser
 from numpy import full
@@ -16,7 +15,7 @@ import regex as re
 
 from collect.cvo.cvo_common import report_type_maker, months_between, load_pdf_to_dataframe, validate_user_date, data_cleaner
 
-def file_getter_dout(start, end):
+def file_getter_dout(start, end, report_type = 'dout'):
     """
     Arguements:
         range of dates including start and end month
@@ -65,7 +64,7 @@ def file_getter_dout(start, end):
     for dt_month in months_between(start, end):
         dt_month = datetime.strptime(dt_month.strftime('%m%y'), '%m%y')
 
-        url = report_type_maker(dt_month.strftime('%m%y'),'dout')
+        url = report_type_maker(dt_month.strftime('%m%y'),report_type)
         urls.append(url)
 
         if dt_month.strftime('%Y-%m') == today_date.strftime('%Y-%m'):
@@ -126,7 +125,7 @@ def file_getter_dout(start, end):
         pdf_time= pd.to_datetime(date_pulished[0][0])
         dates_published.append(pdf_time)
 
-        pdf_df = load_pdf_to_dataframe(full_data,'dout')
+        pdf_df = load_pdf_to_dataframe(full_data,report_type)
         pdf_df['Date'] = pdf_df['Date'].apply(lambda x: dateutil.parser.parse(x))
         frames.append(pdf_df)
 
@@ -134,7 +133,7 @@ def file_getter_dout(start, end):
 
     df = pd.concat(frames).set_index('Date').sort_index().truncate(before=start, after=end)
 
-    new_df = data_cleaner(df,'dout')
+    new_df = data_cleaner(df,report_type)
 
 
     # tuple format: (top, bottom)
@@ -147,12 +146,6 @@ def file_getter_dout(start, end):
                                  'units': 'cfs',
                                  'date published': dates_published}}
     #return dates
-
-
-# start_date = datetime(2020,9,1)
-# end_date = datetime(2021,1,1)
-
-# data = file_getter_dout(start_date,end_date)
 
 if __name__ == '__main__':
 

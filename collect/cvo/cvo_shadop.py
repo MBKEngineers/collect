@@ -4,8 +4,7 @@ collect.cvo.cvo_shadop
 access cvo data
 """
 # -*- coding: utf-8 -*-
-import datetime
-from datetime import date
+from datetime import datetime
 
 import pandas as pd
 from tabula import read_pdf
@@ -32,7 +31,7 @@ def file_getter_shadop(start, end, report_type = 'shadop'):
     validate_user_date(start)
     validate_user_date(end)
 
-    today_date = date.today()
+    today_date = datetime.now()
 
     # Defining variables
     dates_published = list(months_between(start, end))
@@ -58,7 +57,7 @@ def file_getter_shadop(start, end, report_type = 'shadop'):
         else:
 
             # Using the list of dates, grab a url for each date
-            url = report_type_maker(dt_month.strftime('%m%y'), 'shadop')
+            url = report_type_maker(dt_month.strftime('%m%y'), report_type)
             urls.append(url)
 
             # set the bottom boundary for tabula read_pdf function for February months
@@ -72,10 +71,10 @@ def file_getter_shadop(start, end, report_type = 'shadop'):
                         pages = 1, 
                         guess = False, 
                         pandas_options={'header':None})
-        pdf_df = load_pdf_to_dataframe(pdf1,'shadop')
+        pdf_df = load_pdf_to_dataframe(pdf1,report_type)
 
         # change the dates in pdf_df to date objects
-        pdf_df['Date'] = pdf_df['Date'].apply(lambda x: datetime.date(dt_month.year, dt_month.month, x))
+        pdf_df['Date'] = pdf_df['Date'].apply(lambda x: datetime(dt_month.year, dt_month.month, x))
 
         # append dataframes for each month
         frames.append(pdf_df)
@@ -84,7 +83,7 @@ def file_getter_shadop(start, end, report_type = 'shadop'):
     df = pd.concat(frames).set_index('Date').truncate(before=start, after=end) 
 
     # clean data and convert to multi-level columns
-    new_df = data_cleaner(df,'shadop')
+    new_df = data_cleaner(df,report_type)
 
     return {'data': new_df, 'info': {'url': urls,
                                  'title': "Shadop Reservoir Daily Operations",
@@ -95,7 +94,8 @@ def file_getter_shadop(start, end, report_type = 'shadop'):
 
 if __name__ == '__main__':
 
-    start_date = datetime.date(2021,1,10)
-    end_date = datetime.date.today()
+    start_date = datetime(2021,1,10)
+    end_date = datetime.now()
     data = file_getter_shadop(start_date,end_date)
+    print(data)
 
