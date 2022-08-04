@@ -9,7 +9,6 @@ Some will have multiple args to differentiate between the CVO data that is being
 # -*- coding: utf-8 -*-
 
 import datetime
-from datetime import date
 
 import pandas as pd
 import numpy as np
@@ -19,29 +18,29 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 
 def report_type_maker(date, report_type):
-    '''
+    """
     Arguments:
         date (str): the date but in MMYY format, ex 0520
         report_type (str): specify which pdf you're looking at
     Returns:
         report_type (str): the report_type for requesting the file
-    '''
+    """
     
     if report_type == 'kesdop':
-        text = "https://www.usbr.gov/mp/cvo/vungvari/kesdop"
-        final = text + date + ".pdf"
+        text = 'https://www.usbr.gov/mp/cvo/vungvari/kesdop'
+        final = text + date + '.pdf'
 
         return str(final)
 
     elif report_type == 'shadop':
-        text = "https://www.usbr.gov/mp/cvo/vungvari/shadop"
-        final = text + date + ".pdf"
+        text = 'https://www.usbr.gov/mp/cvo/vungvari/shadop'
+        final = text + date + '.pdf'
 
         return str(final)
 
     elif report_type == 'shafln':
-        text = "https://www.usbr.gov/mp/cvo/vungvari/shafln"
-        final = text + date + ".pdf"
+        text = 'https://www.usbr.gov/mp/cvo/vungvari/shafln'
+        final = text + date + '.pdf'
 
         return str(final)
 
@@ -54,18 +53,18 @@ def report_type_maker(date, report_type):
         
         # if date is before including 2010 December, give the prn link
         if txt < file_date <= prn:
-            text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
-            final = text + date + ".prn"
+            text = 'https://www.usbr.gov/mp/cvo/vungvari/dout'
+            final = text + date + '.prn'
 
         # if date is before including 2002 April, give the txt link
         elif file_date <= txt:
-            text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
-            final = text + date + ".txt"
+            text = 'https://www.usbr.gov/mp/cvo/vungvari/dout'
+            final = text + date + '.txt'
 
         # if not give in pdf format
         else:
-            text = "https://www.usbr.gov/mp/cvo/vungvari/dout"
-            final = text + date + ".pdf"
+            text = 'https://www.usbr.gov/mp/cvo/vungvari/dout'
+            final = text + date + '.pdf'
 
         return str(final)
 
@@ -82,7 +81,7 @@ def months_between(start_date, end_date):
        (datetime.date): all dates between the date range in mmyy format
     """
     if start_date > end_date:
-        raise ValueError(f"Start date {start_date} is not before end date {end_date}")
+        raise ValueError(f'Start date {start_date} is not before end date {end_date}')
 
     year = start_date.year
     month = start_date.month
@@ -119,23 +118,23 @@ def load_pdf_to_dataframe(ls,report_type):
     """
 
     # establishing column names
-    kesdop_col_names =["Date", "elev", "storage", "change", "inflow",
-                        "spring_release", "shasta_release", "power", 
-                        "spill", "fishtrap", "evap_cfs"]
+    kesdop_col_names =['Date', 'elev', 'storage', 'change', 'inflow',
+                        'spring_release', 'shasta_release', 'power', 
+                        'spill', 'fishtrap', 'evap_cfs']
 
-    shadop_col_names =["Date", "elev", "in_lake", "change", "inflow_cfs", 
-                        "power", "spill", "outlet", "evap_cfs", "evap_in", 
-                        "precip_in"]
+    shadop_col_names =['Date', 'elev', 'in_lake', 'change', 'inflow_cfs', 
+                        'power', 'spill', 'outlet', 'evap_cfs', 'evap_in', 
+                        'precip_in']
 
-    shafln_col_names =["Date", "britton", "mccloud", "iron_canyon", "pit6",
-                        "pit7", "res_total", "d_af", "d_cfs", "shasta_inf", 
-                        "nat_river", "accum_full_1000af"]
+    shafln_col_names =['Date', 'britton', 'mccloud', 'iron_canyon', 'pit6',
+                        'pit7', 'res_total', 'd_af', 'd_cfs', 'shasta_inf', 
+                        'nat_river', 'accum_full_1000af']
 
-    dout_col_names =["Date", "SactoR_pd", "SRTP_pd", "Yolo_pd", "East_side_stream_pd", 
-                    "Joaquin_pd", "Joaquin_7dy","Joaquin_mth", "total_delta_inflow", 
-                    "NDCU", "CLT", "TRA", "CCC", "BBID", "NBA", "total_delta_exports", 
-                    "3_dy_avg_TRA_CLT", "NDOI_daily","outflow_7_dy_avg", 
-                    "outflow_mnth_avg", "exf_inf_daily","exf_inf_3dy", "exf_inf_14dy"]
+    dout_col_names =['Date', 'SactoR_pd', 'SRTP_pd', 'Yolo_pd', 'East_side_stream_pd', 
+                    'Joaquin_pd', 'Joaquin_7dy','Joaquin_mth', 'total_delta_inflow', 
+                    'NDCU', 'CLT', 'TRA', 'CCC', 'BBID', 'NBA', 'total_delta_exports', 
+                    '3_dy_avg_TRA_CLT', 'NDOI_daily','outflow_7_dy_avg', 
+                    'outflow_mnth_avg', 'exf_inf_daily','exf_inf_3dy', 'exf_inf_14dy']
 
 
 
@@ -172,7 +171,7 @@ def validate_user_date(date_text):
     """
 
     #if condition returns True, then nothing happens:
-    assert isinstance(date_text,datetime.date) == True , "Please give in date format"
+    assert isinstance(date_text,datetime.datetime) == True , 'Please give in datetime format'
 
 
 def data_cleaner(df,report_type):
@@ -198,13 +197,13 @@ def data_cleaner(df,report_type):
 
             df.loc[:,key] = value.astype(float)
 
-        tuples = (("delta_inflow","SactoR_pd"),("delta_inflow","SRTP_pd"),("delta_inflow","Yolo_pd"),
-            ("delta_inflow","East_side_stream_pd"),("delta_inflow","Joaquin_pd"),("delta_inflow","Joaquin_7dy"),
-            ("delta_inflow","Joaquin_mth"),("delta_inflow","total_delta_inflow"),("NDCU","NDCU"),
-            ("delta_exports","CLT"),("delta_exports","TRA"),("delta_exports","CCC"),("delta_exports","BBID"),
-            ("delta_exports","NBA"),("delta_exports","total_delta_exports"),("delta_exports","3_dy_avg_TRA_CLT"),
-            ("outflow_index","NDOI_daily"),("outflow_index","outflow_7_dy_avg"),("outflow_index","outflow_mnth_avg"),
-            ("exp_inf","exf_inf_daily"),("exp_inf","exf_inf_3dy"),("exp_inf","exf_inf_14dy"))
+        tuples = (('delta_inflow','SactoR_pd'),('delta_inflow','SRTP_pd'),('delta_inflow','Yolo_pd'),
+            ('delta_inflow','East_side_stream_pd'),('delta_inflow','Joaquin_pd'),('delta_inflow','Joaquin_7dy'),
+            ('delta_inflow','Joaquin_mth'),('delta_inflow','total_delta_inflow'),('NDCU','NDCU'),
+            ('delta_exports','CLT'),('delta_exports','TRA'),('delta_exports','CCC'),('delta_exports','BBID'),
+            ('delta_exports','NBA'),('delta_exports','total_delta_exports'),('delta_exports','3_dy_avg_TRA_CLT'),
+            ('outflow_index','NDOI_daily'),('outflow_index','outflow_7_dy_avg'),('outflow_index','outflow_mnth_avg'),
+            ('exp_inf','exf_inf_daily'),('exp_inf','exf_inf_3dy'),('exp_inf','exf_inf_14dy'))
         df.columns = pd.MultiIndex.from_tuples(tuples)
         
         return df
@@ -218,23 +217,23 @@ def data_cleaner(df,report_type):
             df.loc[:,key] = value.astype(float)
 
         if report_type == 'shafln':
-            tuples = (("Storage_AF","britton"),("Storage_AF","mccloud"),("Storage_AF","iron_canyon"),
-                        ("Storage_AF","pit6"),("Storage_AF","pit7"),
-                        ("Res","res_total"),
-                        ("change","d_af"),("change","d_cfs"),
-                        ("Shasta_inflow","shasta_inf"),
-                        ("Nat_river","nat_river"),
-                        ("accum_full_1000af","accum_full_1000af"))
+            tuples = (('Storage_AF','britton'),('Storage_AF','mccloud'),('Storage_AF','iron_canyon'),
+                        ('Storage_AF','pit6'),('Storage_AF','pit7'),
+                        ('Res','res_total'),
+                        ('change','d_af'),('change','d_cfs'),
+                        ('Shasta_inflow','shasta_inf'),
+                        ('Nat_river','nat_river'),
+                        ('accum_full_1000af','accum_full_1000af'))
             df.columns = pd.MultiIndex.from_tuples(tuples)
 
         elif report_type == 'kesdop':
-            tuples = (("Elevation","elev"),
-                        ("Storage_AF","storage"),("Storage_AF","change"),
-                        ("CFS","inflow"),
-                        ("Spring_release","spring_release"),
-                        ("Shasta_release","shasta_release"),
-                        ("Release_CFS","power"),("Release_CFS","spill"),("Release_CFS","fishtrap"),
-                        ("Evap_cfs","evap_cfs"))
+            tuples = (('Elevation','elev'),
+                        ('Storage_AF','storage'),('Storage_AF','change'),
+                        ('CFS','inflow'),
+                        ('Spring_release','spring_release'),
+                        ('Shasta_release','shasta_release'),
+                        ('Release_CFS','power'),('Release_CFS','spill'),('Release_CFS','fishtrap'),
+                        ('Evap_cfs','evap_cfs'))
             df.columns = pd.MultiIndex.from_tuples(tuples)
 
         else:

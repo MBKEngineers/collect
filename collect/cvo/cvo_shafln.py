@@ -18,13 +18,16 @@ from collect.cvo.cvo_common import report_type_maker, months_between, load_pdf_t
 def file_getter_shafln(start, end, report_type = 'shafln'):
     """
     Earliest PDF date: Feburary 2000
+    Range of dates including start and end month
+    Given in YYYY/MM/DD format and as a datetime object
 
     Arguements:
-        Range of dates including start and end month
-        Given in YYYY/MM/DD format and as a datetime object
+        start (datetime): start date given in datetime format
+        end (datetime): end date given in datetime format
+        report_type(str): specifies the reservoir used
 
     Returns:
-        dataframe of date range 
+        dictionary: dictionary of data and metadata of report
 
     """
     # Check if date is in the right format
@@ -86,7 +89,7 @@ def file_getter_shafln(start, end, report_type = 'shafln'):
 
 
     return {'data': new_df, 'info': {'url': urls,
-                                 'title': "Shasta Reservoir Daily Operations",
+                                 'title': 'Shasta Reservoir Daily Operations',
                                  'units': 'cfs',
                                  'date published': dates_published,
                                  'date retrieved': today_date}}

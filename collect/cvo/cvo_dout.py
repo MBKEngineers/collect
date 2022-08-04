@@ -46,19 +46,19 @@ def file_getter_dout(start, end, report_type = 'dout'):
     small_pdf = datetime.strptime('0117', '%m%y')
     prn_date = datetime.strptime('1210', '%m%y')
     txt_date = datetime.strptime('0402', '%m%y')
-    special_date = datetime.strptime('0111',"%m%y")
-    blown_up_start1 = datetime.strptime('0120',"%m%y")
-    blown_up_end1 = datetime.strptime('0820',"%m%y")
+    special_date = datetime.strptime('0111','%m%y')
+    blown_up_start1 = datetime.strptime('0120','%m%y')
+    blown_up_end1 = datetime.strptime('0820','%m%y')
 
-    blown_up_start2 = datetime.strptime('0319',"%m%y")
-    blown_up_end2 = datetime.strptime('0819',"%m%y")
+    blown_up_start2 = datetime.strptime('0319','%m%y')
+    blown_up_end2 = datetime.strptime('0819','%m%y')
 
-    blown_up_start3 = datetime.strptime('0622',"%m%y")
+    blown_up_start3 = datetime.strptime('0622','%m%y')
 
-    column_names=["Date", "SactoR_pd","SRTP_pd", "Yolo_pd","East_side_stream_pd","Joaquin_pd",
-                   "Joaquin_7dy","Joaquin_mth", "total_delta_inflow","NDCU", "CLT","TRA","CCC","BBID",
-                   "NBA","total_delta_exports","3_dy_avg_TRA_CLT","NDOI_daily","outflow_7_dy_avg",
-                   "outflow_mnth_avg","exf_inf_daily","exf_inf_3dy","exf_inf_14dy"]
+    column_names=['Date', 'SactoR_pd','SRTP_pd', 'Yolo_pd','East_side_stream_pd','Joaquin_pd',
+                   'Joaquin_7dy','Joaquin_mth', 'total_delta_inflow','NDCU', 'CLT','TRA','CCC','BBID',
+                   'NBA','total_delta_exports','3_dy_avg_TRA_CLT','NDOI_daily','outflow_7_dy_avg',
+                   'outflow_mnth_avg','exf_inf_daily','exf_inf_3dy','exf_inf_14dy']
 
     # Getting list of dates for url
     for dt_month in months_between(start, end):
@@ -83,7 +83,7 @@ def file_getter_dout(start, end, report_type = 'dout'):
             # Weird date where pdf gets slightly longer
             # Other PDFs are smaller than the usual size
             if dt_month == special_date:
-                full_data = read_pdf("https://www.usbr.gov/mp/cvo/vungvari/dout0111.pdf", encoding = 'ISO-8859-1',stream=True, area = [146.19, 20.76,350 ,733.67], pages = 1, guess = False,  pandas_options={'header':None})
+                full_data = read_pdf('https://www.usbr.gov/mp/cvo/vungvari/dout0111.pdf', encoding = 'ISO-8859-1',stream=True, area = [146.19, 20.76,350 ,733.67], pages = 1, guess = False,  pandas_options={'header':None})
             else:
                 full_data = read_pdf(url, encoding = 'ISO-8859-1',stream=True, area = [151.19, 20.76,360 ,900.67], pages = 1, guess = False,  pandas_options={'header':None})
             date_pulished = read_pdf(url, encoding = 'ISO-8859-1',stream=True, area = [566, 566,700 ,800], pages = 1,  pandas_options={'header':None})
@@ -142,7 +142,7 @@ def file_getter_dout(start, end, report_type = 'dout'):
     # print(date_published)
 
     return {'data': new_df, 'info': {'url': urls,
-                                 'title': " U.S. Bureau of Reclamation - Central Valley Operations Office Delta Outflow Computation",
+                                 'title': 'U.S. Bureau of Reclamation - Central Valley Operations Office Delta Outflow Computation',
                                  'units': 'cfs',
                                  'date published': dates_published}}
     #return dates

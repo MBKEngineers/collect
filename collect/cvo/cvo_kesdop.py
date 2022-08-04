@@ -12,19 +12,20 @@ from tabula import read_pdf
 from collect.cvo.cvo_common import report_type_maker, months_between, load_pdf_to_dataframe, validate_user_date, data_cleaner
 
 
-# input as a range of dates
-# Takes range of dates and uses report_type_maker to get multiple pdfs
-# Format: 'YYYY/MM/DD'
 def file_getter_kesdop(start, end, report_type = 'kesdop'):
     """
     Earliest PDF date: Feburary 2000
+    Range of dates including start and end month
+    Given in YYYY/MM/DD format and as a datetime object
 
     Arguements:
-        Range of dates including start and end month
-        Given in YYYY/MM/DD format and as a datetime object
+        start (datetime): start date given in datetime format
+        end (datetime): end date given in datetime format
+        report_type(str): specifies the reservoir used
 
     Returns:
-        dataframe of date range
+        dictionary: dictionary of data and metadata of report
+
     """
     # Check if date is in the right format
     validate_user_date(start)
@@ -37,7 +38,7 @@ def file_getter_kesdop(start, end, report_type = 'kesdop'):
     frames = []
     urls = []
 
-	# Getting list of dates for url
+    # Getting list of dates for url
     for dt_month in dates_published:
         
         # set the default bottom boundary for tabula read_pdf function
@@ -84,7 +85,7 @@ def file_getter_kesdop(start, end, report_type = 'kesdop'):
     new_df = data_cleaner(df,report_type)
 
     return {'data': new_df, 'info': {'url': urls,
-                                 'title': "Kesdop Reservoir Daily Operations",
+                                 'title': 'Kesdop Reservoir Daily Operations',
                                  'units': 'cfs',
                                  'date published': dates_published,
                                  'date retrieved': today_date}}

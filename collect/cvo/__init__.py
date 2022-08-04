@@ -18,4 +18,4 @@ file_getter_dout(datetime.datetime(2015,1,10), datetime.datetime(2022,4,20))
 
 """
 # -*- coding: utf-8 -*-
-from . import cvo_dout, cvo_shadop
+from . import cvo_dout, cvo_shadop, cvo_kesdop, cvo_shafln
