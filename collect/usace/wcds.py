@@ -282,6 +282,16 @@ def get_release_report(reservoir):
     return {'data': raw, 'info': info}
 
 def get_reservoir_metadata(reservoir, water_year, interval='d'):
+    """
+    Retrieves website metadata from Folsom entry on USACE-SPK's WCDS.
+    Note: times formatted as 2400 are assigned to 0000 of the next date. (hourly and daily)
+    
+    Arguments:
+        reservoir (str): three-letter reservoir code, lowercase
+    Returns:
+        (dict): dictionary containing the release change email and other reservoir info
+    """
+
     # reservoir code is case-sensitive
     reservoir = reservoir.lower()
 
@@ -289,8 +299,7 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.meta'
     
     # Read url data
-    response = requests.get(url, verify=False)
-    text = response.text
-    site_info = json.loads(text)
+    response = requests.json(url, verify=False)
+    site_info = json.loads(response)
     return site_info
 
