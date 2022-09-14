@@ -59,26 +59,10 @@ def get_water_year_data(reservoir, water_year, interval='d'):
 
     # Define variable for reservoir metadata
     raw = get_reservoir_metadata(reservoir, water_year, interval)
-    data_headers = raw['allheaders']
-
-    if 'ymarkers' in raw and 'Gross Pool(elev NGVD29)' in raw['ymarkers']:
-        result =  {'data': df, 
-                   'info': {'reservoir': raw['title'],
-                            'water year': water_year, 
-                            'interval':interval,
-                            'gross pool': raw['ymarkers']['Gross Pool']['value'],
-                            'gross pool (elev)': raw['ymarkers']['Gross Pool(elev NGVD29)']['value'],
-                            'data headers': data_headers},
-                    'metadata': raw}
-    else:
-        result =  {'data': df, 
-                   'info': {'reservoir': raw['title'],
-                            'water year': water_year, 
-                            'interval':interval,
-                            'gross pool': raw['ymarkers']['Gross Pool']['value'],
-                            'gross pool (elev)': raw['ymarkers']['Gross Pool(elev)']['value'],
-                            'data headers': data_headers},
-                    'metadata': raw}
+    
+    result =    {'data': df, 
+                'info': raw['info'],
+                'metadata': raw['metadata']}
 
     return result
 
@@ -98,7 +82,7 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
     # reservoir code is case-sensitive
     reservoir = reservoir.lower()
 
-    # Check that user chosen water year is within range with data
+    # Check that user-chosen water year is within range with data
     earliest_time = dt.datetime.strptime('1994-10-01', '%Y-%m-%d')
 
     if start_time.tzname() in ['US/Pacific', 'PST', 'PDT']:
@@ -108,16 +92,15 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
         print(f'No data for selected start date. Earliest possible start date selected instead: {earliest_time}')
         start_time = earliest_time
 
-    # Make new dataframe
+    # Make new dataframe and dictionary for every water year within selection
     frames = []
-    for water_year in range(utils.get_water_year(start_time), utils.get_water_year(end_time) + 1):
+    metadata = {}
+    m_start_time = utils.get_water_year(start_time)
+    m_end_time = utils.get_water_year(end_time)
+    for water_year in range(m_start_time, m_end_time + 1):
             frames.append(get_water_year_data(reservoir, water_year, interval)['data'])
-    
-    # Make dictionary for every water year within selection
-    metadata = {}    
-    for water_year in range(utils.get_water_year(start_time), utils.get_water_year(end_time) + 1):
             metadata[water_year] = get_water_year_data(reservoir, water_year, interval)['info']['data headers']
-
+            
     df = pd.concat(frames)
     df.index.name = 'ISO 8601 Date Time'
 
@@ -125,23 +108,22 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
     if clean_column_headers:
         df.rename(_cleaned_columns_map(df.columns), axis=1, inplace=True)
 
-    # Check if headers are equal
-    m_start_time = utils.get_water_year(start_time)
-    m_end_time = utils.get_water_year(end_time)
+    result = {'data': df, 
+                  'info': {'reservoir': get_water_year_data(reservoir, m_end_time, interval)['info']['reservoir'], 
+                           'interval': interval, 
+                           'notes': 'daily data value occurs on midnight of entry date',
+                           'data headers at start time': metadata[m_start_time],
+                           'data headers at end time': metadata[m_end_time]}
+               }
 
+    # Check if headers are equal
     if metadata[m_start_time] ==  metadata[m_end_time]:
-        result = {'data': df, 
-                  'info': {'reservoir': get_water_year_data(reservoir, m_end_time, interval)['info']['reservoir'], 
-                           'interval': interval, 
-                           'notes': 'daily data value occurs on midnight of entry date',
-                           'data headers': metadata[m_start_time]}}
+        result['info']['data headers'] = result['info'].pop('data headers at start time')
+        del result['info']['data headers at end time']
+        result['info']['data headers'] = metadata[m_start_time]
     else:
-        result = {'data': df, 
-                  'info': {'reservoir': get_water_year_data(reservoir, m_end_time, interval)['info']['reservoir'], 
-                           'interval': interval, 
-                           'notes': 'daily data value occurs on midnight of entry date',
-                           'data headers at start time': metadata_list[m_start_time],
-                           'data headers at end time': metadata_list[m_end_time]}}
+        result['info']['data headers at start time'] = metadata[m_start_time]
+        result['info']['data headers at end time'] = metadata[m_end_time]
 
     # return timeseries data and record metadata
     return result
@@ -283,13 +265,15 @@ def get_release_report(reservoir):
 
 def get_reservoir_metadata(reservoir, water_year, interval='d'):
     """
-    Retrieves website metadata from Folsom entry on USACE-SPK's WCDS.
-    Note: times formatted as 2400 are assigned to 0000 of the next date. (hourly and daily)
+    Retrieves website metadata from USACE-SPK's WCDS.
     
     Arguments:
-        reservoir (str): three-letter reservoir code, lowercase
+        reservoir (str): three-letter reservoir code; i.e. 'fol'
+        water_year (int): the water year
+        interval (str): data interval; i.e. 'd' 
+
     Returns:
-        (dict): dictionary containing the release change email and other reservoir info
+        site_info (dict): nested dictionary with 'allheaders', 'generated', 'groups', 'title' and 'ymarkers' keys
     """
 
     # reservoir code is case-sensitive
@@ -299,7 +283,33 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.meta'
     
     # Read url data
-    response = requests.json(url, verify=False)
-    site_info = json.loads(response)
-    return site_info
+    response = requests.get(url, verify=False)
+    site_info = response.json()
+    
+    # checks whether Gross Pool is noted with '(elev NGVD29)' or not
+    if 'ymarkers' in site_info and 'Gross Pool(elev NGVD29)' in site_info['ymarkers']:
+        result =   {'metadata':     site_info,
+                    'info':         {'reservoir code': reservoir,
+                                    'reservoir': site_info['title'],
+                                    'water year': water_year, 
+                                    'interval':interval,
+                                    'gross pool': site_info['ymarkers']['Gross Pool']['value'],
+                                    'gross pool (elev)': site_info['ymarkers']['Gross Pool(elev NGVD29)']['value'],
+                                    'data headers': site_info['allheaders']
+                                    }
+                    }
+    else: 
+        result =   {'metadata':      site_info,
+                    'info':         {'reservoir code': reservoir,
+                                    'reservoir': site_info['title'],
+                                    'water year': water_year, 
+                                    'interval':interval,
+                                    'gross pool': site_info['ymarkers']['Gross Pool']['value'],
+                                    'gross pool (elev)': site_info['ymarkers']['Gross Pool(elev)']['value'],
+                                    'data headers': site_info['allheaders']
+                                    }
+                    }
+
+    # returns result in dict form
+    return result
 
