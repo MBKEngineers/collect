@@ -58,13 +58,15 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval=None):
         dictionary: dictionary of 'data' and 'info' with dataframe of timeseries and station metadata
     """
     # cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
-    cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuousdata/'
+    cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/'
 
     if not interval and variable in ('CONDUCTIVITY', 'WATER_TEMPERATURE'):
         interval = 'POINT'
 
-    table_url = cawdl_url + 'docs/{0}/{1}/{2}_{3}_DATA.CSV'.format(site_id, water_year, variable, interval)
-    site_url = cawdl_url + 'index.cfm?site={0}'.format(site_id) # HAVE TO CHANGE AND ADD TO SITE INFO
+    # https://wdlstorageaccount.blob.core.windows.net/continuous/B91479/por/B91479_Conductivity_Daily_Mean.csv
+
+    table_url = cawdl_url + 'continuous/{0}/{1}/{0}_{2}_{3}.CSV'.format(site_id, 'por', variable.title(), interval)
+    site_url = cawdl_url + 'continuousdata/index.cfm?site={0}'.format(site_id) # HAVE TO CHANGE AND ADD TO SITE INFO
 
     # read historical ground water timeseries from "recent groundwater level data" tab
     df = pandas.read_csv(table_url, header=[0, 1, 2], parse_dates=[0], index_col=0)
@@ -83,6 +85,7 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval=None):
 
     return {'data': df, 'info': site_info}
 
+
 def get_cawdl_surface_water_por(site_id, variable, interval=None):
     """
     Download full POR timeseries from CAWDL database
@@ -96,6 +99,7 @@ def get_cawdl_surface_water_por(site_id, variable, interval=None):
         dictionary: dictionary of 'data' and 'info' with dataframe of timeseries and station metadata
     """
     return get_cawdl_surface_water_data(site_id, 'POR', variable, interval)
+
 
 def get_cawdl_surface_water_site_report(site_id):
     """
@@ -143,3 +147,42 @@ def get_cawdl_surface_water_site_report(site_id):
                 pass
 
     return {'info': site_info}
+
+
+def _validate_interval(interval):
+    """
+    Arguments:
+        interval (str): the continuous data timeseries interval
+    Returns:
+        (bool): ind
+    """
+    assert interval in ['Daily Mean', 'Raw'], 'Error: must provide valid `interval` string'
+    return interval
+
+
+def _validate_variable(variable):
+    """
+    Arguments:
+        variable (str): the continuous data timeseries variable
+    Returns:
+        (bool): ind
+    """
+    assert variable in [
+        'Air_Temperature', 
+        'Chlorophyll', 
+        'Dissolved_Oxygen_(%)', 
+        'Dissolved_Oxygen', 
+        'Flow', 
+        'Ground_Surface_Displacement', 
+        'Groundwater_Level_Below_Ground_Surface', 
+        'Groundwater_Surface_Elevation', 
+        'Groundwater_Temperature', 
+        'pH', 
+        'Salinity', 
+        'Stage', 
+        'Turbidity', 
+        'Velocity', 
+        'Water_Temperature_ADCP', 
+        'Water_Temperature', 
+    ], 'Error: must provide valid `variable` string'
+    return variable
