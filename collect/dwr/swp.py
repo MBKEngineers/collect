@@ -9,7 +9,10 @@ import io
 import re
 
 import pandas as pd
-import pdftotext
+try:
+    import pdftotext
+except:
+    print('WARNING: pdftotext not installed')
 import requests
 
 
