@@ -14,7 +14,7 @@ try:
     from tabula import read_pdf
 except:
     print('WARNING: tabula is require for cvo module')
-import regex as re
+import re
 
 from collect.cvo.cvo_common import report_type_maker, months_between, load_pdf_to_dataframe, validate_user_date, data_cleaner
 
