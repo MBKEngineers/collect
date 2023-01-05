@@ -5,6 +5,7 @@ access CDEC gage data
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
+import numpy as np
 import json
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -109,7 +110,7 @@ def get_station_sensors(station, start, end):
     return sensors
 
 
-def get_station_data(station, start, end, sensors=[], duration=''):
+def get_station_data(station, start, end, sensors=[], duration='', filename=''):
     """
     General purpose function for returning a pandas DataFrame for all available
     data for CDEC `station` in the given time window, with optional `duration` argument.
@@ -123,7 +124,7 @@ def get_station_data(station, start, end, sensors=[], duration=''):
     Returns:
         df (pandas.DataFrame): the queried timeseries as a DataFrame
     """
-    return get_raw_station_csv(station, start, end, sensors, duration)
+    return get_raw_station_csv(station, start, end, sensors, duration, filename)
 
 
 def get_raw_station_csv(station, start, end, sensors=[], duration='', filename=''):
@@ -152,7 +153,7 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
         'SENSOR_TYPE': str,
         'DATE TIME': str,
         'OBS DATE': str,
-        'VALUE': float,
+        # 'VALUE': (float, str),
         'DATA_FLAG': str,
         'UNITS': str,
     }
@@ -162,12 +163,17 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
                      header=0, 
                      parse_dates=True, 
                      index_col=4, 
-                     na_values=['m', '---', ' ', 'ART', 'BRT', -9999, -9998, -9997],
+                     na_values=['m', '---', ' ', -9999, -9998, -9997],
                      float_precision='high',
                      dtype=default_data_types)
+
+    #report if the data is BRT or ART (below/above rating table)
+    df.loc[df['VALUE'] == 'BRT', 'RATING_FLAG'] = 'BRT'
+    df.loc[df['VALUE'] == 'ART', 'RATING_FLAG'] = 'ART'
+    df['VALUE'] = df['VALUE'].replace({'BRT': np.nan, 'ART': np.nan})
     df['DATE TIME'] = df.index
 
-    if bool(filename):
+    if filename != '':
         df.to_csv(filename)
 
     if bool(sensors):
