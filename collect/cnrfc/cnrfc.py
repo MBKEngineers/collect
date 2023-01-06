@@ -265,12 +265,17 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_csv_export.zip'.format(date_string, watershed)
 
     # extract CSV from zip object
-    if get_web_status(url) and _date_string is not None:
-        # raise error if user supplied an actual date string but that forecast doesn't exist
+    if get_web_status(url):
         try:
             csvdata = _get_forecast_csv(url)
         except zipfile.BadZipFile:
             print(f'ERROR: forecast for {date_string} has not yet been issued.')
+            raise zipfile.BadZipFile
+    
+    # raise error if user supplied an actual date string but that forecast doesn't exist
+    elif _date_string is not None:
+        print(f'ERROR: forecast for {date_string} has not yet been issued.')
+        raise zipfile.BadZipFile
 
     # try previous forecast until a valid file is found
     else:
@@ -441,12 +446,17 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
 
     # extract CSV from zip object
-    if get_web_status(url) and _date_string is not None:
-        # raise error if user supplied an actual date string but that forecast doesn't exist
+    if get_web_status(url):
         try:
             csvdata = _get_forecast_csv(url)
         except zipfile.BadZipFile:
             print(f'ERROR: forecast for {date_string} has not yet been issued.')
+            raise zipfile.BadZipFile
+    
+    # raise error if user supplied an actual date string but that forecast doesn't exist
+    elif _date_string is not None:
+        print(f'ERROR: forecast for {date_string} has not yet been issued.')
+        raise zipfile.BadZipFile
 
     # try previous forecast until a valid file is found
     else:
