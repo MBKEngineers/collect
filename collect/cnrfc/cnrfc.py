@@ -91,6 +91,7 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
                                  'units': 'TAF',
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
+
 def get_water_year_trend_tabular(cnrfc_id, water_year):
     """
     CNRFC Ensemble Product 9, which includes WY Forecast 90% Exceedance, 75% Exceedance, 50% Exceedance, 25% Exceedance, 
@@ -254,6 +255,9 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
     """
     units = 'kcfs'
 
+    # store original date_string
+    _date_string = date_string
+
     # forecast datestamp prefix
     date_string = _default_date_string(date_string)
 
@@ -261,7 +265,21 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_csv_export.zip'.format(date_string, watershed)
 
     # extract CSV from zip object
-    csvdata = _get_forecast_csv(url)
+    if get_web_status(url) and _date_string is not None:
+        # raise error if user supplied an actual date string but that forecast doesn't exist
+        try:
+            csvdata = _get_forecast_csv(url)
+        except zipfile.BadZipFile:
+            print(f'ERROR: forecast for {date_string} has not yet been issued.')
+
+    # try previous forecast until a valid file is found
+    else:
+        stamp = dt.datetime.strptime(date_string, '%Y%m%d%H')
+        while not get_web_status(url):            
+            stamp -= dt.timedelta(hours=6)
+            url = 'https://www.cnrfc.noaa.gov/csv/{0:%Y%m%d%H}_{1}_csv_export.zip'.format(stamp, watershed)
+        date_string = stamp.strftime('%Y%m%d%H')
+        csvdata = _get_forecast_csv(url)
 
     # parse forecast data from CSV
     df = pd.read_csv(csvdata, 
@@ -413,12 +431,31 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
 
     duration = _validate_duration(duration)
 
+    # store original date_string
+    _date_string = date_string
+
     # forecast datestamp prefix
     date_string = _default_date_string(date_string)
 
     # data source
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
-    csvdata = _get_forecast_csv(url)
+
+    # extract CSV from zip object
+    if get_web_status(url) and _date_string is not None:
+        # raise error if user supplied an actual date string but that forecast doesn't exist
+        try:
+            csvdata = _get_forecast_csv(url)
+        except zipfile.BadZipFile:
+            print(f'ERROR: forecast for {date_string} has not yet been issued.')
+
+    # try previous forecast until a valid file is found
+    else:
+        stamp = dt.datetime.strptime(date_string, '%Y%m%d%H')
+        while not get_web_status(url):            
+            stamp -= dt.timedelta(hours=6)
+            url = 'https://www.cnrfc.noaa.gov/csv/{0:%Y%m%d%H}_{1}_hefs_csv_{2}.zip'.format(stamp, watershed, duration)
+        date_string = stamp.strftime('%Y%m%d%H')
+        csvdata = _get_forecast_csv(url)
 
     # parse forecast data from CSV
     df = pd.read_csv(csvdata, 
