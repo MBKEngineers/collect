@@ -175,7 +175,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
 
     # default deterministic URL and index name
     url = 'https://www.cnrfc.noaa.gov/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
-    date_column_header = 'Valid Date/Time (Pacific)'
+    date_column_header = 'Date/Time (Pacific Time)'
     specified_dtypes = {date_column_header: str, 
                         'Stage (Feet)': float,
                         f'{flow_prefix}Flow (CFS)': float, 
