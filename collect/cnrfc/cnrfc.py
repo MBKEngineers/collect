@@ -398,8 +398,8 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
                      float_precision='high', 
                      dtype={'GMT': str, cnrfc_id: float})
 
-    # rename columns for ensemble member IDs starting at 1950
-    df.columns = [str(x) for x in range(1950, 1950 + len(df.columns))]
+    # rename columns for ensemble member IDs starting at 1
+    df.columns = [str(x) for x in range(1, 1 + len(df.columns))]
     
     # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
     df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
