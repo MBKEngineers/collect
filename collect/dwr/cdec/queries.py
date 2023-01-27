@@ -456,7 +456,7 @@ def get_data(station, start, end, sensor='', duration=''):
     return {'data': df, **get_station_metadata(station)}
 
 
-def get_snowpack_data(region, date_string=None):
+def get_daily_snowpack_data(region, date_string=None):
     """
     return snowpack values for % of normal for date and % of April 1
 
