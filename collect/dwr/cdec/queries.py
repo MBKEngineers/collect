@@ -8,9 +8,12 @@ import datetime as dt
 import json
 from bs4 import BeautifulSoup
 import pandas as pd
+import pytz
 import requests
 from six import string_types
 from collect.utils import get_web_status
+
+UTC = pytz.timezone('UTC')
 
 
 def get_station_url(station, start, end, data_format='CSV', sensors=[], duration=''):
