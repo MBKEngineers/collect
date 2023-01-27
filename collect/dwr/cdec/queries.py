@@ -451,3 +451,49 @@ def get_data(station, start, end, sensor='', duration=''):
     """
     df = get_sensor_frame(station, start, end, sensor, duration)
     return {'data': df, **get_station_metadata(station)}
+
+
+def get_snowpack_data(region, date_string=None):
+    """
+    return snowpack values for % of normal for date and % of April 1
+
+    Arguments:
+        region (str): region as a string, including 'NORTH', 'CENTRAL', 'SOUTH', 'STATE'
+        date_string (str): the forecast issuance date as a YYYYMMDD formatted string
+    Returns:
+        (dict): dictionary containing interval, date, % of normal, and % of April 1
+    """
+    # store original date_string
+    _date_string = date_string
+
+    # verify region string is one of the 4 provided
+    if region not in ['NORTH', 'SOUTH', 'CENTRAL', 'STATE']:
+        raise ValueError(f'<region> string must be NORTH, SOUTH, CENTRAL, or STATE.')
+
+    # automatically use today's date if no date provided
+    if date_string is None:
+        date_string = dt.datetime.now().astimezone(UTC).strftime('%m/%d/%Y')
+    else:
+        date_string = dt.datetime.strptime(_date_string, '%Y%m%d').strftime('%m/%d/%Y')
+
+    # parse CDEC website for Daily Regional Snow Water Content Data
+    url = f'https://cdec.water.ca.gov/dynamicapp/querySWC?reg={region}'
+    data = requests.get(url).text
+    soup = BeautifulSoup(data, "lxml")
+    
+    # scrape table by row and pull values for desired date
+    table_body = soup.find('tbody')
+    rows = table_body.find_all('tr')
+    for row in rows:
+        cols=row.find_all('td')
+        cols=[x.text.strip() for x in cols]
+        if date_string in cols:
+            percent_of_normal_for_date = cols[5]
+            percent_of_normal_april_1 = cols[4]
+            break
+    
+    return {"meta": {"interval": "daily",
+                     "region": region},
+            "data": {"date": date_string,
+                     "percent_of_normal_for_date": percent_of_normal_for_date,
+                     "percent_of_normal_april_1": percent_of_normal_april_1}}
