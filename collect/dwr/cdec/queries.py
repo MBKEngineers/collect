@@ -474,6 +474,8 @@ def get_daily_snowpack_data(region, start, end):
     # validate date string is within range
     if start < dt.datetime(2003, 2, 15):
         raise ValueError(f'<start> time cannot be earlier than 2003-2-15.')
+    if end > dt.datetime.now():
+        raise ValueError(f'<end> time cannot be later than today.')
 
     # read in snowpack region table as dataframe
     df = pd.read_html(f'https://cdec.water.ca.gov/dynamicapp/querySWC?reg={region}')[0]
