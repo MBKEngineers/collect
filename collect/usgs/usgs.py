@@ -4,12 +4,18 @@ collect.usgs.usgs
 USGS National Water Information System (NWIS)
 """
 # -*- coding: utf-8 -*-
-
+import datetime as dt
 from bs4 import BeautifulSoup
-import dateutil.parser
+# import dateutil.parser
+
+from colors import color
 import pandas as pd
 import requests
 
+from pytz import timezone
+
+UTC = timezone('UTC')
+PACIFIC = timezone('US/Pacific')
 
 def get_query_url(station_id, sensor, start_time, end_time, interval):
     """
@@ -79,9 +85,14 @@ def get_data(station_id, sensor, start_time, end_time, interval='instantaneous')
         # entry['dateTime'] = dateutil.parser.parse(entry['dateTime'])
         entry['qualifiers'] = ','.join(entry['qualifiers'])
 
+    # convert to UTC to ensure all datetimes/timestamps carry the same timezone, allowing creation of 
+    # pandas.DatetimeIndex, then convert to local timezone
     frame = pd.DataFrame.from_records(series, index='dateTime')
     frame.index = pd.to_datetime(frame.index)
-    frame.value = frame.value.astype(float)
+    if not isinstance(frame.index, pd.DatetimeIndex):
+        frame.index = pd.DatetimeIndex(frame.index.map(lambda x: x.astimezone(UTC)).tz_convert('US/Pacific'))
+
+    frame['value'] = frame['value'].astype(float)
     frame.rename(columns={'value': str(sensor)}, inplace=True)
 
     # extract site metadata from json blob
