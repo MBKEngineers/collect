@@ -8,12 +8,9 @@ import datetime as dt
 import json
 from bs4 import BeautifulSoup
 import pandas as pd
-import pytz
 import requests
 from six import string_types
 from collect.utils import get_web_status
-
-UTC = pytz.timezone('UTC')
 
 
 def get_station_url(station, start, end, data_format='CSV', sensors=[], duration=''):
@@ -463,8 +460,8 @@ def get_daily_snowpack_data(region, start, end):
 
     Arguments:
         region (str): region as a string containing 'NORTH', 'CENTRAL', 'SOUTH', or 'STATE'
-        start (dt.datetime): query start date as dt.datetime(YYYY, MM, DD)
-        end (dt.datetime): query end date as dt.datetime(YYYY, MM, DD)
+        start (datetime.datetime): query start date as datetime
+        end (datetime.datetime): query end date as datetime
     Returns:
         (dict): dictionary containing dataframe with % of normal and % of April 1 values
     """
@@ -473,18 +470,22 @@ def get_daily_snowpack_data(region, start, end):
         raise ValueError(f'<region> string must be NORTH, SOUTH, CENTRAL, or STATE.')
 
     # validate date string is within range
-    if start < dt.datetime(2003, 2, 15):
-        raise ValueError(f'<start> time cannot be earlier than 2003-2-15.')
-    if end > dt.datetime.now():
-        raise ValueError(f'<end> time cannot be later than today.')
+    # if start < dt.datetime(2003, 2, 15):
+    #     raise ValueError(f'<start> time cannot be earlier than 2003-2-15.')
+    # if end > dt.datetime.now():
+    #     raise ValueError(f'<end> time cannot be later than today.')
 
     # read in snowpack region table as dataframe
     df = pd.read_html(f'https://cdec.water.ca.gov/dynamicapp/querySWC?reg={region}')[0]
+    df['Date'] = pd.to_datetime(df['Date'])
+
+    # sort and index dataframe by ascending date 
+    df.sort_values('Date', inplace=True)
     df.set_index('Date', inplace=True)
 
     # slice dataframe for query range
-    df_query = df.loc[end.strftime('%m/%d/%Y'):start.strftime('%m/%d/%Y')]
+    df_query = df.loc[start:end]
     
-    return {'meta': {'interval': 'daily',
+    return {'info': {'interval': 'daily',
                      'region': region},
             'data': df_query}
