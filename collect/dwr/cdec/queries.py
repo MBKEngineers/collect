@@ -264,13 +264,14 @@ def get_station_metadata(station, as_geojson=False):
     site_info['sensors'].update(_parse_station_sensors_table(tables[_get_table_index('sensors', tables)]))
 
     # add site url
-    site_info.update({"CDEC URL": f"<a target=\"_blank\" href=\"{url}\">{station}</a>"})
+    site_info.update({'CDEC URL': f"<a target=\"_blank\" href=\"{url}\">{station}</a>"})
 
     if soup.find('a', href=True, text='Dam Information'):
         site_info.update(get_dam_metadata(station))
 
     if soup.find('a', href=True, text='Reservoir Information'):
-        site_info.update(get_reservoir_metadata(station))
+        if station not in ['BAR', 'BHC', 'FRM', 'KKR', 'PRA', 'SJT', 'DNP', 'LGR']:
+            site_info.update(get_reservoir_metadata(station))
 
     # export a geojson feature (as dictionary)
     if as_geojson:
