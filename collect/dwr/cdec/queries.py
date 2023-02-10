@@ -451,3 +451,41 @@ def get_data(station, start, end, sensor='', duration=''):
     """
     df = get_sensor_frame(station, start, end, sensor, duration)
     return {'data': df, **get_station_metadata(station)}
+
+
+def get_daily_snowpack_data(region, start, end):
+    """
+    return regional snowpack values for % of normal for date, % of April 1 value, 
+    number of stations reporting, and average snow water content
+
+    Arguments:
+        region (str): region as a string containing 'NORTH', 'CENTRAL', 'SOUTH', or 'STATE'
+        start (datetime.datetime): query start date as datetime
+        end (datetime.datetime): query end date as datetime
+    Returns:
+        (dict): dictionary containing dataframe with % of normal and % of April 1 values
+    """
+    # validate region string is one of the 4 provided
+    if region not in ['NORTH', 'SOUTH', 'CENTRAL', 'STATE']:
+        raise ValueError(f'<region> string must be NORTH, SOUTH, CENTRAL, or STATE.')
+
+    # read in snowpack region table as dataframe
+    df = pd.read_html(f'https://cdec.water.ca.gov/dynamicapp/querySWC?reg={region}')[0]
+    df['Date'] = pd.to_datetime(df['Date'])
+
+    # sort and index dataframe by ascending date 
+    df.sort_values('Date', inplace=True)
+    df.set_index('Date', inplace=True)
+
+    # slice dataframe for query range
+    df_query = df.loc[start:end]
+
+    # issue warning if dates are outside of possible query range
+    if start < df.index[0]:
+        print(f'WARNING: <start> time should not be earlier than {df.index[0]}.')
+    if end > df.index[-1]:
+        print(f'WARNING: <end> time should not be later than {df.index[-1]}')
+    
+    return {'info': {'interval': 'daily',
+                     'region': region},
+            'data': df_query}
