@@ -489,3 +489,63 @@ def get_daily_snowpack_data(region, start, end):
     return {'info': {'interval': 'daily',
                      'region': region},
             'data': df_query}
+
+            
+def get_snowpack_gauge_data(watershed, start, end):
+    """
+    return regional snowpack values for % of normal for date, % of April 1 value, 
+    number of stations reporting, and average snow water content
+
+    Arguments:
+        watershed (str): region as a string, including 'american'
+        start (dt.datetime): query start date as dt.datetime(YYYY, MM, DD)
+        end (dt.datetime): query end date as dt.datetime(YYYY, MM, DD)
+    Returns:
+        (dict): dictionary containing dataframe with % of normal and % of April 1 values
+    """
+    # validate region string is one of the 4 provided
+    if watershed not in ['american']:
+        raise ValueError(f'<watershed> string only supported for american.')
+
+    # # validate date string is within range
+    # if start < dt.datetime(2003, 2, 15):
+    #     raise ValueError(f'<start> time cannot be earlier than 2003-2-15.')
+    # if end > dt.datetime.now():
+    #     raise ValueError(f'<end> time cannot be later than today.')
+
+    if watershed == 'american':
+        gauges = ['SCN', 'LOS', 'CXS', 'CAP', 'ALP', 'FRN', 'SIL', 'VVL', 'HYS', 'RBB', 'GKS', 'BLC', 'RBP']
+
+    # list of dates between start and end
+    dates_list = [start + dt.timedelta(days=x) for x in range((end-start).days + 1)]
+
+    # empty dictionary to store date:dataframe pairs
+    data_dict = {}
+
+    for date in dates_list:
+
+        # read in snow sensor report for Yuba and American rivers
+        day = date.strftime('%Y%m%d')
+        df_list = pd.read_html(f'https://cdec.water.ca.gov/reportapp/javareports?name=PAGE6.{day}')
+
+        # drop river labels and concatenate into one dataframe of just stations
+        df = pd.concat(df_list)
+        df_query = df['Snow Water Equivalents'][df['Snow Water Equivalents']['ID'].notna()]
+        
+        # set dataframe to index by station ID
+        df_query.set_index('ID', inplace=True)
+
+        df_query = df_query.filter(items=gauges, axis=0)
+        data_dict.update({date: df_query})
+
+    # pp.pprint(data_dict)
+    df = pd.DataFrame.from_dict(data_dict, orient='tight')
+    pp.pprint(df)
+    # df.set_index('Date', inplace=True)
+
+    # # slice dataframe for query range
+    # df_query = df.loc[end.strftime('%m/%d/%Y'):start.strftime('%m/%d/%Y')]
+    
+    # return {'meta': {'interval': 'daily',
+    #                  'region': region},
+    #         'data': df_query}
