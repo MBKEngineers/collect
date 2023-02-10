@@ -458,7 +458,8 @@ def get_data(station, start, end, sensor='', duration=''):
 
 def get_daily_snowpack_data(region, start, end):
     """
-    return snowpack values for % of normal for date and % of April 1
+    return regional snowpack values for % of normal for date, % of April 1 value, 
+    number of stations reporting, and average snow water content
 
     Arguments:
         region (str): region as a string containing 'NORTH', 'CENTRAL', 'SOUTH', or 'STATE'
