@@ -456,47 +456,32 @@ def get_data(station, start, end, sensor='', duration=''):
     return {'data': df, **get_station_metadata(station)}
 
 
-def get_daily_snowpack_data(region, date_string=None):
+def get_daily_snowpack_data(region, start, end):
     """
     return snowpack values for % of normal for date and % of April 1
 
     Arguments:
-        region (str): region as a string, including 'NORTH', 'CENTRAL', 'SOUTH', 'STATE'
-        date_string (str): the forecast issuance date as a YYYYMMDD formatted string
+        region (str): region as a string containing 'NORTH', 'CENTRAL', 'SOUTH', or 'STATE'
+        start (dt.datetime): query start date as dt.datetime(YYYY, MM, DD)
+        end (dt.datetime): query end date as dt.datetime(YYYY, MM, DD)
     Returns:
-        (dict): dictionary containing interval, date, % of normal, and % of April 1
+        (dict): dictionary containing dataframe with % of normal and % of April 1 values
     """
-    # store original date_string
-    _date_string = date_string
-
-    # verify region string is one of the 4 provided
+    # validate region string is one of the 4 provided
     if region not in ['NORTH', 'SOUTH', 'CENTRAL', 'STATE']:
         raise ValueError(f'<region> string must be NORTH, SOUTH, CENTRAL, or STATE.')
 
-    # automatically use today's date if no date provided
-    if date_string is None:
-        date_string = dt.datetime.now().astimezone(UTC).strftime('%m/%d/%Y')
-    else:
-        date_string = dt.datetime.strptime(_date_string, '%Y%m%d').strftime('%m/%d/%Y')
+    # validate date string is within range
+    if start < dt.datetime(2003, 2, 15):
+        raise ValueError(f'<start> time cannot be earlier than 2003-2-15.')
 
-    # parse CDEC website for Daily Regional Snow Water Content Data
-    url = f'https://cdec.water.ca.gov/dynamicapp/querySWC?reg={region}'
-    data = requests.get(url).text
-    soup = BeautifulSoup(data, "lxml")
+    # read in snowpack region table as dataframe
+    df = pd.read_html(f'https://cdec.water.ca.gov/dynamicapp/querySWC?reg={region}')[0]
+    df.set_index('Date', inplace=True)
+
+    # slice dataframe for query range
+    df_query = df.loc[end.strftime('%m/%d/%Y'):start.strftime('%m/%d/%Y')]
     
-    # scrape table by row and pull values for desired date
-    table_body = soup.find('tbody')
-    rows = table_body.find_all('tr')
-    for row in rows:
-        cols=row.find_all('td')
-        cols=[x.text.strip() for x in cols]
-        if date_string in cols:
-            percent_of_normal_for_date = cols[5]
-            percent_of_normal_april_1 = cols[4]
-            break
-    
-    return {"meta": {"interval": "daily",
-                     "region": region},
-            "data": {"date": date_string,
-                     "percent_of_normal_for_date": percent_of_normal_for_date,
-                     "percent_of_normal_april_1": percent_of_normal_april_1}}
+    return {'meta': {'interval': 'daily',
+                     'region': region},
+            'data': df_query}
