@@ -13,8 +13,5 @@
    .. automodule:: collect.cnrfc.gages
       :members:
 
-   .. automodule:: collect.cnrfc.figures
-      :members:
-
    .. automodule:: collect.cnrfc.utilities
       :members:

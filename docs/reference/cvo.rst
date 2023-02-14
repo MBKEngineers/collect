@@ -7,5 +7,5 @@
 .. automodule:: collect.cvo
    :members: 
 
-.. automodule:: collect.cvo.cvo
-      :members:
+   .. automodule:: collect.cvo.cvo
+         :members:
