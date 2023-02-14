@@ -29,7 +29,7 @@ $ python setup.py develop
 or with _pip_ and the "editable" flag (-e):
 ```
 $ cd collect
-$ pip install -e .
+$ python -m pip install -e .
 ```
 
 ### Configure package variables
