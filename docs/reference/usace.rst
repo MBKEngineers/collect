@@ -8,3 +8,6 @@ collect.usace
 
 .. automodule:: collect.usace
    :members: 
+
+   .. automodule:: collect.usace.wcds
+      :members:

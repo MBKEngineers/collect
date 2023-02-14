@@ -1,5 +1,5 @@
 """
-collect.cvo.common
+collect.cvo.cvo
 ==========================================================================
 Functions that are used throughout the cvo scripts
 

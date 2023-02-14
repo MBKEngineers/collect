@@ -6,3 +6,6 @@
 
 .. automodule:: collect.alert
    :members: 
+
+   .. automodule:: collect.alert.alert
+      :members:
