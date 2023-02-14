@@ -10,6 +10,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+import datetime as dt
 import os
 import sys
 sys.path.insert(0, os.path.abspath('.')) # or '..' for rtd theme
@@ -18,7 +19,7 @@ sys.path.insert(0, os.path.abspath('.')) # or '..' for rtd theme
 # -- Project information -----------------------------------------------------
 
 project = 'collect'
-copyright = '2020, MBK Engineers'
+copyright = f'{dt.datetime.now():%Y}, MBK Engineers'
 author = 'MBK Engineers'
 
 # The full version, including alpha/beta/rc tags
