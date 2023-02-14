@@ -15,7 +15,6 @@ collect
    cnrfc
    dwr
    nid
-   telemetry
    usace
    usgs
    utils
