@@ -270,8 +270,7 @@ def get_station_metadata(station, as_geojson=False):
         site_info.update(get_dam_metadata(station))
 
     if soup.find('a', href=True, text='Reservoir Information'):
-        if station not in ['BAR', 'BHC', 'FRM', 'KKR', 'PRA', 'SJT', 'DNP', 'LGR']:
-            site_info.update(get_reservoir_metadata(station))
+        site_info.update(get_reservoir_metadata(station))
 
     # export a geojson feature (as dictionary)
     if as_geojson:
@@ -293,6 +292,10 @@ def get_dam_metadata(station):
         info (dict): the CDEC station metadata, stored as key, value pairs
     """
     url = 'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=dam'.format(station=station)
+
+    # interrupt if URL is invalid
+    if not get_web_status(url):
+        return {}
 
     # request dam info page
     soup = BeautifulSoup(requests.get(url).content, 'lxml')
@@ -318,7 +321,11 @@ def get_reservoir_metadata(station):
         info (dict): the CDEC station metadata, stored as key, value pairs
     """
     url = 'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=res'.format(station=station)
-    
+
+    # interrupt if URL is invalid
+    if not get_web_status(url):
+        return {}
+
     # request dam info page
     soup = BeautifulSoup(requests.get(url).content, 'lxml')
 
