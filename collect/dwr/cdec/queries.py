@@ -264,7 +264,7 @@ def get_station_metadata(station, as_geojson=False):
     site_info['sensors'].update(_parse_station_sensors_table(tables[_get_table_index('sensors', tables)]))
 
     # add site url
-    site_info.update({"CDEC URL": f"<a target=\"_blank\" href=\"{url}\">{station}</a>"})
+    site_info.update({'CDEC URL': f"<a target=\"_blank\" href=\"{url}\">{station}</a>"})
 
     if soup.find('a', href=True, text='Dam Information'):
         site_info.update(get_dam_metadata(station))
@@ -293,6 +293,10 @@ def get_dam_metadata(station):
     """
     url = 'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=dam'.format(station=station)
 
+    # interrupt if URL is invalid
+    if not get_web_status(url):
+        return {}
+
     # request dam info page
     soup = BeautifulSoup(requests.get(url).content, 'lxml')
 
@@ -317,7 +321,11 @@ def get_reservoir_metadata(station):
         info (dict): the CDEC station metadata, stored as key, value pairs
     """
     url = 'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=res'.format(station=station)
-    
+
+    # interrupt if URL is invalid
+    if not get_web_status(url):
+        return {}
+
     # request dam info page
     soup = BeautifulSoup(requests.get(url).content, 'lxml')
 
