@@ -316,7 +316,7 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast_watershed_IO(watershed, date_string):#, cnrfc_id=None):
+def get_deterministic_forecast_watershed_IO(watershed, date_string, path):#, cnrfc_id=None):
     """
     from: https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
     https://www.cnrfc.noaa.gov/csv/2019040318_american_csv_export.zip
@@ -324,9 +324,7 @@ def get_deterministic_forecast_watershed_IO(watershed, date_string):#, cnrfc_id=
     Arguments:
         watershed (str):
         date_string (str):
-        acre_feet (bool): 
-        pdt_convert (bool): 
-        as_pdt (bool): 
+        path (str): file name including file path/s3 key
         cnrfc_id (str): 
     Returns:
         (dict): 
@@ -355,20 +353,19 @@ def get_deterministic_forecast_watershed_IO(watershed, date_string):#, cnrfc_id=
         print(f'ERROR: forecast for {date_string} has not yet been issued.')
         raise zipfile.BadZipFile
 
-    # try previous forecast until a valid file is found
-    else:
-        stamp = dt.datetime.strptime(date_string, '%Y%m%d%H')
-        while not get_web_status(url):            
-            stamp -= dt.timedelta(hours=6)
-            url = 'https://www.cnrfc.noaa.gov/csv/{0:%Y%m%d%H}_{1}_csv_export.zip'.format(stamp, watershed)
-        date_string = stamp.strftime('%Y%m%d%H')
-        csvdata = _get_forecast_csv(url)
-
-    # clean up
-    csvdata.close()
-
     # forecast issue time
     time_issued = get_watershed_forecast_issue_time('hourly', watershed, date_string, deterministic=True)
+
+    # set path for 
+    if path is None:
+        datestr = url.split('_')[0].split('/')[-1]
+        watershedstr = url.split('_')[1]
+        path = '{}/{}_{}_csv_export.csv'.format(os.getcwd(), datestr, watershedstr)
+
+    # write csvdata to specified path
+    path = path.replace('/', os.sep)
+    with open(path, 'wb') as f:
+        f.write(csvdata.read())
 
     return {'data': csvdata, 'info': {'url': url, 
                                  'type': 'Deterministic Forecast', 
@@ -555,17 +552,18 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_ensemble_forecast_watershed_IO(watershed, duration, date_string):#, cnrfc_id=None):
+def get_ensemble_forecast_watershed_IO(watershed, duration, date_string, path):#, cnrfc_id=None):
     """
     from: get_watershed_ensemble_issue_time
           get_watershed_ensemble_daily
 
-    download seasonal outlook for the watershed as zipped file, unzip...
+    download seasonal outlook for the watershed as zipped file, unzip, save as csv to path
 
     Arguments:
         watershed (str): the forecast group identifier
         duration (str): forecast data timestep (hourly or daily)
         date_string (str): the forecast issuance date as a YYYYMMDDHH formatted string
+        path (str): file name including file path/s3 key
         cnrfc_id (str): the 5-character CNRFC forecast location code
     Returns:
         (dict): dictionary with data (dataframe) entry and info metadata dict
@@ -596,17 +594,19 @@ def get_ensemble_forecast_watershed_IO(watershed, duration, date_string):#, cnrf
         print(f'ERROR: forecast for {date_string} has not yet been issued.')
         raise zipfile.BadZipFile
 
-    # try previous forecast until a valid file is found
-    else:
-        stamp = dt.datetime.strptime(date_string, '%Y%m%d%H')
-        while not get_web_status(url):            
-            stamp -= dt.timedelta(hours=6)
-            url = 'https://www.cnrfc.noaa.gov/csv/{0:%Y%m%d%H}_{1}_hefs_csv_{2}.zip'.format(stamp, watershed, duration)
-        date_string = stamp.strftime('%Y%m%d%H')
-        csvdata = _get_forecast_csv(url)
-
     # get date/time stamp from ensemble download page
     time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
+
+    # set path for case where path set to None
+    if path is None:
+        datestr = url.split('_')[0].split('/')[-1]
+        watershedstr = url.split('_')[1]
+        path = '{}/{}_{}_csv_export.csv'.format(os.getcwd(), datestr, watershedstr)
+
+    # write csvdata to specified path
+    path = path.replace('/', os.sep)
+    with open(path, 'wb') as f:
+        f.write(csvdata.read())
     
     return {'data': csvdata, 'info': {'url': url, 
                                  'watershed': watershed, 
