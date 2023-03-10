@@ -53,22 +53,24 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval=None):
         site_id (str): string representing cawdl site id; ie 'B94100'
         water_year (int): integer representing water year to collect data from
         variable (str): measurement description; ie 'STAGE' or 'FLOW' or 'CONDUCTIVITY' or 'WATER_TEMPERATURE'
-        interval (str): measurement time interval; ie '15-MINUTE_DATA' or 'DAILY_MEAN' or 'DAILY_MINMAX' or 'POINT' (default for conductivity & temp)
+        interval (str): measurement time interval; 'raw' or 'daily_mean' (default for conductivity & temp)
     Returns:
         dictionary: dictionary of 'data' and 'info' with dataframe of timeseries and station metadata
     """
-    if not interval and variable in ('CONDUCTIVITY', 'WATER_TEMPERATURE'):
-        interval = 'POINT'
+    if variable.lower() == 'conductivity':
+        variable = 'Electrical_Conductivity_at_25C'
+    else:
+        variable = variable.title()
 
-    # cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/docs/Hydstra/'
-    cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuousdata/'
-    table_url = cawdl_url + 'docs/{0}/{1}/{2}_{3}_DATA.CSV'.format(site_id, water_year, variable, interval)
-    
-    if water_year == 'por':
-        if interval == 'Daily_Mean':
-            cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuous/'
-            table_url = cawdl_url + '{0}/{1}/{0}_{2}_{3}.csv'.format(site_id, water_year, variable, interval)
-            
+    if not interval and variable in ('CONDUCTIVITY', 'WATER_TEMPERATURE'):
+        interval = 'Raw'
+
+    # make both the interval and variable title case
+    interval = interval.title()
+
+    cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuous/'
+    table_url = cawdl_url + '{0}/por/{0}_{1}_{2}.csv'.format(site_id, variable, interval)
+
     site_url = cawdl_url + 'index.cfm?site={0}'.format(site_id) # HAVE TO CHANGE AND ADD TO SITE INFO
 
     # read historical ground water timeseries from "recent groundwater level data" tab
@@ -83,6 +85,10 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval=None):
     meta = df[f'Unnamed: {n}_level_2'].dropna()
     df.drop(f'Unnamed: {n}_level_2', axis=1, inplace=True)
     # df = df.tz_localize('US/Pacific')
+
+    # filter to given water year if not POR
+    if isinstance(water_year, int):
+        df = df[((df.index.year==water_year) & (df.index.month < 10)) | ((df.index.year==water_year-1) & (df.index.month >= 10))]
 
     site_info = get_cawdl_surface_water_site_report(site_id)['info']
 
