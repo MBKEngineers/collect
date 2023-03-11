@@ -28,13 +28,38 @@ def clean_fwf_df(table_text, col_spec, header, skiprows=[]):
                        skiprows=skiprows).dropna()
 
 
+def _parse_reconstructed_wyi_table(table_text):
+    text_buffer = StringIO(wyi_table)
+    text_buffer.write(table_text)
+    text_buffer.seek(0)
+
+    df = pd.read_fwf(text_buffer, header=[0], skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12], index_col=0)
+
+    column_headers = {
+        'Oct-Mar': ('Runoff (maf)', 'Oct-Mar'),
+        'Apr-Jul': ('Runoff (maf)', 'Apr-Jul'),
+        'WYsum': ('Runoff (maf)', 'WYsum'),
+        'Index': ('WY Index', 'Index'),
+        'Yr-type': ('WY Index', 'Yr-type')
+    }
+
+    df.columns = pd.MultiIndex.from_tuples(
+        [('Sacramento Valley', *column_headers.get(c)) for c in df.columns[:5]] 
+        + [('San Joaquin Valley', *column_headers.get(c.rstrip('.1'))) for c in df.columns[5:]]
+    )
+
+    return df
+
+
+
+
 def get_wsi_data():
     """
     Water Supply Index Info
     """
 
     # main WRWSIHIST url
-    url = 'http://cdec.water.ca.gov/reportapp/javareports?name=wsihist'
+    url = 'https://cdec.water.ca.gov/reportapp/javareports?name=wsihist'
 
     # parse HTML file structure; AJ forecast table
     soup = BeautifulSoup(requests.get(url).content, 'html5lib')
