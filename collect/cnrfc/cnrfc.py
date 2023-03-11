@@ -601,7 +601,7 @@ def get_ensemble_forecast_watershed_IO(watershed, duration, date_string, path):#
     if path is None:
         datestr = url.split('_')[0].split('/')[-1]
         watershedstr = url.split('_')[1]
-        path = '{}/{}_{}_csv_export.csv'.format(os.getcwd(), datestr, watershedstr)
+        path = '{}/{}_{}_hefs_csv_{}_export.csv'.format(os.getcwd(), datestr, watershedstr, duration)
 
     # write csvdata to specified path
     path = path.replace('/', os.sep)
