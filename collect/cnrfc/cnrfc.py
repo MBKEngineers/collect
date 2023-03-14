@@ -240,18 +240,18 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
 
 def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False, pdt_convert=False, as_pdt=False, cnrfc_id=None):
     """
-    from: https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
-    https://www.cnrfc.noaa.gov/csv/2019040318_american_csv_export.zip
+    download the deterministic forecasts for an entire watershed, as linked on
+    https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
 
     Arguments:
-        watershed (str):
-        date_string (str):
-        acre_feet (bool): 
-        pdt_convert (bool): 
-        as_pdt (bool): 
-        cnrfc_id (str): 
+        watershed (str): the string identifier for the watershed
+        date_string (str): date as a string in format YYYYMMDDHH
+        acre_feet (bool): flag to convert flow forecasts to volumes in acre-feet
+        pdt_convert (bool): flag to convert to Pacific timezone
+        as_pdt (bool): localize the data in Pacific timezone
+        cnrfc_id (str): optional single forecast location for filtering
     Returns:
-        (dict): 
+        (dict): resulting dictionary with data key mapping to dataframe and info containing query metadata
     """
     units = 'kcfs'
 
@@ -295,12 +295,10 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
                      float_precision='high',
                      dtype={'GMT': str})
 
-    # filter watershed for single forecast point ensemble
+    # filter watershed for single forecast point ensemble, if provided
     if cnrfc_id is not None:
-        columns = [x for x in df.columns if cnrfc_id in x]
-    else:
-        columns = df.columns
-    
+        df = df.filter(regex=r'^{0}((\.\d+)?)$'.format(cnrfc_id))
+
     # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
     df, units = _apply_conversions(df, 'hourly', acre_feet, pdt_convert, as_pdt)
 
@@ -476,10 +474,9 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
                      float_precision='high',
                      dtype={'GMT': str})
 
-    # filter watershed for single forecast point ensemble
+    # filter watershed for single forecast point ensemble, if provided
     if cnrfc_id is not None:
-        columns = [x for x in df.columns if cnrfc_id in x]
-        df = df[columns]
+        df = df.filter(regex=r'^{0}((\.\d+)?)$'.format(cnrfc_id))
     
     # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
     df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
