@@ -366,13 +366,6 @@ def get_deterministic_forecast_watershed_IO(watershed, date_string, path=None):#
     with open(path, 'wb') as f:
         f.write(csvdata.read())
 
-    return {'data': csvdata, 'info': {'url': url, 
-                                 'type': 'Deterministic Forecast', 
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
-                                 'watershed': watershed, 
-                                 'units': units,
-                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
-
 
 def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=False):
     """
@@ -605,13 +598,6 @@ def get_ensemble_forecast_watershed_IO(watershed, duration, date_string, path=No
     path = path.replace('/', os.sep)
     with open(path, 'wb') as f:
         f.write(csvdata.read())
-    
-    return {'data': csvdata, 'info': {'url': url, 
-                                 'watershed': watershed, 
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
-                                 'units': units, 
-                                 'duration': duration,
-                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
 def get_watershed_forecast_issue_time(duration, watershed, date_string=None, deterministic=False):
