@@ -316,7 +316,7 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast_watershed_IO(watershed, date_string, path):#, cnrfc_id=None):
+def get_deterministic_forecast_watershed_IO(watershed, date_string, path=None):#, cnrfc_id=None):
     """
     from: https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
     https://www.cnrfc.noaa.gov/csv/2019040318_american_csv_export.zip
@@ -358,9 +358,8 @@ def get_deterministic_forecast_watershed_IO(watershed, date_string, path):#, cnr
 
     # set path for 
     if path is None:
-        datestr = url.split('_')[0].split('/')[-1]
-        watershedstr = url.split('_')[1]
-        path = '{}/{}_{}_csv_export.csv'.format(os.getcwd(), datestr, watershedstr)
+        path = '{}/{}'.format(os.getcwd(), 
+                                url.split('/')[-1].replace('.zip','.csv'))
 
     # write csvdata to specified path
     path = path.replace('/', os.sep)
@@ -552,7 +551,7 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_ensemble_forecast_watershed_IO(watershed, duration, date_string, path):#, cnrfc_id=None):
+def get_ensemble_forecast_watershed_IO(watershed, duration, date_string, path=None):#, cnrfc_id=None):
     """
     from: get_watershed_ensemble_issue_time
           get_watershed_ensemble_daily
@@ -599,9 +598,8 @@ def get_ensemble_forecast_watershed_IO(watershed, duration, date_string, path):#
 
     # set path for case where path set to None
     if path is None:
-        datestr = url.split('_')[0].split('/')[-1]
-        watershedstr = url.split('_')[1]
-        path = '{}/{}_{}_hefs_csv_{}_export.csv'.format(os.getcwd(), datestr, watershedstr, duration)
+        path = '{}/{}'.format(os.getcwd(), 
+                                url.split('/')[-1].replace('.zip','.csv'))
 
     # write csvdata to specified path
     path = path.replace('/', os.sep)
