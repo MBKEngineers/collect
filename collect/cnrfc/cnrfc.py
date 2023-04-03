@@ -496,7 +496,8 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
 def get_watershed_forecast_file(watershed, date_string, forecast_type, duration=None, path=None):
     """
 
-    download seasonal outlook for the watershed as zipped file, unzip, save as csv to path
+    download short range ensemble, deterministic forecast, and seasonal outlook for the 
+    watershed as zipped file, unzip, save as csv to path
 
     Arguments:
         watershed (str): the forecast group identifier
