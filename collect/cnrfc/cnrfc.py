@@ -316,57 +316,6 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast_watershed_IO(watershed, date_string, path=None):
-    """
-    from: https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
-    https://www.cnrfc.noaa.gov/csv/2019040318_american_csv_export.zip
-
-    Arguments:
-        watershed (str):
-        date_string (str):
-        path (str): file name including file path/s3 key
-        cnrfc_id (str): 
-    Returns:
-        (dict): 
-    """
-    units = 'kcfs'
-
-    # store original date_string
-    _date_string = date_string
-
-    # forecast datestamp prefix
-    date_string = _default_date_string(date_string)
-
-    # data source
-    url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_csv_export.zip'.format(date_string, watershed)
-
-    # extract CSV from zip object
-    if get_web_status(url):
-        try:
-            csvdata = _get_forecast_csv(url)
-        except zipfile.BadZipFile:
-            print(f'ERROR: forecast for {date_string} has not yet been issued.')
-            raise zipfile.BadZipFile
-    
-    # raise error if user supplied an actual date string but that forecast doesn't exist
-    elif _date_string is not None:
-        print(f'ERROR: forecast for {date_string} has not yet been issued.')
-        raise zipfile.BadZipFile
-
-    # forecast issue time
-    time_issued = get_watershed_forecast_issue_time('hourly', watershed, date_string, deterministic=True)
-
-    # set path for 
-    if path is None:
-        path = '{}/{}'.format(os.getcwd(), 
-                                url.split('/')[-1].replace('.zip','.csv'))
-
-    # write csvdata to specified path
-    path = path.replace('/', os.sep)
-    with open(path, 'wb') as f:
-        f.write(csvdata.read())
-
-
 def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=False):
     """
     Get issuance time from the deterministic inflow forecast page
@@ -544,65 +493,8 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_ensemble_forecast_watershed_IO(watershed, duration, date_string, path=None):
+def get_watershed_forecast_file(watershed, date_string, forecast_type, duration=None, path=None):
     """
-    from: get_watershed_ensemble_issue_time
-          get_watershed_ensemble_daily
-
-    download seasonal outlook for the watershed as zipped file, unzip, save as csv to path
-
-    Arguments:
-        watershed (str): the forecast group identifier
-        duration (str): forecast data timestep (hourly or daily)
-        date_string (str): the forecast issuance date as a YYYYMMDDHH formatted string
-        path (str): file name including file path/s3 key
-        cnrfc_id (str): the 5-character CNRFC forecast location code
-    Returns:
-        (dict): dictionary with data (dataframe) entry and info metadata dict
-    """
-    units = 'kcfs'
-
-    duration = _validate_duration(duration)
-
-    # store original date_string
-    _date_string = date_string
-
-    # forecast datestamp prefix
-    date_string = _default_date_string(date_string)
-
-    # data source
-    url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
-
-    # extract CSV from zip object
-    if get_web_status(url):
-        try:
-            csvdata = _get_forecast_csv(url)
-        except zipfile.BadZipFile:
-            print(f'ERROR: forecast for {date_string} has not yet been issued.')
-            raise zipfile.BadZipFile
-    
-    # raise error if user supplied an actual date string but that forecast doesn't exist
-    elif _date_string is not None:
-        print(f'ERROR: forecast for {date_string} has not yet been issued.')
-        raise zipfile.BadZipFile
-
-    # get date/time stamp from ensemble download page
-    time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
-
-    # set path for case where path set to None
-    if path is None:
-        path = '{}/{}'.format(os.getcwd(), 
-                                url.split('/')[-1].replace('.zip','.csv'))
-
-    # write csvdata to specified path
-    path = path.replace('/', os.sep)
-    with open(path, 'wb') as f:
-        f.write(csvdata.read())
-
-def get_watershed_forecast(watershed, date_string, forecast_type, duration='daily', path=None):
-    """
-    from: get_watershed_ensemble_issue_time
-          get_watershed_ensemble_daily
 
     download seasonal outlook for the watershed as zipped file, unzip, save as csv to path
 
@@ -613,12 +505,8 @@ def get_watershed_forecast(watershed, date_string, forecast_type, duration='dail
         duration (str): forecast data timestep (hourly or daily)
         path (str): file name including file path/s3 key
     Returns:
-        (dict): dictionary with data (dataframe) entry and info metadata dict
+        (path): file name including file path/s3 key
     """
-    units = 'kcfs'
-
-    duration = _validate_duration(duration)
-
     # store original date_string
     _date_string = date_string
 
@@ -631,6 +519,7 @@ def get_watershed_forecast(watershed, date_string, forecast_type, duration='dail
     if forecast_type == 'deterministic':
         url_end = '{0}_{1}_csv_export.zip'.format(date_string, watershed)
     elif forecast_type == 'ensemble':
+        duration = _validate_duration(duration)
         url_end = '{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
     
     url = 'https://www.cnrfc.noaa.gov/csv/' + url_end
