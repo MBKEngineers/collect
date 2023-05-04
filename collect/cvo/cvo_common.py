@@ -147,16 +147,16 @@ def load_pdf_to_dataframe(ls,report_type):
 
     if report_type == 'kesdop':
         # Change from array to dataframe, generate new columns
-        df = pd.DataFrame(ls1,columns=kesdop_col_names)
+        df = pd.DataFrame(ls1, columns=kesdop_col_names)
 
     elif report_type == 'shadop':
-        df = pd.DataFrame(ls1,columns=shadop_col_names)
+        df = pd.DataFrame(ls1, columns=shadop_col_names)
 
     elif report_type == 'shafln':
-        df = pd.DataFrame(ls1,columns=shafln_col_names)
+        df = pd.DataFrame(ls1, columns=shafln_col_names)
 
     elif report_type == 'dout':
-        df = pd.DataFrame(ls1,columns=dout_col_names)
+        df = pd.DataFrame(ls1, columns=dout_col_names)
 
     return df.dropna().reindex()
 
