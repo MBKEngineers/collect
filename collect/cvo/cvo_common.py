@@ -5,11 +5,10 @@ Functions that are used throughout the cvo scripts
 
 Some will have multiple args to differentiate between the CVO data that is being read
 """
-
 # -*- coding: utf-8 -*-
+import datetime as dt
 
-import datetime
-
+from colors import color
 import pandas as pd
 import numpy as np
 
@@ -23,50 +22,22 @@ def report_type_maker(date, report_type):
         date (str): the date but in MMYY format, ex 0520
         report_type (str): specify which pdf you're looking at
     Returns:
-        report_type (str): the report_type for requesting the file
+        url (str): the url for requesting the file
     """
-    
-    if report_type == 'kesdop':
-        text = 'https://www.usbr.gov/mp/cvo/vungvari/kesdop'
-        final = text + date + '.pdf'
-
-        return str(final)
-
-    elif report_type == 'shadop':
-        text = 'https://www.usbr.gov/mp/cvo/vungvari/shadop'
-        final = text + date + '.pdf'
-
-        return str(final)
-
-    elif report_type == 'shafln':
-        text = 'https://www.usbr.gov/mp/cvo/vungvari/shafln'
-        final = text + date + '.pdf'
-
-        return str(final)
-
-    elif report_type == 'dout':
-
-        # construct the station report_type
-        prn = datetime.date(2010, 12, 1)
-        txt = datetime.date(2002, 4, 1)
-        file_date = datetime.date(2000+int(date[2:4]), int(date[0:2]),1)
+    if report_type == 'dout':
+        prn = dt.date(2010, 12, 1)
+        txt = dt.date(2002, 4, 1)
+        file_date = dt.date(2000 + int(date[2:4]), int(date[0:2]), 1)
         
         # if date is before including 2010 December, give the prn link
         if txt < file_date <= prn:
-            text = 'https://www.usbr.gov/mp/cvo/vungvari/dout'
-            final = text + date + '.prn'
+            return f'https://www.usbr.gov/mp/cvo/vungvari/{report_type}{date}.prn'
 
         # if date is before including 2002 April, give the txt link
         elif file_date <= txt:
-            text = 'https://www.usbr.gov/mp/cvo/vungvari/dout'
-            final = text + date + '.txt'
+            return f'https://www.usbr.gov/mp/cvo/vungvari/{report_type}{date}.txt'
 
-        # if not give in pdf format
-        else:
-            text = 'https://www.usbr.gov/mp/cvo/vungvari/dout'
-            final = text + date + '.pdf'
-
-        return str(final)
+    return f'https://www.usbr.gov/mp/cvo/vungvari/{report_type}{date}.pdf'
 
 
 def months_between(start_date, end_date):
@@ -87,7 +58,7 @@ def months_between(start_date, end_date):
     month = start_date.month
 
     while (year, month) <= (end_date.year, end_date.month):
-        yield datetime.date(year, month, 1)
+        yield dt.date(year, month, 1)
 
         # Move to the next month.  If we're at the end of the year, wrap around
         # to the start of the next.
@@ -103,62 +74,141 @@ def months_between(start_date, end_date):
             month += 1
             
 
-def load_pdf_to_dataframe(ls,report_type):
+def load_pdf_to_dataframe(ls, report_type):
     """
-    Changes dataframe to an array and reshape it
-    column names change to what is specified below
+    changes dataframe to an array and reshape it column names change to what is specified below
 
     Arguments:
-        ls (dataframe):  dataframe in a [1,rows,columns] structure
-        report_type (string): name of report
-
+        ls (dataframe): dataframe in a [1, rows, columns] structure
+        report_type (str): name of report
     Returns:
-        df (dataframe): in a [rows,columns] structure, 
-
+        df (pandas.DataFrame):
     """
-
     # establishing column names
-    kesdop_col_names =['Date', 'elev', 'storage', 'change', 'inflow',
-                        'spring_release', 'shasta_release', 'power', 
-                        'spill', 'fishtrap', 'evap_cfs']
+    column_names = {
 
-    shadop_col_names =['Date', 'elev', 'in_lake', 'change', 'inflow_cfs', 
-                        'power', 'spill', 'outlet', 'evap_cfs', 'evap_in', 
-                        'precip_in']
+        'kesdop': ['Date', 'elev', 'storage', 'change', 'inflow',
+                   'spring_release', 'shasta_release', 'power', 
+                   'spill', 'fishtrap', 'evap_cfs'],
 
-    shafln_col_names =['Date', 'britton', 'mccloud', 'iron_canyon', 'pit6',
-                        'pit7', 'res_total', 'd_af', 'd_cfs', 'shasta_inf', 
-                        'nat_river', 'accum_full_1000af']
+        'shadop': ['Date', 'elev', 'in_lake', 'change', 'inflow_cfs', 
+                   'power', 'spill', 'outlet', 'evap_cfs', 'evap_in', 
+                   'precip_in'],
 
-    dout_col_names =['Date', 'SactoR_pd', 'SRTP_pd', 'Yolo_pd', 'East_side_stream_pd', 
-                    'Joaquin_pd', 'Joaquin_7dy','Joaquin_mth', 'total_delta_inflow', 
-                    'NDCU', 'CLT', 'TRA', 'CCC', 'BBID', 'NBA', 'total_delta_exports', 
-                    '3_dy_avg_TRA_CLT', 'NDOI_daily','outflow_7_dy_avg', 
-                    'outflow_mnth_avg', 'exf_inf_daily','exf_inf_3dy', 'exf_inf_14dy']
+        'shafln': ['Date', 'britton', 'mccloud', 'iron_canyon', 'pit6',
+                   'pit7', 'res_total', 'd_af', 'd_cfs', 'shasta_inf', 
+                   'nat_river', 'accum_full_1000af'],
+
+        'dout': ['Date', 'SactoR_pd', 'SRTP_pd', 'Yolo_pd', 'East_side_stream_pd', 
+                 'Joaquin_pd', 'Joaquin_7dy','Joaquin_mth', 'total_delta_inflow', 
+                 'NDCU', 'CLT', 'TRA', 'CCC', 'BBID', 'NBA', 'total_delta_exports', 
+                 '3_dy_avg_TRA_CLT', 'NDOI_daily','outflow_7_dy_avg', 
+                 'outflow_mnth_avg', 'exf_inf_daily','exf_inf_3dy', 'exf_inf_14dy'],
+
+        'fedslu':  ['Day', 'Elev', 'Storage', 'Change', 
+                    'Federal Pump', 'Federal Gen', 'Pacheco Pump', 'ADJ', 
+                    'Federal Change', 'Federal Storage'],
+
+        # slunit_col_names = [
+            # '__DAY',
+            # '_AQUEDUCT CHECK 12_STATE',
+            # '_AQUEDUCT CHECK 12_FED',
+            # '_AQUEDUCT CHECK 12_TOTAL',
+            # 'ONEILL_PUMPING_FED',
+            # 'ONEILL_PUMPING_STATE',
+            # 'ONEILL_PUMPING_TOTAL',
+            # 'ONEILL_GENER_TOTAL',
+            # 'SAN LUIS_PUMPING_FED',
+            # 'SAN LUIS_PUMPING_STATE',
+            # 'SAN LUIS_PUMPING_TOTAL',
+            # 'SAN LUIS_GENERATION_FED',
+            # 'SAN LUIS_GENERATION_STATE',
+            # 'SAN LUIS_GENERATION_TOTAL',
+            # '_PACHECO_PUMP',
+            # '_DOS AMIGOS_FED',
+            # '_DOS AMIGOS_STATE',
+            # '_DOS AMIGOS_TOTAL',
+        # ]
 
 
+        'slunit': [
+            '__DAY',
+            '_AQUEDUCT CHECK 12_STATE',
+            '_AQUEDUCT CHECK 12_FED',
+            '_AQUEDUCT CHECK 12_TOTAL',
+            'ONEILL_PUMPING_FED',
+            'ONEILL_PUMPING_STATE',
+            'ONEILL_PUMPING_TOTAL',
+            'ONEILL_GENER_TOTAL',
+            'SAN LUIS_PUMPING_FED',
+            'SAN LUIS_PUMPING_STATE',
+            'SAN LUIS_PUMPING_TOTAL',
+            'SAN LUIS_GENERATION_FED',
+            'SAN LUIS_GENERATION_STATE',
+            'SAN LUIS_GENERATION_TOTAL',
+            '_PACHECO_PUMP',
+            '_DOS AMIGOS_FED',
+            '_DOS AMIGOS_STATE',
+            '_DOS AMIGOS_TOTAL',
 
-    # changing structure of dataframe
-    
-    ls1 = np.array(ls)
-    dims = ls1.ndim
-    if dims > 2:
-        ls1 = ls1[0]
+            '_AQEDUCT CHECK 21_FED',
+            '_AQEDUCT CHECK 21_STATE',
+            '_AQEDUCT CHECK 21_TOTAL',
+        ]
 
-    if report_type == 'kesdop':
-        # Change from array to dataframe, generate new columns
-        df = pd.DataFrame(ls1, columns=kesdop_col_names)
+        # 'slunit': [
+        #     '__DAY',
+        #     '_AQUEDUCT CHECK 12_STATE_1',
+        #     '_AQUEDUCT CHECK 12_FED_2',
+        #     '_AQUEDUCT CHECK 12_TOTAL_3',
+        #     'ONEILL_PUMPING_FED_4',
+        #     'ONEILL_PUMPING_STATE_5',
+        #     'ONEILL_PUMPING_TOTAL_6',
+        #     'ONEILL_GENER_TOTAL_7',
+        #     'SAN LUIS_PUMPING_FED_8',
+        #     'SAN LUIS_PUMPING_STATE_9',
+        #     'SAN LUIS_PUMPING_TOTAL_10',
+        #     'SAN LUIS_GENERATION_FED_11',
+        #     'SAN LUIS_GENERATION_STATE_12',
+        #     'SAN LUIS_GENERATION_TOTAL_13',
+        #     'PACHECO_PACHECO_PUMP_14',
+        #     '_DOS AMIGOS_XVC_15',
+        #     '_DOS AMIGOS_FED_16',
+        #     '_DOS AMIGOS_STATE_17',
+        #     '_DOS AMIGOS_TOTAL_18',
+        #     '_AQEDUCT CHECK 21_FED_19',
+        #     '_AQEDUCT CHECK 21_STATE_20',
+        #     '_AQEDUCT CHECK 21_TOTAL_21'
+        # ],
 
-    elif report_type == 'shadop':
-        df = pd.DataFrame(ls1, columns=shadop_col_names)
+    }
 
-    elif report_type == 'shafln':
-        df = pd.DataFrame(ls1, columns=shafln_col_names)
+    # remove all commas in number formatting
+    df = ls[0].replace(',', '', regex=True)
 
-    elif report_type == 'dout':
-        df = pd.DataFrame(ls1, columns=dout_col_names)
+    # filter so that only Day rows are included
+    df = df.loc[df[0].astype(str).str.isnumeric()]
 
-    return df.dropna().reindex()
+    new_obj = []
+    for column, series in df.iteritems():
+        test = series.astype(str).str.split()
+
+        if len(test[0]) > 1:
+
+            x, y = zip(*test)
+            new_obj.append(pd.Series(x))
+            new_obj.append(pd.Series(y))
+
+        elif not series.dropna().empty:
+            new_obj.append(series)
+
+    nf = pd.DataFrame(new_obj).T
+    nf.columns = pd.RangeIndex(start=0, stop=len(nf.columns), step=1)
+
+    # update the column names
+    nf.columns = column_names.get(report_type)
+
+    return nf.dropna().reindex().astype(float)
 
 
 def validate_user_date(date_text):
@@ -171,10 +221,10 @@ def validate_user_date(date_text):
     """
 
     #if condition returns True, then nothing happens:
-    assert isinstance(date_text,datetime.datetime) == True , 'Please give in datetime format'
+    assert isinstance(date_text, dt.datetime) == True , 'Please give in datetime format'
 
 
-def data_cleaner(df,report_type):
+def data_cleaner(df, report_type):
     """
     This function converts data from string to floats and
     removes any non-numeric elements 
@@ -226,6 +276,75 @@ def data_cleaner(df,report_type):
                         ('accum_full_1000af','accum_full_1000af'))
             df.columns = pd.MultiIndex.from_tuples(tuples)
 
+        if report_type == 'fedslu':
+            tuples = [
+                ('Day', 'Day'),
+                ('Elev', 'Elev'), 
+                ('Storage', 'Storage'), 
+                ('Change', 'Change'), 
+                ('Federal Pump', 'Federal Pump'), 
+                ('Federal Gen', 'Federal Gen'), 
+                ('Pacheco Pump', 'Pacheco Pump'), 
+                ('ADJ', 'ADJ'), 
+                ('Federal Change', 'Federal Change'), 
+                ('Federal Storage', 'Federal Storage')
+            ]
+            df.columns = pd.MultiIndex.from_tuples(tuples)
+
+        if report_type == 'slunit':
+            tuples = [
+                ('DAY', 'DAY', 'DAY'),
+                ('AQUEDUCT CHECK 12', 'AQUEDUCT CHECK 12', 'STATE'),
+                ('AQUEDUCT CHECK 12', 'AQUEDUCT CHECK 12', 'FED'),
+                ('AQUEDUCT CHECK 12', 'AQUEDUCT CHECK 12', 'TOTAL'),
+                ('ONEILL', 'PUMPING', 'FED'),
+                ('ONEILL', 'PUMPING', 'STATE'),
+                ('ONEILL', 'PUMPING', 'TOTAL'),
+                ('ONEILL', 'GENER', 'TOTAL'),
+                ('SAN LUIS', 'PUMPING', 'FED'),
+                ('SAN LUIS', 'PUMPING', 'STATE'),
+                ('SAN LUIS', 'PUMPING', 'TOTAL'),
+                ('SAN LUIS', 'GENERATION', 'FED'),
+                ('SAN LUIS', 'GENERATION', 'STATE'),
+                ('SAN LUIS', 'GENERATION', 'TOTAL'),
+                ('PACHECO', 'PACHECO', 'PUMP'),
+                ('DOS AMIGOS', 'DOS AMIGOS', 'FED'),
+                ('DOS AMIGOS', 'DOS AMIGOS', 'STATE'),
+                ('DOS AMIGOS', 'DOS AMIGOS', 'TOTAL'),
+
+                # added for Jun2012-Dec2013
+                ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'FED'),
+                ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'STATE'),
+                ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'TOTAL'),
+
+                # ('DAY', 'DAY', 'DAY', 'DAY'),
+                # ('AQUEDUCT CHECK 12', 'AQUEDUCT CHECK 12', 'STATE', '1'),
+                # ('AQUEDUCT CHECK 12', 'AQUEDUCT CHECK 12', 'FED', '2'),
+                # ('AQUEDUCT CHECK 12', 'AQUEDUCT CHECK 12', 'TOTAL', '3'),
+                # ('ONEILL', 'PUMPING', 'FED', '4'),
+                # ('ONEILL', 'PUMPING', 'STATE', '5'),
+                # ('ONEILL', 'PUMPING', 'TOTAL', '6'),
+                # ('ONEILL', 'GENER', 'TOTAL', '7'),
+                # ('SAN LUIS', 'PUMPING', 'FED', '8'),
+                # ('SAN LUIS', 'PUMPING', 'STATE', '9'),
+                # ('SAN LUIS', 'PUMPING', 'TOTAL', '10'),
+                # ('SAN LUIS', 'GENERATION', 'FED', '11'),
+                # ('SAN LUIS', 'GENERATION', 'STATE', '12'),
+                # ('SAN LUIS', 'GENERATION', 'TOTAL', '13'),
+                # ('PACHECO', 'PACHECO', 'PUMP', '14'),
+
+                # ('DOS AMIGOS', 'DOS AMIGOS', 'XVC', '15'),
+                # ('DOS AMIGOS', 'DOS AMIGOS', 'FED', '16'),
+                # ('DOS AMIGOS', 'DOS AMIGOS', 'STATE', '17'),
+                # ('DOS AMIGOS', 'DOS AMIGOS', 'TOTAL', '18'),
+
+                # ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'FED', '19'),
+                # ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'STATE', '20'),
+                # ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'TOTAL', '21'),    
+            ]
+
+            df.columns = pd.MultiIndex.from_tuples(tuples)
+
         elif report_type == 'kesdop':
             tuples = (('Elevation','elev'),
                         ('Storage_AF','storage'),('Storage_AF','change'),
@@ -244,6 +363,5 @@ def data_cleaner(df,report_type):
                         ('Evaporation','evap_cfs'),('Evaporation','evap_in'),
                         ('Precip_in','precip_in'))
             df.columns = pd.MultiIndex.from_tuples(tuples)
-
 
         return df
