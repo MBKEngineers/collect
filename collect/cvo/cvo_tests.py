@@ -5,8 +5,7 @@ access cvo data
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
-from collect.cvo.cvo_common import get_data
-from collect.cvo.cvo_dout import file_getter_dout
+from collect.cvo.cvo import get_data, file_getter_dout
 
 
 if __name__ == '__main__':
