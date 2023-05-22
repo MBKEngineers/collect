@@ -7,15 +7,13 @@ Some will have multiple args to differentiate between the CVO data that is being
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
-import re
-import urllib
-
 import dateutil.parser
 import pandas as pd
+import requests
 try:
     from tabula import read_pdf
 except:
-    print('WARNING: tabula is require for cvo module')
+    print('WARNING: tabula is required for cvo module')
 
 
 def get_url(date_structure, report_type):
@@ -119,11 +117,10 @@ def data_cleaner(content, report_type, date_structure):
         df.loc[:, key] = (value.astype(str)
                                .replace(to_replace=r'[,\/]', value='', regex=True)
                                .replace(to_replace=r'[%\/]', value='', regex=True)
-                               .replace(to_replace=r'[(\/]', value='-', regex=True) # check if we need to convert to negative???
-                               .replace(to_replace=r'[)\/]', value='', regex=True)
+                               # .replace(to_replace=r'[(\/]', value='-', regex=True) # check if we need to convert to negative???
+                               # .replace(to_replace=r'[)\/]', value='', regex=True)
                                .replace(to_replace='None', value=float('nan'), regex=True)
                                .astype(float))
-        
 
     # drop COA columns with no data
     if 'COA USBR' in df:
@@ -208,7 +205,7 @@ def get_report_columns(report_type, date_structure, expected_length=None):
                   ('Evaporation', 'evap_cfs'),
                   ('Evaporation', 'evap_in'),
                   ('Precip_in', 'precip_in'))
-    
+
     if isinstance(expected_length, int):
         return tuples[:expected_length]
     return tuples
@@ -307,18 +304,6 @@ def get_pdf_area(date_structure, report_type):
                 area = [175.19, 20.76, 500.78, 900.67]
 
     return area
-
-
-def get_title(report_type):
-    if report_type == 'shafln':
-        return 'Shasta Reservoir Daily Operations'
-    elif report_type == 'kesdop':
-        return 'Kesdop Reservoir Daily Operations'
-    elif report_type == 'shadop':
-        return 'Shadop Reservoir Daily Operations'
-    elif report_type == 'doutdly':
-        return 'U.S. Bureau of Reclamation - Central Valley Operations Office Delta Outflow Computation'
-    return ''
 
 
 def get_date_published(url, date_structure, report_type):
@@ -494,3 +479,18 @@ def get_data(start, end, report_type):
 
     # clean data and convert to multi-level columns
     return {'data': df, 'info': info}
+
+
+def download_the_files(start, end, report_type):
+    """
+    Arguments:
+        start (datetime.datetime):  start date given by user input
+        end (datetime.datetime): end date given by user input
+        report_type (str): the str identifier for CVO report
+    Returns:
+        None
+    """
+    for date_structure in months_between(start, end):
+        response = requests.get(get_url(date_structure.strftime('%m%y'), report_type))
+        with open('pdfs/{report_type}{date_structure:%m%y}.pdf', 'wb') as f:
+            f.write(response.content)
