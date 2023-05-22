@@ -1,5 +1,5 @@
 """
-collect.cvo.common
+collect.cvo.cvo
 ==========================================================================
 functions to support retrieving tabular data from CVO monthly report PDFs
 """
@@ -736,17 +736,22 @@ def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
     return df
 
 
-def download_files(start, end, report_type):
+def download_files(start, end, report_type, destination='.'):
     """
     Arguments:
         start (datetime.datetime):  start date given by user input
         end (datetime.datetime): end date given by user input
         report_type (str): the str identifier for CVO report
+        destination (str): destination path for saving report files
     Returns:
         None
     """
+    if not os.path.exists(destination):
+        os.makedirs(destination)
+
     for date_structure in months_between(start, end):
         url = get_url(date_structure, report_type)
         response = requests.get(url)
-        with open(f'pdfs/' + url.split('/')[-1], 'wb') as f:
+
+        with open(os.path.join(destination, url.split('/')[-1]), 'wb') as f:
             f.write(response.content)
