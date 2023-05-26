@@ -19,7 +19,6 @@ from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from collect.cnrfc.gages import *
 from collect.utils.utils import clean_fixed_width_headers, get_web_status
-from urllib.request import urlopen
 
 UTC = pytz.timezone('UTC')
 PACIFIC = pytz.timezone('America/Los_Angeles')
