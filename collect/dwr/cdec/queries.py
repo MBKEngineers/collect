@@ -10,8 +10,8 @@ from bs4 import BeautifulSoup
 import pandas as pd
 import requests
 from six import string_types
-from collect.utils import get_web_status
-
+from collect.utils import get_web_status, get_session_response
+import pprint as pp
 
 def get_station_url(station, start, end, data_format='CSV', sensors=[], duration=''):
     """ 
@@ -490,7 +490,7 @@ def get_daily_snowpack_data(region, start, end):
                      'region': region},
             'data': df_query}
 
-            
+
 def get_snowpack_gauge_data(watershed, start, end):
     """
     return regional snowpack values for % of normal for date, % of April 1 value, 
@@ -519,33 +519,96 @@ def get_snowpack_gauge_data(watershed, start, end):
     # list of dates between start and end
     dates_list = [start + dt.timedelta(days=x) for x in range((end-start).days + 1)]
 
-    # empty dictionary to store date:dataframe pairs
-    data_dict = {}
+    df_list = []
+    
+    url = 'https://cdec.water.ca.gov/reportapp/javareports?name=PAGE6.20230324'
+    # request = requests.get(url)
+    data = pd.read_html(url)
+    print(data)
+    # extract CSV from zip object
+    print(get_session_response(url))
+    exit()
+    # try:
+    #     data = 
+    #     wiki_table = pd.read_html(req, attrs = {"class":"infobox vcard"})
+    # except TypeError as e: # to limit the catched exception to a minimal
+    #     print(str(e)) # optional but useful
 
     for date in dates_list:
 
         # read in snow sensor report for Yuba and American rivers
         day = date.strftime('%Y%m%d')
-        df_list = pd.read_html(f'https://cdec.water.ca.gov/reportapp/javareports?name=PAGE6.{day}')
+        url = f'https://cdec.water.ca.gov/reportapp/javareports?name=PAGE6.{day}'
+        request = requests.get(url)
 
-        # drop river labels and concatenate into one dataframe of just stations
-        df = pd.concat(df_list)
-        df_query = df['Snow Water Equivalents'][df['Snow Water Equivalents']['ID'].notna()]
-        
-        # set dataframe to index by station ID
-        df_query.set_index('ID', inplace=True)
+        try:
+            data = pd.read_html(f'https://cdec.water.ca.gov/reportapp/javareports?name=PAGE6.{day}')
+        except:
+            print(f'No info available for {day}')
+            exit()
 
-        df_query = df_query.filter(items=gauges, axis=0)
-        data_dict.update({date: df_query})
+        if data:
+            print(data)
+            exit()
 
-    # pp.pprint(data_dict)
-    df = pd.DataFrame.from_dict(data_dict, orient='tight')
-    pp.pprint(df)
-    # df.set_index('Date', inplace=True)
+    #     # parse data based on CDEC table format; first changed on 2018-08-01
+    #     if date >= dt.datetime(2018, 8, 1):
+    #         df_report = pd.concat(pd.read_html(f'https://cdec.water.ca.gov/reportapp/javareports?name=PAGE6.{day}'))
 
-    # # slice dataframe for query range
-    # df_query = df.loc[end.strftime('%m/%d/%Y'):start.strftime('%m/%d/%Y')]
+    #         # drop river labels and concatenate into one dataframe of just stations
+    #         df_query = df_report['Snow Water Equivalents'][df_report['Snow Water Equivalents']['ID'].notna()]
+    #         df_query['Date'] = date
+    #         df_query = df_query[df_query['ID'].isin(gauges)]
+
+    #         # set dataframe to index by station ID
+    #         df_query.set_index('Date', inplace=True)
+
+    #         df_list.append(df_query)
+    #     else:
+    #         data = pd.read_html(f'https://cdec.water.ca.gov/reportapp/javareports?name=PAGE6.{day}')
+    #         print(data)
+    #         exit()
+    #         df_report = pd.concat(pd.read_html(f'https://cdec.water.ca.gov/reportapp/javareports?name=PAGE6.{day}', skiprows=1))
+    #         print(df_report)
+
+    #         df_query = df_report[df_report['ID'] != '&nbsp']
+    #         df_query['Date'] = date
+    #         df_query = df_query[df_query['ID'].isin(gauges)]
+
+    #         # set dataframe to index by station ID
+    #         df_query.set_index('Date', inplace=True)
+
+    #         df_list.append(df_query)
+
+    # df = pd.concat(df_list)
+
+    # data source
+    url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
+
+    url = f'https://cdec.water.ca.gov/reportapp/javareports?name=PAGE6.{day}'
+
+    # extract CSV from zip object
+    if get_web_status(url):
+        try:
+            csvdata = _get_forecast_csv(url)
+        except zipfile.BadZipFile:
+            print(f'ERROR: forecast for {date_string} has not yet been issued.')
+            raise zipfile.BadZipFile
     
-    # return {'meta': {'interval': 'daily',
-    #                  'region': region},
-    #         'data': df_query}
+    # raise error if user supplied an actual date string but that forecast doesn't exist
+    elif _date_string is not None:
+        print(f'ERROR: forecast for {date_string} has not yet been issued.')
+        raise zipfile.BadZipFile
+
+    # try previous forecast until a valid file is found
+    else:
+        stamp = dt.datetime.strptime(date_string, '%Y%m%d%H')
+        while not get_web_status(url):            
+            stamp -= dt.timedelta(hours=6)
+            url = 'https://www.cnrfc.noaa.gov/csv/{0:%Y%m%d%H}_{1}_csv_export.zip'.format(stamp, watershed)
+        date_string = stamp.strftime('%Y%m%d%H')
+        csvdata = _get_forecast_csv(url)
+    
+    return {'info': {'interval': 'daily',
+                     'watershed': watershed},
+            'data': df}
