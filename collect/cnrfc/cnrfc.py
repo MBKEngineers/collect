@@ -852,33 +852,44 @@ def get_forecast_csvdata(url):
 
 
 def get_rating_curve(cnrfc_id):
+    """
+    Returns paired flow and stage data parsed from the text of CNRFC rating curve JavaScript files
     
-     # retrieve data from URL
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+        result (dict): query result dictionary with 'data' and 'info' keys
+    """
+    # retrieve data from URL
     url = f'https://www.cnrfc.noaa.gov/data/ratings/{cnrfc_id}_rating.js'
-    page = urlopen(url)
-    html = page.read().decode("utf-8")
-    soup = BeautifulSoup(html, "html.parser")
+    response = requests.get(url)
 
-    # convert data into list of strings and delete first two entries because no data is contained there
-    raw = soup.get_text().splitlines()
-    n = 2 
-    raw__string_list = raw[n:]
-    flow_string_list = [raw__string_list[index] for index in range(1,len(raw__string_list), 2)]
-    stage_string_list = [raw__string_list[index] for index in range(0,len(raw__string_list), 2)]
+    # check if data exists
+    if response.status_code == 200:
+        raw_data = response.text.splitlines()[2:]
 
-    # extract data from list of strings and convert into list of floats
-    def number_extraction(string_list):
-        return  string_list[string_list.find("(")+1:string_list.find(")")]
-    flow_string_data = list(map(number_extraction, flow_string_list))
-    flow_data = list(map(float, flow_string_data))
-    stage_string_data = list(map(number_extraction, stage_string_list))
-    stage_data = list(map(float, stage_string_data))
+        # filter and extract flow and stage data
+        flow_data = []
+        stage_data = []
+        for line in raw_data:
+            if line.startswith('ratingFlow'):
+                flow = line.split('(')[1].split(')')[0]
+                flow_data.append(float(flow))
+            elif line.startswith('ratingStage'):
+                stage = line.split('(')[1].split(')')[0]
+                stage_data.append(float(stage))
 
-    # list of paired values as tuples
-    data = [[stage,flow] for stage, flow in zip(stage_data, flow_data)]
+        # pair ratingFlow and ratingStage data
+        data = list(zip(stage_data, flow_data))
 
-    return data
+    else:
+        print(f'Error accessing rating curve URL for: {cnrfc_id}')
+        data = None
 
+    return {'data': data, 
+            'info': {'url': url, 
+                     'cnrfc_id': cnrfc_id}
+            }
 
 
 def _default_date_string(date_string):
