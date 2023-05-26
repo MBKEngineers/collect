@@ -852,7 +852,7 @@ def get_forecast_csvdata(url):
 
 def get_rating_curve(cnrfc_id):
     """
-    Returns paired flow and stage data parsed from the text of CNRFC rating curve JavaScript files
+    returns paired flow and stage data parsed from the text of CNRFC rating curve JavaScript files
     
     Arguments:
         cnrfc_id (str): forecast point (such as FOLC1)
