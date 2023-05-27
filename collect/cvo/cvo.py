@@ -62,7 +62,7 @@ def get_area(date_structure, report_type):
     set the default target area boundaries for tabula read_pdf function
 
     Arguments:
-        date_structure (datetime.datetime): report month/year represented as a datetime
+        date_structure (datetime.date): report month/year represented as a datetime
         report_type(str): specifies the report table type
     Returns:
         area (list): list of target area dimensions in order of: top, left, bottom, right
@@ -72,12 +72,8 @@ def get_area(date_structure, report_type):
 
     if report_type == 'doutdly':
 
-        # if report is .txt extension
-        if report_date <= dt.date(2002, 4, 1):
-            return None
-
-        # if date is before including 2010 December, report is .prn extension
-        if dt.date(2002, 4, 1) < report_date <= dt.date(2010, 12, 1):
+        # if date is before including 2010 December, report is .txt or .prn extension
+        if report_date <= dt.date(2010, 12, 1):
             return None
 
         # provide pdf target area
@@ -95,19 +91,18 @@ def get_area(date_structure, report_type):
                 area = [146.19, 20.76, 350, 733.67]
 
             elif report_date in [dt.date(2013, 8, 1), dt.date(2013, 10, 1)]:
-                return [151.19, 20.76, 380, 900.67]
+                area = [151.19, 20.76, 380, 900.67]
 
             elif report_date == dt.date(2013, 12, 1):
-                return [151.19, 20.76, 390, 900.67]
+                area = [151.19, 20.76, 390, 900.67]
 
             else:
                 area = [151.19, 20.76, 360, 900.67]
 
         elif report_date == dt.datetime(2021, 12, 1):
             area = [290.19, 20.76, 1250.78, 1300.67]
-        
+
         else:
-            # area = [175.19, 20.76, 450.78, 900.67]
             area = [175.19, 20.76, 500.78, 900.67]
 
     if report_type == 'fedslu':
@@ -203,16 +198,10 @@ def get_area(date_structure, report_type):
                 30: [140, 30, 500, 700],
                 31: [140, 30, 520, 700]}.get(days_in_month, [140, 30, 520, 700])
 
-        if report_date == dt.date(2000, 9, 1):
-            area[2] = 520
-
-        if report_date == dt.date(2001, 6, 1):
-            area[2] = 520
-
-        if report_date == dt.date(2001, 9, 1):
-            area[2] = 520
-
-        if report_date == dt.date(2001, 11, 1):
+        if report_date in [dt.date(2000, 9, 1), 
+                           dt.date(2001, 6, 1),
+                           dt.date(2001, 9, 1),
+                           dt.date(2001, 11, 1)]:
             area[2] = 520
 
         if report_date >= dt.date(2002, 3, 1):
@@ -268,8 +257,8 @@ def get_data(start, end, report_type):
     retrieve CVO report data spanning multiple months, as specified by query date range
 
     Arguments:
-        start (datetime.datetime): start date given in datetime format
-        end (datetime.datetime): end date given in datetime format
+        start (datetime.date): start date given in datetime format
+        end (datetime.date): end date given in datetime format
         report_type (str): specifies the CVO report type
     Returns:
         result (dict): dictionary of data and metadata of report
@@ -280,8 +269,8 @@ def get_data(start, end, report_type):
 
     # check query parameters
     assert start > dt.date(2000, 1, 1), 'ERROR: CVO library begins in February 2000'
-    assert isinstance(start, dt.date), 'ERROR: provide start as datetime.datetime'
-    assert isinstance(end, dt.date), 'ERROR: provide end as datetime.datetime'
+    assert isinstance(start, dt.date), 'ERROR: provide start as datetime.date'
+    assert isinstance(end, dt.date), 'ERROR: provide end as datetime.date'
     assert start <= end, 'ERROR: specify date range where start <= end'
 
     # report and query metadata
@@ -326,10 +315,10 @@ def get_data(start, end, report_type):
 def get_date_published(url, date_structure, report_type):
     """
     Arguments:
-        date_structure (datetime.datetime): report month/year represented as a datetime
+        date_structure (datetime.date): report month/year represented as a datetime
         report_type(str): specifies the report table type
     Returns:
-        date_published (datetime.datetime): the extracted date of report
+        date_published (datetime.date): the extracted date of report
     """
     date_published = None
 
@@ -339,7 +328,7 @@ def get_date_published(url, date_structure, report_type):
 
             # Dates of specific changes to pdf publish date sizing
             publish_date_target = [566, 566, 700, 800]
-            today_date = dt.datetime.now()
+            today_date = dt.date.today()
             if (date_structure.strftime('%Y-%m') == today_date.strftime('%Y-%m')
                     or (dt.datetime(2020, 1, 1) <= date_structure <= dt.datetime(2020, 8, 1))
                     or (dt.datetime(2019, 3, 1) <= date_structure <= dt.datetime(2019, 8, 1))
@@ -388,7 +377,7 @@ def get_report_columns(report_type, date_structure, expected_length=None, defaul
     """
     Arguments:
         report_type (str):
-        date_structure (datetime.datetime):
+        date_structure (datetime.date):
         expected_length (int): expected length of columns (axis=1)
         default (bool): flag to indicate which set of tuples should be used as default
     Returns:
@@ -528,7 +517,7 @@ def get_report(date_structure, report_type):
     get report content for one month for the specified report_type
 
     Arguments:
-        date_structure (datetime.datetime): report month/year represented as a datetime
+        date_structure (datetime.date): report month/year represented as a python datetime.date
         report_type(str): specifies the report table type
     Returns:
         dictionary: dictionary of data and metadata of report
@@ -539,8 +528,8 @@ def get_report(date_structure, report_type):
 
     # construct report url
     url = get_url(date_structure, report_type)
-    if os.path.exists(f'pdfs/{report_type}/' + url.split('/')[-1]):
-        url = f'pdfs/{report_type}/' + url.split('/')[-1]
+    # if os.path.exists(f'pdfs/{report_type}/' + url.split('/')[-1]):
+    #     url = f'pdfs/{report_type}/' + url.split('/')[-1]
 
     # using the url, read pdf with tabula based off area coordinates
     if url.endswith('.pdf'):
@@ -559,7 +548,6 @@ def get_report(date_structure, report_type):
     if url.endswith('.prn'):
         df = pd.read_table(url,
                            skiprows=10,
-                           # skipfooter=2,
                            names=get_report_columns(report_type, date_structure),
                            index_col=False,
                            delim_whitespace=True,
@@ -606,14 +594,14 @@ def get_url(date_structure, report_type):
     construct the query URL for specified year/month and report type
 
     Arguments:
-        date_structure (datetime.datetime): datetime representing report year and month
+        date_structure (datetime.date): date representing report year and month
         report_type (str): one of SUPPORTED_REPORTS
     Returns:
         url (str): the PDF resource URL for the specified month and report type
     """
     # current month URL
     if date_structure.strftime('%Y-%m') == dt.date.today().strftime('%Y-%m'):
-        return f'https://www.usbr.gov/mp/cvo/vungvari/{report_type}.pdf'    
+        return f'https://www.usbr.gov/mp/cvo/vungvari/{report_type}.pdf'
 
     # special handling for delta outflow calculation reports
     if report_type == 'doutdly':
@@ -635,12 +623,12 @@ def get_url(date_structure, report_type):
 
 def months_between(start_date, end_date):
     """
-    given two instances of ``datetime.datetime``, generate a list of dates on
+    given two instances of ``datetime.date``, generate a list of dates on
     the 1st of every month between the two dates (inclusive).
 
     Arguments:
-        start_date (datetime.datetime):  start date given by user input
-        end_date (datetime.datetime): end date given by user input
+        start_date (datetime.date):  start date given by user input
+        end_date (datetime.date): end date given by user input
     Yields:
        (datetime.date): all dates between the date range in mmyy format
     """
@@ -741,7 +729,7 @@ def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
     df = df.loc[~df[0].isna()]
 
     # filter so that only numeric Day rows are included
-    df = df.loc[df[0].astype(str).str.match('\d+(\.\d+)?'), :]
+    df = df.loc[df[0].astype(str).str.match(r'\d+(\.\d+)?'), :]
 
     # remove any "NaN" entries for cases where offset created in parsing fixed-width columns
     df = pd.DataFrame(data=[list(map(float, row.split()[1:]))
@@ -789,9 +777,11 @@ def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
 
 def download_files(start, end, report_type, destination='.'):
     """
+    download file contents for all reports within date range to specified destination directory
+
     Arguments:
-        start (datetime.datetime):  start date given by user input
-        end (datetime.datetime): end date given by user input
+        start (datetime.date):  start date given by user input
+        end (datetime.date): end date given by user input
         report_type (str): the str identifier for CVO report
         destination (str): destination path for saving report files
     Returns:
