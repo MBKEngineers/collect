@@ -8,6 +8,7 @@ import calendar
 import datetime as dt
 import os
 
+from colors import color
 import dateutil.parser
 import pandas as pd
 import requests
@@ -15,6 +16,45 @@ try:
     from tabula import read_pdf
 except:
     print('WARNING: tabula is required for cvo module')
+
+
+REPORTS = [
+    'doutdly',
+    'kesdop',
+    'fedslu',
+    'shadop',
+    'shafln',
+    'slunit',
+    'trndop',
+    'nmlfln',
+    'lewdop',
+    'nmldop',
+    'whidop',
+    'tuldop',
+    'sprdop',
+    'gdwdop',
+    'mildop',
+    'milfln',
+    'shafcr',
+    'epkdop',
+    'stgdop',
+    'foldop',
+    'berdop',
+    'natdop',
+    'soldop',
+    'snldop',
+    'cchdop',
+    'onfdop',
+]
+
+SUPPORTED_REPORTS = [
+    'doutdly',
+    'kesdop',
+    'fedslu',
+    'shadop',
+    'shafln',
+    'slunit',
+]
 
 
 def get_area(date_structure, report_type):
@@ -28,91 +68,38 @@ def get_area(date_structure, report_type):
         area (list): list of target area dimensions in order of: top, left, bottom, right
     """
     today_day = dt.date.today().day
+    report_date = dt.date(date_structure.year, date_structure.month, 1)
 
-    if report_type == 'slunit':
+    if report_type in ['doutdly', 'dout']:
 
-        # set the default bottom boundary for tabula read_pdf function
-        days_in_month = calendar.monthrange(date_structure.year, date_structure.month)[1]
-        area = {28: [140, 30, 480, 700],
-                29: [140, 30, 500, 700],
-                30: [140, 30, 500, 700],
-                31: [140, 30, 520, 700]}.get(days_in_month, [140, 30, 520, 700])
+        # if report is .txt extension
+        if date_structure <= dt.date(2002, 4, 1):
+            return None
 
-        if dt.date(date_structure.year, date_structure.month, 1) == dt.date(2000, 9, 1):
-            area[2] = 520
+        # if date is before including 2010 December, report is .prn extension
+        if dt.date(2002, 4, 1) < date_structure <= dt.date(2010, 12, 1):
+            return None
 
-        if dt.date(date_structure.year, date_structure.month, 1) == dt.date(2001, 6, 1):
-            area[2] = 520
+        # provide pdf target area
+        # dates of specific changes to pdf sizing
+        if (date_structure.strftime('%Y-%m') == dt.date.today().strftime('%Y-%m')
+                or (dt.date(2020, 1, 1) <= date_structure <= dt.date(2020, 8, 1))
+                or (dt.date(2019, 3, 1) <= date_structure <= dt.date(2019, 8, 1))
+                or (dt.date(2022, 6, 1) <= date_structure <= dt.date.today())):
+            area = [290.19, 20.76, 750.78, 1300.67]
 
-        if dt.date(date_structure.year, date_structure.month, 1) == dt.date(2001, 9, 1):
-            area[2] = 520
-
-        if dt.date(date_structure.year, date_structure.month, 1) == dt.date(2001, 11, 1):
-            area[2] = 520
-
-        if dt.date(date_structure.year, date_structure.month, 1) >= dt.date(2002, 3, 1):
-            area = [140, 30, 600, 600]
-
-        if dt.date(date_structure.year, date_structure.month, 1) > dt.date(2002, 8, 1):
-            area[1] = 20
-
-        if dt.date(date_structure.year, date_structure.month, 1) > dt.date(2012, 5, 1):
-
-            area = {28: [120, 20, 440, 820],
-                    29: [120, 20, 440, 820],
-                    30: [120, 20, 460, 820],
-                    31: [120, 20, 480, 820]}.get(days_in_month, [110, 30, 480, 820])
-
-        if dt.date(date_structure.year, date_structure.month, 1) >= dt.date(2016, 11, 1):
-
-            area = {28: [130, 0, 455, 900],
-                    29: [130, 0, 480, 900],
-                    30: [130, 0, 490, 900],
-                    31: [130, 0, 490, 900]}.get(days_in_month, [130, 0, 490, 900])
-
-        if dt.date(date_structure.year, date_structure.month, 1) ==  dt.date(2016, 12, 1):
-
-            area = {28: [130, 0, 455, 900],
-                    29: [130, 0, 480, 900],
-                    30: [130, 0, 480, 900],
-                    31: [130, 0, 490, 900]}.get(days_in_month, [130, 0, 490, 900])
-
-        if dt.date(date_structure.year, date_structure.month, 1) ==  dt.date(2020, 2, 1):
-
-            area = {28: [130, 0, 455, 900],
-                    29: [130, 0, 460, 900],
-                    30: [130, 0, 480, 900],
-                    31: [130, 0, 490, 900]}.get(days_in_month, [130, 0, 490, 900])
-
-        # # Set up a condition that replaces url with correct one each loop
-        # if date_structure.strftime('%Y-%m-%d') == dt.date.now().strftime('%Y-%m-01'):
-
-        #     # set the bottom boundary for tabula read_pdf function
-        #     today_day = dt.date.now().day
-        #     bottom = 145 + (today_day) * 10
-        #     area = [140, 30, bottom, 640]
-
-        return area
-
-    if report_type == 'kesdop':
-
-        # set the default bottom boundary for tabula read_pdf function
-        area = [145, 30, 465, 881]
-
-        if date_structure.month == 2:
-            area = [145, 30, 443, 881]
-
-        today = dt.date.today()
-
-        # Set up a condition that replaces url with correct one each loop
-        if date_structure.strftime('%Y-%m-%d') == today.strftime('%Y-%m-01'):
-            bottom = 150 + (today.day - 1) * 10
-            area = [145, 45, bottom, 881]
-
-        if date_structure >= dt.date(2022, 9, 1):
-            area = [145, 30, 700, 881]
-
-        return area
+        elif dt.date(2010, 12, 1) < date_structure <= dt.date(2017, 1, 1):
+            # Weird date where pdf gets slightly longer
+            # Other PDFs are smaller than the usual size
+            if date_structure == dt.date(2011, 1, 1):
+                area = [146.19, 20.76, 350, 733.67]
+            else:
+                area = [151.19, 20.76, 360, 900.67]
+        elif date_structure == dt.datetime(2021, 12, 1):
+            area = [290.19, 20.76, 1250.78, 1300.67]
+        else:
+            # area = [175.19, 20.76, 450.78, 900.67]
+            area = [175.19, 20.76, 500.78, 900.67]
 
     if report_type == 'fedslu':
 
@@ -139,6 +126,26 @@ def get_area(date_structure, report_type):
         #         area = [140, 30, 600, 640]
 
         # if date_structure.year >= 2022 or date_structure.year == 2021 and date_structure.month == 11:
+        return area
+
+    if report_type == 'kesdop':
+
+        # set the default bottom boundary for tabula read_pdf function
+        area = [145, 30, 465, 881]
+
+        if date_structure.month == 2:
+            area = [145, 30, 443, 881]
+
+        today = dt.date.today()
+
+        # Set up a condition that replaces url with correct one each loop
+        if date_structure.strftime('%Y-%m-%d') == today.strftime('%Y-%m-01'):
+            bottom = 150 + (today.day - 1) * 10
+            area = [145, 45, bottom, 881]
+
+        if date_structure >= dt.date(2022, 9, 1):
+            area = [145, 30, 700, 881]
+
         return area
 
     if report_type == 'shadop':
@@ -178,36 +185,71 @@ def get_area(date_structure, report_type):
                     31: [140, 30, 630, 700]}.get(days_in_month, [140, 30, 600, 700])
         return area
 
-    if report_type in ['doutdly', 'dout']:
+    if report_type == 'slunit':
 
-        # if report is .txt extension
-        if date_structure <= dt.date(2002, 4, 1):
-            return None
+        # set the default bottom boundary for tabula read_pdf function
+        days_in_month = calendar.monthrange(date_structure.year, date_structure.month)[1]
+        area = {28: [140, 30, 480, 700],
+                29: [140, 30, 500, 700],
+                30: [140, 30, 500, 700],
+                31: [140, 30, 520, 700]}.get(days_in_month, [140, 30, 520, 700])
 
-        # if date is before including 2010 December, report is .prn extension
-        if dt.date(2002, 4, 1) < date_structure <= dt.date(2010, 12, 1):
-            return None
+        if report_date == dt.date(2000, 9, 1):
+            area[2] = 520
 
-        # provide pdf target area
-        # dates of specific changes to pdf sizing
-        if (date_structure.strftime('%Y-%m') == dt.date.today().strftime('%Y-%m')
-                or (dt.date(2020, 1, 1) <= date_structure <= dt.date(2020, 8, 1))
-                or (dt.date(2019, 3, 1) <= date_structure <= dt.date(2019, 8, 1))
-                or (dt.date(2022, 6, 1) <= date_structure <= dt.date.today())):
-            area = [290.19, 20.76, 750.78, 1300.67]
+        if report_date == dt.date(2001, 6, 1):
+            area[2] = 520
 
-        elif dt.date(2010, 12, 1) < date_structure <= dt.date(2017, 1, 1):
-            # Weird date where pdf gets slightly longer
-            # Other PDFs are smaller than the usual size
-            if date_structure == dt.date(2011, 1, 1):
-                area = [146.19, 20.76, 350, 733.67]
-            else:
-                area = [151.19, 20.76, 360, 900.67]
-        elif date_structure == dt.datetime(2021, 12, 1):
-            area = [290.19, 20.76, 1250.78, 1300.67]
-        else:
-            # area = [175.19, 20.76, 450.78, 900.67]
-            area = [175.19, 20.76, 500.78, 900.67]
+        if report_date == dt.date(2001, 9, 1):
+            area[2] = 520
+
+        if report_date == dt.date(2001, 11, 1):
+            area[2] = 520
+
+        if report_date >= dt.date(2002, 3, 1):
+            area = [140, 30, 600, 600]
+
+        if report_date > dt.date(2002, 8, 1):
+            area[1] = 20
+
+        if report_date > dt.date(2012, 5, 1):
+            area = {28: [120, 20, 440, 820],
+                    29: [120, 20, 440, 820],
+                    30: [120, 20, 460, 820],
+                    31: [120, 20, 480, 820]}.get(days_in_month, [110, 30, 480, 820])
+
+        if report_date == dt.date(2014, 1, 1):
+            area = [130, 20, 490, 820]
+
+        if report_date == dt.date(2014, 2, 1):
+            area = [130, 20, 455, 820]
+
+        if report_date >= dt.date(2014, 3, 1):
+            area = [130, 20, 490, 820]
+
+        if report_date >= dt.date(2016, 11, 1):
+            area = {28: [130, 0, 455, 900],
+                    29: [130, 0, 480, 900],
+                    30: [130, 0, 490, 900],
+                    31: [130, 0, 490, 900]}.get(days_in_month, [130, 0, 490, 900])
+
+        if report_date ==  dt.date(2016, 12, 1):
+            area = {28: [130, 0, 455, 900],
+                    29: [130, 0, 480, 900],
+                    30: [130, 0, 480, 900],
+                    31: [130, 0, 490, 900]}.get(days_in_month, [130, 0, 490, 900])
+
+        if report_date ==  dt.date(2020, 2, 1):
+            area = {28: [130, 0, 455, 900],
+                    29: [130, 0, 460, 900],
+                    30: [130, 0, 480, 900],
+                    31: [130, 0, 490, 900]}.get(days_in_month, [130, 0, 490, 900])
+
+        # set the bottom boundary for tabula read_pdf function for current month
+        if report_date == dt.date.today().replace(day=1):
+            area = [140, 30, 145 + (today_day) * 10, 640]
+
+        return area
 
     return area
 
@@ -243,20 +285,19 @@ def get_data(start, end, report_type):
     frames = []
     for date_structure in months_between(start, end):
 
-        # try:
-        # extract report content for month/year
-        report = get_report(date_structure, report_type)
+        try:
+            # extract report content for month/year
+            report = get_report(date_structure, report_type)
 
-        # append report-specific info to query result metadata
-        info['urls'].append(report['info']['url'])
-        # info['dates published'].append(report['info']['date published'])
+            # append report-specific info to query result metadata
+            info['urls'].append(report['info']['url'])
+            # info['dates published'].append(report['info']['date published'])
 
-        # append dataframes for each month
-        frames.append(report['data'])
+            # append dataframes for each month
+            frames.append(report['data'])
 
-        # print(color(f'SUCCESS: {report_type} {date_structure:%b %Y}', 'cyan'))
-        # except:
-        #     print(color(f'ERROR: {report_type} {date_structure:%b %Y}', 'red'))
+        except:
+            print(f'ERROR: {report_type} {date_structure:%b %Y}')
 
     # concatenate and set index for all appended dataframes
     df = pd.concat(frames)
@@ -332,12 +373,13 @@ def get_date_published(url, date_structure, report_type):
     return date_published
 
 
-def get_report_columns(report_type, date_structure, expected_length=None):
+def get_report_columns(report_type, date_structure, expected_length=None, default=False):
     """
     Arguments:
         report_type (str):
         date_structure (datetime.datetime):
         expected_length (int): expected length of columns (axis=1)
+        default (bool): flag to indicate which set of tuples should be used as default
     Returns:
         (tuple): tuple of tuples representing multi-level column names
     Raises:
@@ -370,6 +412,51 @@ def get_report_columns(report_type, date_structure, expected_length=None):
             ('Export/Inflow', '14 Day (%)'),
             ('COA USBR', 'Account Balance')
         )
+
+    elif report_type == 'fedslu':
+        tuples = (
+            ('Day'),
+            ('Elev Feet'),
+            ('Storage'),
+            ('Change'),
+            ('Federal Pump'),
+            ('Federal Gen'),
+            ('Pacheco Pump'),
+            ('ADJ'),
+            ('Federal Change'),
+            ('Federal Storage')
+        )
+
+    elif report_type == 'kesdop':
+        tuples = (
+            ('Day', ''),
+            ('ELEV', 'ELEV'),
+            ('STORAGE ACRE-FEET', 'RES.'),
+            ('STORAGE ACRE-FEET', 'CHANGE'),
+            ('COMPUTED* INFLOW C.F.S.', 'COMPUTED* INFLOW C.F.S.'),
+            ('SPRING CR. P. P. RELEASE', 'SPRING CR. P. P. RELEASE'),
+            ('SHASTA RELEASE C.F.S.', 'SHASTA RELEASE C.F.S.'),
+            ('RELEASE - C.F.S.', 'POWER'),
+            ('RELEASE - C.F.S.', 'SPILL'),
+            ('RELEASE - C.F.S.', 'FISHTRAP'),
+            ('EVAP C.F.S. (1)', 'EVAP C.F.S. (1)')
+        )
+
+    elif report_type == 'shadop':
+        tuples = (
+            ('Day', '', ''),
+            ('ELEV', 'ELEV', 'ELEV'),
+            ('STORAGE', '1000 ACRE-FEET', 'IN LAKE'),
+            ('STORAGE', '1000 ACRE-FEET', 'CHANGE'),
+            ('COMPUTED* INFLOW C.F.S.', 'COMPUTED* INFLOW C.F.S.', 'COMPUTED* INFLOW C.F.S.'),
+            ('RELEASE - C.F.S.', 'RIVER', 'POWER'),
+            ('RELEASE - C.F.S.', 'RIVER', 'SPILL'),
+            ('RELEASE - C.F.S.', 'RIVER', 'OUTLET'),
+            ('EVAPORATION', 'EVAPORATION', 'C.F.S.'),
+            ('EVAPORATION', 'EVAPORATION', 'INCHES'),
+            ('PRECIP', 'PRECIP', 'INCHES')
+        )
+
     elif report_type == 'shafln':
         tuples = (
             ('Day', ''),
@@ -385,19 +472,8 @@ def get_report_columns(report_type, date_structure, expected_length=None):
             ('Natural River C.F.S.', 'Natural River C.F.S.'),
             ('Accum * Full Natural 1000 A.F.', 'Accum * Full Natural 1000 A.F.')
         )
-    elif report_type == 'fedslu':
-        tuples = (
-            ('Day'),
-            ('Elev Feet'),
-            ('Storage'),
-            ('Change'),
-            ('Federal Pump'),
-            ('Federal Gen'),
-            ('Pacheco Pump'),
-            ('ADJ'),
-            ('Federal Change'),
-            ('Federal Storage')
-        )
+
+    # note: original report has an additional layer of numbered columns for reports starting in June 2012
     elif report_type == 'slunit':
         tuples = [
             ('Day', '', ''),
@@ -415,73 +491,19 @@ def get_report_columns(report_type, date_structure, expected_length=None):
             ('SAN LUIS', 'GENERATION', 'STATE'),
             ('SAN LUIS', 'GENERATION', 'TOTAL'),
             ('PACHECO', 'PACHECO', 'PUMP'),
+            *(('DOS AMIGOS', 'DOS AMIGOS', 'XVC') if (date_structure > dt.date(2013, 12, 31) or default) else ()),
             ('DOS AMIGOS', 'DOS AMIGOS', 'FED'),
             ('DOS AMIGOS', 'DOS AMIGOS', 'STATE'),
-            ('DOS AMIGOS', 'DOS AMIGOS', 'TOTAL')
+            ('DOS AMIGOS', 'DOS AMIGOS', 'TOTAL'),
         ]
-        # Jun2012 - Dec2013
-        if dt.date(2012, 6, 1) <= date_structure <= dt.date(2013, 12, 31):
+        if date_structure >= dt.date(2012, 6, 1) or default:
             tuples += [
                 ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'FED'),
                 ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'STATE'),
-                ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'TOTAL')
+                ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'TOTAL'),
             ]
-        elif date_structure > dt.date(2013, 12, 31):
-            tuples = (
-                ('Day', '', '', ''),
-                ('AQUEDUCT CHECK 12', 'AQUEDUCT CHECK 12', 'STATE', '1'),
-                ('AQUEDUCT CHECK 12', 'AQUEDUCT CHECK 12', 'FED', '2'),
-                ('AQUEDUCT CHECK 12', 'AQUEDUCT CHECK 12', 'TOTAL', '3'),
-                ('ONEILL', 'PUMPING', 'FED', '4'),
-                ('ONEILL', 'PUMPING', 'STATE', '5'),
-                ('ONEILL', 'PUMPING', 'TOTAL', '6'),
-                ('ONEILL', 'GENER', 'TOTAL', '7'),
-                ('SAN LUIS', 'PUMPING', 'FED', '8'),
-                ('SAN LUIS', 'PUMPING', 'STATE', '9'),
-                ('SAN LUIS', 'PUMPING', 'TOTAL', '10'),
-                ('SAN LUIS', 'GENERATION', 'FED', '11'),
-                ('SAN LUIS', 'GENERATION', 'STATE', '12'),
-                ('SAN LUIS', 'GENERATION', 'TOTAL', '13'),
-                ('PACHECO', 'PACHECO', 'PUMP', '14'),
-
-                ('DOS AMIGOS', 'DOS AMIGOS', 'XVC', '15'),
-                ('DOS AMIGOS', 'DOS AMIGOS', 'FED', '16'),
-                ('DOS AMIGOS', 'DOS AMIGOS', 'STATE', '17'),
-                ('DOS AMIGOS', 'DOS AMIGOS', 'TOTAL', '18'),
-
-                ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'FED', '19'),
-                ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'STATE', '20'),
-                ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'TOTAL', '21'),
-            )
         return tuples
-    elif report_type == 'kesdop':
-        tuples = (
-            ('Day', ''),
-            ('ELEV', 'ELEV'),
-            ('STORAGE ACRE-FEET', 'RES.'),
-            ('STORAGE ACRE-FEET', 'CHANGE'),
-            ('COMPUTED* INFLOW C.F.S.', 'COMPUTED* INFLOW C.F.S.'),
-            ('SPRING CR. P. P. RELEASE', 'SPRING CR. P. P. RELEASE'),
-            ('SHASTA RELEASE C.F.S.', 'SHASTA RELEASE C.F.S.'),
-            ('RELEASE - C.F.S.', 'POWER'),
-            ('RELEASE - C.F.S.', 'SPILL'),
-            ('RELEASE - C.F.S.', 'FISHTRAP'),
-            ('EVAP C.F.S. (1)', 'EVAP C.F.S. (1)')
-        )
-    elif report_type == 'shadop':
-        tuples = (
-            ('Day', '', ''),
-            ('ELEV', 'ELEV', 'ELEV'),
-            ('STORAGE', '1000 ACRE-FEET', 'IN LAKE'),
-            ('STORAGE', '1000 ACRE-FEET', 'CHANGE'),
-            ('COMPUTED* INFLOW C.F.S.', 'COMPUTED* INFLOW C.F.S.', 'COMPUTED* INFLOW C.F.S.'),
-            ('RELEASE - C.F.S.', 'RIVER', 'POWER'),
-            ('RELEASE - C.F.S.', 'RIVER', 'SPILL'),
-            ('RELEASE - C.F.S.', 'RIVER', 'OUTLET'),
-            ('EVAPORATION', 'EVAPORATION', 'C.F.S.'),
-            ('EVAPORATION', 'EVAPORATION', 'INCHES'),
-            ('PRECIP', 'PRECIP', 'INCHES')
-        )
+
     else:
         raise NotImplementedError(f'report_type {report_type} is not supported.')
 
@@ -506,12 +528,11 @@ def get_report(date_structure, report_type):
 
     # construct report url
     url = get_url(date_structure, report_type)
-    if os.path.exists('pdfs/' + url.split('/')[-1]):
-        url = 'pdfs/' + url.split('/')[-1]
+    if os.path.exists(f'pdfs/{report_type}/' + url.split('/')[-1]):
+        url = f'pdfs/{report_type}/' + url.split('/')[-1]
 
+    # using the url, read pdf with tabula based off area coordinates
     if url.endswith('.pdf'):
-
-        # using the url, read pdf with tabula based off area coordinates
         content = read_pdf(url,
                            encoding='ISO-8859-1',
                            stream=True,
@@ -519,7 +540,6 @@ def get_report(date_structure, report_type):
                            pages=1,
                            guess=False,
                            pandas_options={'header': None})
-
         df = load_pdf_to_dataframe(content, date_structure, report_type)
 
     elif url.endswith('.prn'):
@@ -536,10 +556,7 @@ def get_report(date_structure, report_type):
                          skiprows=10,
                          sep=r'\s{1,}',
                          index_col=False,
-                         names=get_report_columns(report_type, date_structure))#[:-2]
-
-        # tail = df['Date'].tail(2)
-        # df.drop(tail.index, inplace=True)
+                         names=get_report_columns(report_type, date_structure))
 
     # create date-indexed dataframe and convert numeric values to floats
     return {'data': data_cleaner(df, report_type, date_structure),
@@ -632,55 +649,54 @@ def months_between(start_date, end_date):
 
 def data_cleaner(content, report_type, date_structure):
     """
-    Changes dataframe to an array and reshape it
-    column names change to what is specified below
-
-    This function converts data from string to floats and
-    removes any non-numeric elements
+    This function converts data from string to floats and removes any non-numeric elements
 
     Arguments:
-        content (dataframe):  dataframe in a [1,rows,columns] structure
-        report_type (string): name of report
-        date_structure (datetime.datetime):
+        content (dataframe): daily data as a dataframe
+        report_type (string): report type identifier
+        date_structure (datetime.datetime): date of the monthly report
     Returns:
         df (dataframe): in a [rows,columns] structure,
     """
-    content = content[0] if isinstance(content, list) else content
+    try:
+        content = content[0] if isinstance(content, list) else content
 
-    # Change from array to dataframe, generate new columns
-    df = pd.DataFrame(content if content.ndim <= 2 else content[0])
+        # Change from array to dataframe, generate new columns
+        df = pd.DataFrame(content if content.ndim <= 2 else content[0])
 
-    # set the multi-level column names
-    df.columns = pd.MultiIndex.from_tuples(get_report_columns(report_type,
-                                                              date_structure,
-                                                              expected_length=len(df.columns)))
+        # set the multi-level column names
+        df.columns = pd.MultiIndex.from_tuples(get_report_columns(report_type,
+                                                                  date_structure,
+                                                                  expected_length=len(df.columns)))
 
-    # change the dates in dataframe to date objects (if represented as integer days, construct
-    # date with current month/year)
-    df = df.set_index(('Date', 'Date'))
-    df.index.name = None
-    df.index = df.index.map(lambda x: dt.date(date_structure.year, date_structure.month, x) if str(x).isnumeric()
-                                      else dateutil.parser.parse(x) if x != '-' and str(x[0]).isnumeric()
-                                      else None)
+        # change the dates in dataframe to date objects (if represented as integer days, construct
+        # date with current month/year)
+        df = df.set_index(('Date', 'Date'))
+        df.index.name = None
+        df.index = df.index.map(lambda x: dt.date(date_structure.year, date_structure.month, x) if str(x).isnumeric()
+                                          else dateutil.parser.parse(x) if x != '-' and str(x[0]).isnumeric()
+                                          else None)
 
-    # drop non-date index entries
-    df = df.loc[~df.index.isna()]
+        # drop non-date index entries
+        df = df.loc[~df.index.isna()]
 
-    # convert numeric data to floats, including parentheses notation to negative numbers
-    df = (df.replace(',', '', regex=True)
-            .replace('%', '', regex=True)
-            .replace('None', float('nan'), regex=True)
-            .replace(r'[\$,)]', '', regex=True)
-            .replace(r'[(]', '-', regex=True)
-            .astype(float))
+        # convert numeric data to floats, including parentheses notation to negative numbers
+        df = (df.replace(',', '', regex=True)
+                .replace('%', '', regex=True)
+                .replace('None', float('nan'), regex=True)
+                .replace(r'[\$,)]', '', regex=True)
+                .replace(r'[(]', '-', regex=True)
+                .astype(float))
 
-    # drop COA columns with no data
-    if 'COA USBR' in df:
-        if df['COA USBR']['Account Balance'].dropna().empty:
-            df.drop('COA USBR', axis=1, inplace=True)
+        # drop COA columns with no data
+        if 'COA USBR' in df:
+            if df['COA USBR']['Account Balance'].dropna().empty:
+                df.drop('COA USBR', axis=1, inplace=True)
 
-    # return converted dataframe; drop NaN values
-    return df.dropna(how='all').reindex()
+        # return converted dataframe; drop NaN values
+        return df.dropna(how='all').reindex()
+    except:
+        return content
 
 
 def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
@@ -696,8 +712,11 @@ def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
     # remove all commas in number formatting
     df = content[0].replace(',', '', regex=True)
 
-    # filter so that only Day rows are included
-    df = df.loc[df[0].astype(str).apply(lambda x: str(x).split()[0].isnumeric())]
+    # remove rows with NaN in Day column
+    df = df.loc[~df[0].isna()]
+
+    # filter so that only numeric Day rows are included
+    df = df.loc[df[0].astype(str).str.match('\d+(\.\d+)?'), :]
 
     # remove any "NaN" entries for cases where offset created in parsing fixed-width columns
     df = pd.DataFrame(data=[list(map(float, row.split()[1:]))
@@ -706,6 +725,11 @@ def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
     # update the column names
     df.columns = pd.MultiIndex.from_tuples(get_report_columns(report_type, date_structure))
 
+    # reindex to match the version of the report with the most columns, for concatenating full record requests
+    header = pd.MultiIndex.from_tuples(get_report_columns(report_type, date_structure, default=True))
+    df = df.reindex(header, axis=1)
+
+    # data cleaning specific to delta outflow report
     if report_type == 'dout':
         # convert numeric data to floats, including parentheses notation to negative numbers
         df = (df.replace(',', '', regex=True)
@@ -715,6 +739,7 @@ def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
                 .replace(r'[(]', '-', regex=True)
                 .astype(float))
 
+    # drop any rows where all values are missing
     df = df.dropna(how='all').reindex()
 
     # change the dates in dataframe to date objects
@@ -722,6 +747,7 @@ def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
 
     # set the DateIndex
     df = df.set_index('Date')
+    df = df.sort_index()
 
     # check that length of dataframe matches expected number of days
     message = f'ERROR: row count does not match number of days in {date_structure:%b %Y}'
