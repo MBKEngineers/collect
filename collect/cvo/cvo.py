@@ -70,33 +70,42 @@ def get_area(date_structure, report_type):
     today_day = dt.date.today().day
     report_date = dt.date(date_structure.year, date_structure.month, 1)
 
-    if report_type in ['doutdly', 'dout']:
+    if report_type == 'doutdly':
 
         # if report is .txt extension
-        if date_structure <= dt.date(2002, 4, 1):
+        if report_date <= dt.date(2002, 4, 1):
             return None
 
         # if date is before including 2010 December, report is .prn extension
-        if dt.date(2002, 4, 1) < date_structure <= dt.date(2010, 12, 1):
+        if dt.date(2002, 4, 1) < report_date <= dt.date(2010, 12, 1):
             return None
 
         # provide pdf target area
         # dates of specific changes to pdf sizing
-        if (date_structure.strftime('%Y-%m') == dt.date.today().strftime('%Y-%m')
-                or (dt.date(2020, 1, 1) <= date_structure <= dt.date(2020, 8, 1))
-                or (dt.date(2019, 3, 1) <= date_structure <= dt.date(2019, 8, 1))
-                or (dt.date(2022, 6, 1) <= date_structure <= dt.date.today())):
+        if (report_date.strftime('%Y-%m') == dt.date.today().strftime('%Y-%m')
+                or (dt.date(2020, 1, 1) <= report_date <= dt.date(2020, 8, 1))
+                or (dt.date(2019, 3, 1) <= report_date <= dt.date(2019, 8, 1))
+                or (dt.date(2022, 6, 1) <= report_date <= dt.date.today())):
             area = [290.19, 20.76, 750.78, 1300.67]
 
-        elif dt.date(2010, 12, 1) < date_structure <= dt.date(2017, 1, 1):
+        elif dt.date(2010, 12, 1) < report_date <= dt.date(2017, 1, 1):
             # Weird date where pdf gets slightly longer
             # Other PDFs are smaller than the usual size
-            if date_structure == dt.date(2011, 1, 1):
+            if report_date == dt.date(2011, 1, 1):
                 area = [146.19, 20.76, 350, 733.67]
+
+            elif report_date in [dt.date(2013, 8, 1), dt.date(2013, 10, 1)]:
+                return [151.19, 20.76, 380, 900.67]
+
+            elif report_date == dt.date(2013, 12, 1):
+                return [151.19, 20.76, 390, 900.67]
+
             else:
                 area = [151.19, 20.76, 360, 900.67]
-        elif date_structure == dt.datetime(2021, 12, 1):
+
+        elif report_date == dt.datetime(2021, 12, 1):
             area = [290.19, 20.76, 1250.78, 1300.67]
+        
         else:
             # area = [175.19, 20.76, 450.78, 900.67]
             area = [175.19, 20.76, 500.78, 900.67]
@@ -296,11 +305,13 @@ def get_data(start, end, report_type):
             # append dataframes for each month
             frames.append(report['data'])
 
+            print(color(f'SUCCESS: {report_type} {date_structure:%b %Y}', 'cyan'))
+
         except:
-            print(f'ERROR: {report_type} {date_structure:%b %Y}')
+            print(color(f'ERROR: {report_type} {date_structure:%b %Y}', 'red'))
 
     # concatenate and set index for all appended dataframes
-    df = pd.concat(frames)
+    df = pd.concat(frames, axis=0)
 
     # reindex for continuous record
     df = df.reindex(pd.date_range(start=df.first_valid_index(),
@@ -385,7 +396,7 @@ def get_report_columns(report_type, date_structure, expected_length=None, defaul
     Raises:
         NotImplementedError: raises error if invalid report_type is supplied
     """
-    if report_type in ['doutdly', 'dout']:
+    if report_type == 'doutdly':
         tuples = (
             ('Date', 'Date'),
             ('Delta Inflow', 'Sacto R @Freeport prev dy'),
@@ -540,9 +551,12 @@ def get_report(date_structure, report_type):
                            pages=1,
                            guess=False,
                            pandas_options={'header': None})
-        df = load_pdf_to_dataframe(content, date_structure, report_type)
+        if report_type == 'doutdly':
+            df = doutdly_data_cleaner(content, report_type, date_structure)
+        else:
+            df = load_pdf_to_dataframe(content, date_structure, report_type)
 
-    elif url.endswith('.prn'):
+    if url.endswith('.prn'):
         df = pd.read_table(url,
                            skiprows=10,
                            # skipfooter=2,
@@ -550,6 +564,7 @@ def get_report(date_structure, report_type):
                            index_col=False,
                            delim_whitespace=True,
                            engine='python')
+        df = doutdly_data_cleaner(df, report_type, date_structure)
 
     elif url.endswith('.txt'):
         df = pd.read_csv(url,
@@ -557,9 +572,10 @@ def get_report(date_structure, report_type):
                          sep=r'\s{1,}',
                          index_col=False,
                          names=get_report_columns(report_type, date_structure))
+        df = doutdly_data_cleaner(df, report_type, date_structure)
 
     # create date-indexed dataframe and convert numeric values to floats
-    return {'data': data_cleaner(df, report_type, date_structure),
+    return {'data': df,
             'info': {'url': url,
                      'title': get_title(report_type),
                      # 'date_published': get_date_published(url, date_structure, report_type),
@@ -587,33 +603,31 @@ def get_title(report_type):
 
 def get_url(date_structure, report_type):
     """
+    construct the query URL for specified year/month and report type
+
     Arguments:
         date_structure (datetime.datetime): datetime representing report year and month
-        report_type (str): one of 'kesdop', 'shadop', 'shafln', 'doutdly', 'fedslu', 'slunit'
+        report_type (str): one of SUPPORTED_REPORTS
     Returns:
         url (str): the PDF resource URL for the specified month and report type
     """
-    # special handling for delta outflow calculation reports
-    if report_type in ['doutdly', 'dout']:
+    # current month URL
+    if date_structure.strftime('%Y-%m') == dt.date.today().strftime('%Y-%m'):
+        return f'https://www.usbr.gov/mp/cvo/vungvari/{report_type}.pdf'    
 
-        # current month URL
-        if date_structure.strftime('%Y-%m') == dt.date.today().strftime('%Y-%m'):
-            return 'https://www.usbr.gov/mp/cvo/vungvari/doutdly.pdf'
+    # special handling for delta outflow calculation reports
+    if report_type == 'doutdly':
 
         # if date is less than or equal to April 2002, use txt format
         if date_structure <= dt.date(2002, 4, 1):
             return f'https://www.usbr.gov/mp/cvo/vungvari/dout{date_structure:%m%y}.txt'
 
         # if date is less than or equal to December 2010, use prn format
-        if date_structure <= dt.date(2010, 12, 1):
+        if date_structure <= dt.date(2011, 3, 1):
             return f'https://www.usbr.gov/mp/cvo/vungvari/dout{date_structure:%m%y}.prn'
 
         # reference pdf format
         return f'https://www.usbr.gov/mp/cvo/vungvari/dout{date_structure:%m%y}.pdf'
-
-    # current month URL
-    if date_structure.strftime('%Y-%m') == dt.date.today().strftime('%Y-%m'):
-        return f'https://www.usbr.gov/mp/cvo/vungvari/{report_type}.pdf'
 
     # default report URL for past months
     return f'https://www.usbr.gov/mp/cvo/vungvari/{report_type}{date_structure:%m%y}.pdf'
@@ -647,7 +661,7 @@ def months_between(start_date, end_date):
             month += 1
 
 
-def data_cleaner(content, report_type, date_structure):
+def doutdly_data_cleaner(content, report_type, date_structure):
     """
     This function converts data from string to floats and removes any non-numeric elements
 
@@ -658,45 +672,56 @@ def data_cleaner(content, report_type, date_structure):
     Returns:
         df (dataframe): in a [rows,columns] structure,
     """
-    try:
-        content = content[0] if isinstance(content, list) else content
+    content = content[0] if isinstance(content, list) else content
 
-        # Change from array to dataframe, generate new columns
-        df = pd.DataFrame(content if content.ndim <= 2 else content[0])
+    # Change from array to dataframe, generate new columns
+    df = pd.DataFrame(content if content.ndim <= 2 else content[0])
 
-        # set the multi-level column names
-        df.columns = pd.MultiIndex.from_tuples(get_report_columns(report_type,
-                                                                  date_structure,
-                                                                  expected_length=len(df.columns)))
+    # remove any "NaN" entries for cases where offset created in parsing fixed-width columns
+    df = pd.DataFrame(data=[row.split()[1:] for row in df.to_string().replace('NaN', '').splitlines()[1:]])
 
-        # change the dates in dataframe to date objects (if represented as integer days, construct
-        # date with current month/year)
-        df = df.set_index(('Date', 'Date'))
-        df.index.name = None
-        df.index = df.index.map(lambda x: dt.date(date_structure.year, date_structure.month, x) if str(x).isnumeric()
-                                          else dateutil.parser.parse(x) if x != '-' and str(x[0]).isnumeric()
-                                          else None)
+    # set the multi-level column names
+    df.columns = pd.MultiIndex.from_tuples(get_report_columns(report_type,
+                                                              date_structure,
+                                                              expected_length=len(df.columns)))
 
-        # drop non-date index entries
-        df = df.loc[~df.index.isna()]
+    # reindex to match the version of the report with the most columns, for concatenating full record requests
+    header = pd.MultiIndex.from_tuples(get_report_columns(report_type, date_structure))
+    df = df.reindex(header, axis=1)
 
-        # convert numeric data to floats, including parentheses notation to negative numbers
-        df = (df.replace(',', '', regex=True)
-                .replace('%', '', regex=True)
-                .replace('None', float('nan'), regex=True)
-                .replace(r'[\$,)]', '', regex=True)
-                .replace(r'[(]', '-', regex=True)
-                .astype(float))
+    # change the dates in dataframe to date objects (if represented as integer days, construct
+    # date with current month/year)
+    df = df.set_index(('Date', 'Date'))
+    df.index.name = None
 
-        # drop COA columns with no data
-        if 'COA USBR' in df:
-            if df['COA USBR']['Account Balance'].dropna().empty:
-                df.drop('COA USBR', axis=1, inplace=True)
+    # drop non-date index entries
+    df = df.loc[~df.index.isna()]
 
-        # return converted dataframe; drop NaN values
-        return df.dropna(how='all').reindex()
-    except:
-        return content
+    df.index = df.index.map(lambda x: dt.date(date_structure.year, date_structure.month, x) if str(x).isnumeric()
+                                      else dateutil.parser.parse(x) if x != '-' and str(x[0]).isnumeric()
+                                      else None)
+
+    # drop non-date index entries
+    df = df.loc[~df.index.isna()]
+
+    # typo in Dec 2007 .prn file results in assigment of year 2000
+    df.index = [x.replace(year=date_structure.year) for x in df.index]
+
+    # convert numeric data to floats, including parentheses notation to negative numbers
+    df = (df.replace(',', '', regex=True)
+            .replace('%', '', regex=True)
+            .replace('None', float('nan'), regex=True)
+            .replace(r'[\$,)]', '', regex=True)
+            .replace(r'[(]', '-', regex=True)
+            .astype(float))
+
+    # drop COA columns with no data
+    if 'COA USBR' in df:
+        if df['COA USBR']['Account Balance'].dropna().empty:
+            df.drop('COA USBR', axis=1, inplace=True)
+
+    # return converted dataframe; drop NaN values
+    return df.dropna(how='all').reindex()
 
 
 def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
@@ -730,7 +755,7 @@ def load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False):
     df = df.reindex(header, axis=1)
 
     # data cleaning specific to delta outflow report
-    if report_type == 'dout':
+    if report_type == 'doutdly':
         # convert numeric data to floats, including parentheses notation to negative numbers
         df = (df.replace(',', '', regex=True)
                 .replace('%', '', regex=True)
