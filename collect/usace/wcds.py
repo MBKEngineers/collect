@@ -273,43 +273,30 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
         interval (str): data interval; i.e. 'd' 
 
     Returns:
-        site_info (dict): nested dictionary with 'allheaders', 'generated', 'groups', 'title' and 'ymarkers' keys
+        result (dict): query result dictionary
     """
-
     # reservoir code is case-sensitive
     reservoir = reservoir.lower()
 
     # USACE-SPK Folsom page
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.meta'
     
-    # Read url data
+    # read url data
     response = requests.get(url, verify=False)
-    site_info = response.json()
+
+    # complete metadata dictionary
+    metadata_dict = response.json()
+
+    result =   {'data headers': metadata_dict['allheaders'],
+                'gross pool (stor)': metadata_dict['ymarkers']['Gross Pool']['value'],
+                'generated': metadata_dict['generated']
+                }
+
+    # check for changing elevation key
+    if 'Gross Pool(elev NGVD29)' in metadata_dict['ymarkers']:
+        result.update({ 'gross pool (elev)': metadata_dict['ymarkers']['Gross Pool(elev NGVD29)']['value']})
+    else:
+        result.update({ 'gross pool (elev)': metadata_dict['ymarkers']['Gross Pool']['value']})
     
-    # checks whether Gross Pool is noted with '(elev NGVD29)' or not
-    if 'ymarkers' in site_info and 'Gross Pool(elev NGVD29)' in site_info['ymarkers']:
-        result =   {'metadata':     site_info,
-                    'info':         {'reservoir code': reservoir,
-                                    'reservoir': site_info['title'],
-                                    'water year': water_year, 
-                                    'interval':interval,
-                                    'gross pool': site_info['ymarkers']['Gross Pool']['value'],
-                                    'gross pool (elev)': site_info['ymarkers']['Gross Pool(elev NGVD29)']['value'],
-                                    'data headers': site_info['allheaders']
-                                    }
-                    }
-    else: 
-        result =   {'metadata':      site_info,
-                    'info':         {'reservoir code': reservoir,
-                                    'reservoir': site_info['title'],
-                                    'water year': water_year, 
-                                    'interval':interval,
-                                    'gross pool': site_info['ymarkers']['Gross Pool']['value'],
-                                    'gross pool (elev)': site_info['ymarkers']['Gross Pool(elev)']['value'],
-                                    'data headers': site_info['allheaders']
-                                    }
-                    }
-
-    # returns result in dict form
+    # returns relevant subset as dictionary
     return result
-
