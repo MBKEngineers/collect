@@ -108,25 +108,11 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
     if clean_column_headers:
         df.rename(_cleaned_columns_map(df.columns), axis=1, inplace=True)
 
-    result = {'data': df, 
-                  'info': {'reservoir': get_water_year_data(reservoir, m_end_time, interval)['info']['reservoir'], 
-                           'interval': interval, 
-                           'notes': 'daily data value occurs on midnight of entry date',
-                           'data headers at start time': metadata[m_start_time],
-                           'data headers at end time': metadata[m_end_time]}
-               }
-
-    # Check if headers are equal
-    if metadata[m_start_time] ==  metadata[m_end_time]:
-        result['info']['data headers'] = result['info'].pop('data headers at start time')
-        del result['info']['data headers at end time']
-        result['info']['data headers'] = metadata[m_start_time]
-    else:
-        result['info']['data headers at start time'] = metadata[m_start_time]
-        result['info']['data headers at end time'] = metadata[m_end_time]
-
     # return timeseries data and record metadata
-    return result
+    return {'data': df, 
+            'info': {'reservoir': reservoir, 
+                     'interval': interval, 
+                     'notes': 'daily data value occurs on midnight of entry date'}}
 
 
 def get_wcds_reservoirs():
