@@ -10,7 +10,6 @@ import re
 import pandas as pd
 import requests
 from collect import utils
-import json
 
 
 def get_water_year_data(reservoir, water_year, interval='d'):
@@ -58,13 +57,14 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     df.index = pd.to_datetime(df.index)
 
     # Define variable for reservoir metadata
-    raw = get_reservoir_metadata(reservoir, water_year, interval)
+    metadata_dict = get_reservoir_metadata(reservoir, water_year, interval)
     
-    result =    {'data': df, 
-                'info': raw['info'],
-                'metadata': raw['metadata']}
+    return {'data': df, 
+            'info': {'reservoir': reservoir,
+                     'water year': water_year,
+                     'interval': interval,
+                     'metadata': metadata_dict}}
 
-    return result
 
 def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True):
     """
