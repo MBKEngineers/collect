@@ -198,7 +198,7 @@ def get_area(date_structure, report_type):
                 30: [140, 30, 500, 700],
                 31: [140, 30, 520, 700]}.get(days_in_month, [140, 30, 520, 700])
 
-        if report_date in [dt.date(2000, 9, 1), 
+        if report_date in [dt.date(2000, 9, 1),
                            dt.date(2001, 6, 1),
                            dt.date(2001, 9, 1),
                            dt.date(2001, 11, 1)]:
@@ -324,6 +324,7 @@ def get_date_published(url, date_structure, report_type):
 
     if url.endswith('.pdf'):
 
+        # delta daily outflow report
         if report_type == 'doutdly':
 
             # Dates of specific changes to pdf publish date sizing
@@ -496,6 +497,7 @@ def get_report_columns(report_type, date_structure, expected_length=None, defaul
             ('DOS AMIGOS', 'DOS AMIGOS', 'STATE'),
             ('DOS AMIGOS', 'DOS AMIGOS', 'TOTAL'),
         ]
+        # spelling 'AQEDUCT' adopted directly from report
         if date_structure >= dt.date(2012, 6, 1) or default:
             tuples += [
                 ('AQEDUCT CHECK 21', 'AQEDUCT CHECK 21', 'FED'),
