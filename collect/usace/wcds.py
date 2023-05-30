@@ -92,15 +92,15 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
         print(f'No data for selected start date. Earliest possible start date selected instead: {earliest_time}')
         start_time = earliest_time
 
-    # Make new dataframe and dictionary for every water year within selection
+    # Make new dataframe
     frames = []
-    metadata = {}
-    m_start_time = utils.get_water_year(start_time)
-    m_end_time = utils.get_water_year(end_time)
-    for water_year in range(m_start_time, m_end_time + 1):
-            frames.append(get_water_year_data(reservoir, water_year, interval)['data'])
-            metadata[water_year] = get_water_year_data(reservoir, water_year, interval)['info']['data headers']
-            
+    metadata_dict = {}
+
+    for water_year in range(utils.get_water_year(start_time), utils.get_water_year(end_time) + 1):
+        result = get_water_year_data(reservoir, water_year, interval)
+        frames.append(result['data'])
+        metadata_dict.update({water_year: result['info']['metadata']})
+
     df = pd.concat(frames)
     df.index.name = 'ISO 8601 Date Time'
 
@@ -112,7 +112,8 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
     return {'data': df, 
             'info': {'reservoir': reservoir, 
                      'interval': interval, 
-                     'notes': 'daily data value occurs on midnight of entry date'}}
+                     'notes': 'daily data value occurs on midnight of entry date',
+                     'metadata': metadata_dict}}
 
 
 def get_wcds_reservoirs():
@@ -275,12 +276,14 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
 
     result =   {'data headers': metadata_dict['allheaders'],
                 'gross pool (stor)': metadata_dict['ymarkers']['Gross Pool']['value'],
-                'generated': metadata_dict['generated']
+                'generated': metadata_dict['generated'],
+                'datum': None
                 }
 
     # check for changing elevation key
     if 'Gross Pool(elev NGVD29)' in metadata_dict['ymarkers']:
         result.update({ 'gross pool (elev)': metadata_dict['ymarkers']['Gross Pool(elev NGVD29)']['value']})
+        result.update({'datum': 'NGVD29'})
     else:
         result.update({ 'gross pool (elev)': metadata_dict['ymarkers']['Gross Pool']['value']})
     
