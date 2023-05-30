@@ -9,6 +9,7 @@ import io
 import re
 
 import pandas as pd
+import pdftotext
 import requests
 
 
