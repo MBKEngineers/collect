@@ -12,10 +12,7 @@ from colors import color
 import dateutil.parser
 import pandas as pd
 import requests
-try:
-    from tabula import read_pdf
-except:
-    print('WARNING: tabula is required for cvo module')
+from tabula import read_pdf
 
 
 REPORTS = [
