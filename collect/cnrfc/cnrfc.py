@@ -865,7 +865,7 @@ def get_rating_curve(cnrfc_id):
 
     # check if data exists
     if response.status_code == 200:
-        raw_data = response.text.splitlines()[2:]
+        raw_data = response.text.splitlines()
 
         # filter and extract flow and stage data
         flow_data = []
