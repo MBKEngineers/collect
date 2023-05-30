@@ -850,6 +850,47 @@ def get_forecast_csvdata(url):
     return _get_forecast_csv(url)
 
 
+def get_rating_curve(cnrfc_id):
+    """
+    returns paired flow and stage data parsed from the text of CNRFC rating curve JavaScript files
+    
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+        result (dict): query result dictionary with 'data' and 'info' keys
+    """
+    # retrieve data from URL
+    url = f'https://www.cnrfc.noaa.gov/data/ratings/{cnrfc_id}_rating.js'
+    response = requests.get(url)
+
+    # check if data exists
+    if response.status_code == 200:
+        raw_data = response.text.splitlines()
+
+        # filter and extract flow and stage data
+        flow_data = []
+        stage_data = []
+        for line in raw_data:
+            if line.startswith('ratingFlow'):
+                flow = line.split('(')[1].split(')')[0]
+                flow_data.append(float(flow))
+            elif line.startswith('ratingStage'):
+                stage = line.split('(')[1].split(')')[0]
+                stage_data.append(float(stage))
+
+        # pair ratingFlow and ratingStage data
+        data = list(zip(stage_data, flow_data))
+
+    else:
+        print(f'Error accessing rating curve URL for: {cnrfc_id}')
+        data = None
+
+    return {'data': data, 
+            'info': {'url': url, 
+                     'cnrfc_id': cnrfc_id}
+            }
+
+
 def _default_date_string(date_string):
     """
     supply expected latest forecast datestamp or use defined date_string argument
