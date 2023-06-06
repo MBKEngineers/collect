@@ -8,7 +8,6 @@ import calendar
 import datetime as dt
 import os
 
-from colors import color
 import dateutil.parser
 import pandas as pd
 import requests
@@ -291,10 +290,10 @@ def get_data(start, end, report_type):
             # append dataframes for each month
             frames.append(report['data'])
 
-            print(color(f'SUCCESS: {report_type} {date_structure:%b %Y}', 'cyan'))
+            print(f'SUCCESS: {report_type} {date_structure:%b %Y}')
 
         except:
-            print(color(f'ERROR: {report_type} {date_structure:%b %Y}', 'red'))
+            print(f'ERROR: {report_type} {date_structure:%b %Y}')
 
     # concatenate and set index for all appended dataframes
     df = pd.concat(frames, axis=0)
