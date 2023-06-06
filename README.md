@@ -21,16 +21,14 @@ or ```$ source myenv/bin/activate``` (MacOS).
 ```$ git clone https://github.com/MBKEngineers/collect.git```
 
 ### Install `collect` as a Python package available for local use.
-Use the "develop" flag to make sure changes in your repo are propagated to any use of your virtualenv.
-```
-$ cd collect
-$ python setup.py develop
-```
-or with _pip_ and the "editable" flag (-e):
+Use the "editable" flag (-e) flag to make sure changes in your repo are propagated to any use of your virtualenv.
 ```
 $ cd collect
 $ python -m pip install -e .
 ```
+
+### Install Java
+If you plan to use the `collect.cvo` module which depends on `tabula-py`, you will need to install Java.  Follow the instructions at: https://tabula-py.readthedocs.io/en/latest/getting_started.html
 
 ### Configure package variables
 Add username and password credentials to a `.env` file to enable downloading data from password-protected sources.
