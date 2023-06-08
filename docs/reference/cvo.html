@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>collect.cvo &mdash; collect 0.1 documentation</title>
+      <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../static/documentation_options.js"></script>
+        <script src="../static/jquery.js"></script>
+        <script src="../static/underscore.js"></script>
+        <script src="../static/doctools.js"></script>
+    <script src="../static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="collect.utils" href="utils.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> collect
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#project-source-code">Project Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#contributing">Contributing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#updating-documentation">Updating Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Setup instructions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#create-a-virtual-environment">Create a virtual environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#download-source-code">Download source code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#install-collect">Install <code class="docutils literal notranslate"><span class="pre">collect</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#updating-documentation">Updating Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#configure-package-variables">Configure package variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#namespace">Namespace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#adding-new-modules">Adding new modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Example usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">collect</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alert.html">collect.alert</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="alert.html#collect-alert-alert">collect.alert.alert</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cnrfc.html">collect.cnrfc</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-cnrfc">collect.cnrfc.cnrfc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-gages">collect.cnrfc.gages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-utilities">collect.cnrfc.utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="dwr.html">collect.dwr</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-b120">collect.dwr.b120</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-casgem">collect.dwr.casgem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-cawdl-cawdl">collect.dwr.cawdl.cawdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-cdec">collect.dwr.cdec</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="dwr.html#collect-dwr-cdec-queries">collect.dwr.cdec.queries</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-errors">collect.dwr.errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-info">collect.dwr.info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-swp">collect.dwr.swp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-wsi">collect.dwr.wsi</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nid.html">collect.nid</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nid.html#collect-nid-nid">collect.nid.nid</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usace.html">collect.usace</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usace.html#collect-usace-wcds">collect.usace.wcds</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usgs.html">collect.usgs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usgs.html#collect-usgs-usgs">collect.usgs.usgs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">collect.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="utils.html#collect-utils-utils">collect.utils.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">collect.cvo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#collect-cvo-cvo">collect.cvo.cvo</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">collect</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">collect</a> &raquo;</li>
+      <li>collect.cvo</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../sources/reference/cvo.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <span class="target" id="module-collect.cvo"></span><section id="collect-cvo">
+<h1>collect.cvo<a class="headerlink" href="#collect-cvo" title="Permalink to this headline"></a></h1>
+<p>access cvo data</p>
+<span class="target" id="module-collect.cvo.cvo"></span><section id="collect-cvo-cvo">
+<h2>collect.cvo.cvo<a class="headerlink" href="#collect-cvo-cvo" title="Permalink to this headline"></a></h2>
+<p>functions to support retrieving tabular data from CVO monthly report PDFs</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.doutdly_data_cleaner">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">doutdly_data_cleaner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_structure</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.doutdly_data_cleaner" title="Permalink to this definition"></a></dt>
+<dd><p>This function converts data from string to floats and removes any non-numeric elements</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>content</strong> (<em>dataframe</em>) – daily data as a dataframe</p></li>
+<li><p><strong>report_type</strong> (<em>string</em>) – report type identifier</p></li>
+<li><p><strong>date_structure</strong> (<em>datetime.datetime</em>) – date of the monthly report</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>in a [rows,columns] structure,</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>df (dataframe)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.download_files">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">download_files</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">destination</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.download_files" title="Permalink to this definition"></a></dt>
+<dd><p>download file contents for all reports within date range to specified destination directory</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>datetime.date</em>) – start date given by user input</p></li>
+<li><p><strong>end</strong> (<em>datetime.date</em>) – end date given by user input</p></li>
+<li><p><strong>report_type</strong> (<em>str</em>) – the str identifier for CVO report</p></li>
+<li><p><strong>destination</strong> (<em>str</em>) – destination path for saving report files</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.get_area">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">get_area</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date_structure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.get_area" title="Permalink to this definition"></a></dt>
+<dd><p>set the default target area boundaries for tabula read_pdf function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date_structure</strong> (<em>datetime.date</em>) – report month/year represented as a datetime</p></li>
+<li><p><strong>report_type</strong> (<em>str</em>) – specifies the report table type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>list of target area dimensions in order of: top, left, bottom, right</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>area (list)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.get_data">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.get_data" title="Permalink to this definition"></a></dt>
+<dd><p>retrieve CVO report data spanning multiple months, as specified by query date range</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>datetime.date</em>) – start date given in datetime format</p></li>
+<li><p><strong>end</strong> (<em>datetime.date</em>) – end date given in datetime format</p></li>
+<li><p><strong>report_type</strong> (<em>str</em>) – specifies the CVO report type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary of data and metadata of report</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.get_date_published">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">get_date_published</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_structure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.get_date_published" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date_structure</strong> (<em>datetime.date</em>) – report month/year represented as a datetime</p></li>
+<li><p><strong>report_type</strong> (<em>str</em>) – specifies the report table type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the extracted date of report</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>date_published (datetime.date)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.get_report">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">get_report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date_structure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.get_report" title="Permalink to this definition"></a></dt>
+<dd><p>get report content for one month for the specified report_type</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date_structure</strong> (<em>datetime.date</em>) – report month/year represented as a python datetime.date</p></li>
+<li><p><strong>report_type</strong> (<em>str</em>) – specifies the report table type</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary of data and metadata of report</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.get_report_columns">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">get_report_columns</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_structure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">expected_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.get_report_columns" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>report_type</strong> (<em>str</em>) – </p></li>
+<li><p><strong>date_structure</strong> (<em>datetime.date</em>) – </p></li>
+<li><p><strong>expected_length</strong> (<em>int</em>) – expected length of columns (axis=1)</p></li>
+<li><p><strong>default</strong> (<em>bool</em>) – flag to indicate which set of tuples should be used as default</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>tuple of tuples representing multi-level column names</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>NotImplementedError</strong> – raises error if invalid report_type is supplied</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.get_title">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">get_title</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.get_title" title="Permalink to this definition"></a></dt>
+<dd><p>get the title for the identified CVO report</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>report_type</strong> (<em>str</em>) – one of ‘kesdop’, ‘shadop’, ‘shafln’, ‘doutdly’, ‘fedslu’, ‘slunit’</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the report title text</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>title (str)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.get_url">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">get_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date_structure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.get_url" title="Permalink to this definition"></a></dt>
+<dd><p>construct the query URL for specified year/month and report type</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date_structure</strong> (<em>datetime.date</em>) – date representing report year and month</p></li>
+<li><p><strong>report_type</strong> (<em>str</em>) – one of SUPPORTED_REPORTS</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the PDF resource URL for the specified month and report type</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>url (str)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.load_pdf_to_dataframe">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">load_pdf_to_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">content</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_structure</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">report_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_csv</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.load_pdf_to_dataframe" title="Permalink to this definition"></a></dt>
+<dd><p>changes dataframe to an array and reshape it column names change to what is specified below</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>content</strong> (<em>dataframe</em>) – dataframe in a [1, rows, columns] structure</p></li>
+<li><p><strong>report_type</strong> (<em>str</em>) – name of report</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>df (pandas.DataFrame)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cvo.cvo.months_between">
+<span class="sig-prename descclassname"><span class="pre">collect.cvo.cvo.</span></span><span class="sig-name descname"><span class="pre">months_between</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_date</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cvo.cvo.months_between" title="Permalink to this definition"></a></dt>
+<dd><p>given two instances of <code class="docutils literal notranslate"><span class="pre">datetime.date</span></code>, generate a list of dates on
+the 1st of every month between the two dates (inclusive).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start_date</strong> (<em>datetime.date</em>) – start date given by user input</p></li>
+<li><p><strong>end_date</strong> (<em>datetime.date</em>) – end date given by user input</p></li>
+</ul>
+</dd>
+<dt class="field-even">Yields</dt>
+<dd class="field-even"><p><em>(datetime.date)</em> – all dates between the date range in mmyy format</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="utils.html" class="btn btn-neutral float-left" title="collect.utils" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MBK Engineers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script> 
+
+</body>
+</html>

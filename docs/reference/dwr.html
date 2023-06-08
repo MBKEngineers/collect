@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>collect.dwr &mdash; collect 0.1 documentation</title>
+      <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../static/documentation_options.js"></script>
+        <script src="../static/jquery.js"></script>
+        <script src="../static/underscore.js"></script>
+        <script src="../static/doctools.js"></script>
+    <script src="../static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="collect.nid" href="nid.html" />
+    <link rel="prev" title="collect.cnrfc" href="cnrfc.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> collect
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#project-source-code">Project Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#contributing">Contributing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#updating-documentation">Updating Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Setup instructions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#create-a-virtual-environment">Create a virtual environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#download-source-code">Download source code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#install-collect">Install <code class="docutils literal notranslate"><span class="pre">collect</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#updating-documentation">Updating Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#configure-package-variables">Configure package variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#namespace">Namespace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#adding-new-modules">Adding new modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Example usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">collect</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alert.html">collect.alert</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="alert.html#collect-alert-alert">collect.alert.alert</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cnrfc.html">collect.cnrfc</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-cnrfc">collect.cnrfc.cnrfc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-gages">collect.cnrfc.gages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-utilities">collect.cnrfc.utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">collect.dwr</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#collect-dwr-b120">collect.dwr.b120</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#collect-dwr-casgem">collect.dwr.casgem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#collect-dwr-cawdl-cawdl">collect.dwr.cawdl.cawdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#collect-dwr-cdec">collect.dwr.cdec</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#collect-dwr-cdec-queries">collect.dwr.cdec.queries</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#collect-dwr-errors">collect.dwr.errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#collect-dwr-info">collect.dwr.info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#collect-dwr-swp">collect.dwr.swp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#collect-dwr-wsi">collect.dwr.wsi</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nid.html">collect.nid</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nid.html#collect-nid-nid">collect.nid.nid</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usace.html">collect.usace</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usace.html#collect-usace-wcds">collect.usace.wcds</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usgs.html">collect.usgs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usgs.html#collect-usgs-usgs">collect.usgs.usgs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">collect.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="utils.html#collect-utils-utils">collect.utils.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cvo.html">collect.cvo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cvo.html#collect-cvo-cvo">collect.cvo.cvo</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">collect</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">collect</a> &raquo;</li>
+      <li>collect.dwr</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../sources/reference/dwr.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <span class="target" id="module-collect.dwr"></span><section id="collect-dwr">
+<h1>collect.dwr<a class="headerlink" href="#collect-dwr" title="Permalink to this headline"></a></h1>
+<p>access DWR gage data, forecasts and water supply info</p>
+<span class="target" id="module-collect.dwr.b120"></span><section id="collect-dwr-b120">
+<h2>collect.dwr.b120<a class="headerlink" href="#collect-dwr-b120" title="Permalink to this headline"></a></h2>
+<p>access DWR Bulletin 120 forecast data</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.b120.april_july_dataframe">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.b120.</span></span><span class="sig-name descname"><span class="pre">april_july_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.b120.april_july_dataframe" title="Permalink to this definition"></a></dt>
+<dd><p>dataframe storing Apr-Jul forecast table</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>data_list</strong> (<em>list</em>) – </p>
+</dd>
+</dl>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.b120.clean_td">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.b120.</span></span><span class="sig-name descname"><span class="pre">clean_td</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">text</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.b120.clean_td" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>text</strong> (<em>str</em>) – </p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>value (float, None)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.b120.get_120_archived_reports">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.b120.</span></span><span class="sig-name descname"><span class="pre">get_120_archived_reports</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">year</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">month</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.b120.get_120_archived_reports" title="Permalink to this definition"></a></dt>
+<dd><p>Text-formatted reports available through CDEC javareports app for 2011-2017
+<a class="reference external" href="http://cdec.water.ca.gov/reportapp/javareports?name=B120.YYYYMM">http://cdec.water.ca.gov/reportapp/javareports?name=B120.YYYYMM</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>year</strong> (<em>int</em>) – </p></li>
+<li><p><strong>month</strong> (<em>int</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.b120.get_b120_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.b120.</span></span><span class="sig-name descname"><span class="pre">get_b120_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date_suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.b120.get_b120_data" title="Permalink to this definition"></a></dt>
+<dd><p>B-120 Water Supply Forecast Summary
+for current (latest) B120 forecast, use date_suffix = ‘’
+for an earlier month, use format date_suffix = ‘_201804’</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>date_suffix</strong> (<em>str</em>) – </p>
+</dd>
+</dl>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.b120.get_b120_update_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.b120.</span></span><span class="sig-name descname"><span class="pre">get_b120_update_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date_suffix</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.b120.get_b120_update_data" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>date_suffix</strong> (<em>str</em>) – </p>
+</dd>
+</dl>
+<p>Returns:</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.b120.validate_date_suffix">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.b120.</span></span><span class="sig-name descname"><span class="pre">validate_date_suffix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date_suffix</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_year</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2017</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.b120.validate_date_suffix" title="Permalink to this definition"></a></dt>
+<dd><dl class="simple">
+<dt>min year is 2017 for HTML-formatted report at</dt><dd><p><a class="reference external" href="https://cdec.water.ca.gov/b120_YYYYMM.html">https://cdec.water.ca.gov/b120_YYYYMM.html</a></p>
+</dd>
+<dt>min year is 2011 for text-formatted report at</dt><dd><p><a class="reference external" href="http://cdec.water.ca.gov/reportapp/javareports?name=B120.YYYYMM">http://cdec.water.ca.gov/reportapp/javareports?name=B120.YYYYMM</a></p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>date_suffix</strong> (<em>str</em>) – </p></li>
+<li><p><strong>min_year</strong> (<em>int</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+<p>Returns:</p>
+</dd></dl>
+
+</section>
+<span class="target" id="module-collect.dwr.casgem"></span><section id="collect-dwr-casgem">
+<h2>collect.dwr.casgem<a class="headerlink" href="#collect-dwr-casgem" title="Permalink to this headline"></a></h2>
+<p>access CASGEM well data</p>
+</section>
+<span class="target" id="module-collect.dwr.cawdl.cawdl"></span><section id="collect-dwr-cawdl-cawdl">
+<h2>collect.dwr.cawdl.cawdl<a class="headerlink" href="#collect-dwr-cawdl-cawdl" title="Permalink to this headline"></a></h2>
+<p>access CA Water Data Library surface water and well data</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cawdl.cawdl.get_cawdl_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cawdl.cawdl.</span></span><span class="sig-name descname"><span class="pre">get_cawdl_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">site_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cawdl.cawdl.get_cawdl_data" title="Permalink to this definition"></a></dt>
+<dd><p>Download well timeseries data from CAWDL database; return as dataframe</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>site_id</strong> (<em>str</em>) – string representing cawdl site id; ie ‘17202’</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary of ‘data’ and ‘info’ with dataframe of timeseries and station metadata</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cawdl.cawdl.get_cawdl_surface_water_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cawdl.cawdl.</span></span><span class="sig-name descname"><span class="pre">get_cawdl_surface_water_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">site_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">water_year</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cawdl.cawdl.get_cawdl_surface_water_data" title="Permalink to this definition"></a></dt>
+<dd><p>Download timeseries data from CAWDL database; return as dataframe</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>site_id</strong> (<em>str</em>) – string representing cawdl site id; ie ‘B94100’</p></li>
+<li><p><strong>water_year</strong> (<em>int</em>) – integer representing water year to collect data from</p></li>
+<li><p><strong>variable</strong> (<em>str</em>) – measurement description; ie ‘STAGE’ or ‘FLOW’ or ‘CONDUCTIVITY’ or ‘WATER_TEMPERATURE’</p></li>
+<li><p><strong>interval</strong> (<em>str</em>) – measurement time interval; ie ‘15-MINUTE_DATA’ or ‘DAILY_MEAN’ or ‘DAILY_MINMAX’ or ‘POINT’ (default for conductivity &amp; temp)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary of ‘data’ and ‘info’ with dataframe of timeseries and station metadata</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cawdl.cawdl.get_cawdl_surface_water_por">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cawdl.cawdl.</span></span><span class="sig-name descname"><span class="pre">get_cawdl_surface_water_por</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">site_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cawdl.cawdl.get_cawdl_surface_water_por" title="Permalink to this definition"></a></dt>
+<dd><p>Download full POR timeseries from CAWDL database</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>site_id</strong> (<em>str</em>) – string representing cawdl site id; ie ‘B94100’</p></li>
+<li><p><strong>water_year</strong> (<em>int</em>) – integer representing water year to collect data from</p></li>
+<li><p><strong>variable</strong> (<em>str</em>) – measurement description; ie ‘STAGE’ or ‘FLOW’ or ‘CONDUCTIVITY’ or ‘WATER_TEMPERATURE’</p></li>
+<li><p><strong>interval</strong> (<em>str</em>) – measurement time interval; ie ‘15-MINUTE_DATA’ or ‘DAILY_MEAN’ or ‘DAILY_MINMAX’ or ‘POINT’ (default for conductivity &amp; temp)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary of ‘data’ and ‘info’ with dataframe of timeseries and station metadata</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cawdl.cawdl.get_cawdl_surface_water_site_report">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cawdl.cawdl.</span></span><span class="sig-name descname"><span class="pre">get_cawdl_surface_water_site_report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">site_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cawdl.cawdl.get_cawdl_surface_water_site_report" title="Permalink to this definition"></a></dt>
+<dd><p>Download site report from CAWDL database</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>site_id</strong> (<em>str</em>) – string representing cawdl site id; ie ‘B94100’</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>‘info’ key with text from CAWDL site report</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<span class="target" id="module-collect.dwr.cdec"></span><section id="collect-dwr-cdec">
+<h2>collect.dwr.cdec<a class="headerlink" href="#collect-dwr-cdec" title="Permalink to this headline"></a></h2>
+<p>access CDEC gage data</p>
+<span class="target" id="module-collect.dwr.cdec.queries"></span><section id="collect-dwr-cdec-queries">
+<h3>collect.dwr.cdec.queries<a class="headerlink" href="#collect-dwr-cdec-queries" title="Permalink to this headline"></a></h3>
+<p>access CDEC gage data</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_daily_snowpack_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_daily_snowpack_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">region</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_daily_snowpack_data" title="Permalink to this definition"></a></dt>
+<dd><p>return regional snowpack values for % of normal for date, % of April 1 value,
+number of stations reporting, and average snow water content</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>region</strong> (<em>str</em>) – region as a string containing ‘NORTH’, ‘CENTRAL’, ‘SOUTH’, or ‘STATE’</p></li>
+<li><p><strong>start</strong> (<em>datetime.datetime</em>) – query start date as datetime</p></li>
+<li><p><strong>end</strong> (<em>datetime.datetime</em>) – query end date as datetime</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary containing dataframe with % of normal and % of April 1 values</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_dam_metadata">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_dam_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_dam_metadata" title="Permalink to this definition"></a></dt>
+<dd><p>get the gage meta data and datum, monitor/flood/danger stage information</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the CDEC station metadata, stored as key, value pairs</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>info (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_data" title="Permalink to this definition"></a></dt>
+<dd><p>return station date for a query bounded by start and end datetimes for
+a particular sensor/duration combination</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p></li>
+<li><p><strong>start</strong> (<em>dt.datetime</em>) – query start date</p></li>
+<li><p><strong>end</strong> (<em>dt.datetime</em>) – query end date</p></li>
+<li><p><strong>sensor</strong> (<em>int</em>) – the numeric sensor code</p></li>
+<li><p><strong>duration</strong> (<em>str</em>) – interval code for timeseries data (ex: ‘H’)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary of pandas.DataFrame and metadata dict</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_raw_station_csv">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_raw_station_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_raw_station_csv" title="Permalink to this definition"></a></dt>
+<dd><p>Use CDEC CSV query URL to download available data.  Optional <cite>filename</cite> argument
+specifies custom file location for download of CSV records.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p></li>
+<li><p><strong>start</strong> (<em>dt.datetime</em>) – query start date</p></li>
+<li><p><strong>end</strong> (<em>dt.datetime</em>) – query end date</p></li>
+<li><p><strong>sensors</strong> (<em>list</em>) – list of the numeric sensor codes</p></li>
+<li><p><strong>duration</strong> (<em>str</em>) – interval code for timeseries data (ex: ‘H’)</p></li>
+<li><p><strong>filename</strong> (<em>str</em>) – optional filename for locally saving data</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the queried timeseries as a DataFrame</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>df (pandas.DataFrame)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_raw_station_json">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_raw_station_json</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_raw_station_json" title="Permalink to this definition"></a></dt>
+<dd><p>Use CDEC JSON query URL to download available data.  Optional <cite>filename</cite> argument
+specifies custom file location for download of validated JSON records.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p></li>
+<li><p><strong>start</strong> (<em>dt.datetime</em>) – query start date</p></li>
+<li><p><strong>end</strong> (<em>dt.datetime</em>) – query end date</p></li>
+<li><p><strong>sensors</strong> (<em>list</em>) – list of the numeric sensor codes</p></li>
+<li><p><strong>duration</strong> (<em>str</em>) – interval code for timeseries data (ex: ‘H’)</p></li>
+<li><p><strong>filename</strong> (<em>str</em>) – optional filename for locally saving data</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the queried timeseries as JSON</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (str)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_reservoir_metadata">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_reservoir_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_reservoir_metadata" title="Permalink to this definition"></a></dt>
+<dd><p>get the gage meta data and datum, monitor/flood/danger stage information</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the CDEC station metadata, stored as key, value pairs</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>info (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_sensor_frame">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_sensor_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_sensor_frame" title="Permalink to this definition"></a></dt>
+<dd><p>return a pandas DataFrame of <cite>station</cite> data for a particular sensor, filtered
+by <cite>duration</cite> and <cite>start</cite> and <cite>end</cite> dates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p></li>
+<li><p><strong>start</strong> (<em>dt.datetime</em>) – query start date</p></li>
+<li><p><strong>end</strong> (<em>dt.datetime</em>) – query end date</p></li>
+<li><p><strong>sensor</strong> (<em>str</em>) – the numeric sensor code</p></li>
+<li><p><strong>duration</strong> (<em>str</em>) – interval code for timeseries data (ex: ‘H’)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the queried timeseries for a single sensor as a DataFrame</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>df (pandas.DataFrame)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_station_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_station_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_station_data" title="Permalink to this definition"></a></dt>
+<dd><p>General purpose function for returning a pandas DataFrame for all available
+data for CDEC <cite>station</cite> in the given time window, with optional <cite>duration</cite> argument.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p></li>
+<li><p><strong>start</strong> (<em>dt.datetime</em>) – query start date</p></li>
+<li><p><strong>end</strong> (<em>dt.datetime</em>) – query end date</p></li>
+<li><p><strong>sensors</strong> (<em>list</em>) – list of the numeric sensor codes</p></li>
+<li><p><strong>duration</strong> (<em>str</em>) – interval code for timeseries data (ex: ‘H’)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the queried timeseries as a DataFrame</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>df (pandas.DataFrame)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_station_metadata">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_station_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_geojson</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_station_metadata" title="Permalink to this definition"></a></dt>
+<dd><p>get the gage meta data and datum, monitor/flood/danger stage information</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the CDEC station metadata, stored as key, value pairs</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>info (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_station_sensors">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_station_sensors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_station_sensors" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a <cite>dict</cite> of the available sensors for <cite>station</cite> for each duration in window
+defined by <cite>start</cite> and <cite>end</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p></li>
+<li><p><strong>start</strong> (<em>dt.datetime</em>) – query start date</p></li>
+<li><p><strong>end</strong> (<em>dt.datetime</em>) – query end date</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the available sensors for the station in this window</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>sensors (list)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.cdec.queries.get_station_url">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.cdec.queries.</span></span><span class="sig-name descname"><span class="pre">get_station_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'CSV'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sensors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.cdec.queries.get_station_url" title="Permalink to this definition"></a></dt>
+<dd><p>Generate URL for CDEC station query for CSV- or JSON-formatted data</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>if no start/end supplied, then ‘H’ defaults to last day of data</dt><dd><p>‘D’ defaults to last month of data
+‘M’ defaults to last year of data</p>
+</dd>
+</dl>
+</li>
+<li><p>currently start and end are required arguments</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>station</strong> (<em>str</em>) – the 3-letter CDEC station ID</p></li>
+<li><p><strong>start</strong> (<em>dt.datetime</em>) – query start date</p></li>
+<li><p><strong>end</strong> (<em>dt.datetime</em>) – query end date</p></li>
+<li><p><strong>data_format</strong> (<em>str</em>) – the CSV or JSON data format</p></li>
+<li><p><strong>sensors</strong> (<em>list</em>) – list of the numeric sensor codes</p></li>
+<li><p><strong>duration</strong> (<em>str</em>) – interval code for timeseries data (ex: ‘H’)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the CDEC query URL</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>url (str)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+<span class="target" id="module-collect.dwr.errors"></span><section id="collect-dwr-errors">
+<h2>collect.dwr.errors<a class="headerlink" href="#collect-dwr-errors" title="Permalink to this headline"></a></h2>
+<p>exceptions</p>
+<dl class="py exception">
+<dt class="sig sig-object py" id="collect.dwr.errors.B120SourceError">
+<em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">collect.dwr.errors.</span></span><span class="sig-name descname"><span class="pre">B120SourceError</span></span><a class="headerlink" href="#collect.dwr.errors.B120SourceError" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+<span class="target" id="module-collect.dwr.info"></span><section id="collect-dwr-info">
+<h2>collect.dwr.info<a class="headerlink" href="#collect-dwr-info" title="Permalink to this headline"></a></h2>
+<p>links</p>
+</section>
+<span class="target" id="module-collect.dwr.swp"></span><section id="collect-dwr-swp">
+<h2>collect.dwr.swp<a class="headerlink" href="#collect-dwr-swp" title="Permalink to this headline"></a></h2>
+<p>access select DWR delta conditions PDFs and State Water Project files</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.swp.get_barker_slough_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.swp.</span></span><span class="sig-name descname"><span class="pre">get_barker_slough_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.swp.get_barker_slough_data" title="Permalink to this definition"></a></dt>
+<dd><p>fetch and return SWP OCO’s Barker Slough Flows (weekly) report</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>report</strong> (<em>str</em>) – designates which report to retrieve</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the report contents and metadata</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.swp.get_delta_daily_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.swp.</span></span><span class="sig-name descname"><span class="pre">get_delta_daily_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">export_as</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'dict'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.swp.get_delta_daily_data" title="Permalink to this definition"></a></dt>
+<dd><p>fetch and return SWP OCO’s daily delta operations report</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>export_as</strong> (<em>str</em>) – designates which format to use for returned data</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the report contents and metadata</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.swp.get_oco_tabular_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.swp.</span></span><span class="sig-name descname"><span class="pre">get_oco_tabular_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">report</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.swp.get_oco_tabular_data" title="Permalink to this definition"></a></dt>
+<dd><p>support for Hydrologic Conditions Summary (daily) and Miscellaneous Monitoring Data (daily)
+reports; combines multi-page reporting into single date-indexed dataframe</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>report</strong> (<em>str</em>) – designates which report to retrieve</p></li>
+<li><p><strong>filename</strong> (<em>str</em>) – optional filename (.txt) for raw report export</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the string contents of the PDF (preserves whitespace)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>content (str)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.swp.get_raw_text">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.swp.</span></span><span class="sig-name descname"><span class="pre">get_raw_text</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">report</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">preserve_white_space</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.swp.get_raw_text" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filename</strong> (<em>str</em>) – optional filename (.txt) for raw report export</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the string contents of the PDF (preserves whitespace)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>content (str)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.swp.get_report_catalog">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.swp.</span></span><span class="sig-name descname"><span class="pre">get_report_catalog</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">console</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.swp.get_report_catalog" title="Permalink to this definition"></a></dt>
+<dd><p>prints list of available SWP report names to console
+<a class="reference external" href="https://water.ca.gov/Programs/State-Water-Project/Operations-and-Maintenance/Operations-and-Delta-Status">https://water.ca.gov/Programs/State-Water-Project/Operations-and-Maintenance/Operations-and-Delta-Status</a>
+:param console: whether to print catalog to console
+:type console: bool</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>nested dictionary of report names and associated URLs</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>catalog (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.swp.get_report_url">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.swp.</span></span><span class="sig-name descname"><span class="pre">get_report_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">report</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.swp.get_report_url" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>report</strong> (<em>str</em>) – designates which report to retrieve</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the path to the PDF report</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>url (str)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<span class="target" id="module-collect.dwr.wsi"></span><section id="collect-dwr-wsi">
+<h2>collect.dwr.wsi<a class="headerlink" href="#collect-dwr-wsi" title="Permalink to this headline"></a></h2>
+<p>access DWR water supply index data</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.wsi.clean_fwf_df">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.wsi.</span></span><span class="sig-name descname"><span class="pre">clean_fwf_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">table_text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_spec</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">header</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skiprows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.wsi.clean_fwf_df" title="Permalink to this definition"></a></dt>
+<dd><p>write text representing table to string buffer and parse as fixed-width
+file; write results to</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.wsi.get_wsi_data">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.wsi.</span></span><span class="sig-name descname"><span class="pre">get_wsi_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.wsi.get_wsi_data" title="Permalink to this definition"></a></dt>
+<dd><p>Water Supply Index Info</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.dwr.wsi.get_wsi_forecast">
+<span class="sig-prename descclassname"><span class="pre">collect.dwr.wsi.</span></span><span class="sig-name descname"><span class="pre">get_wsi_forecast</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#collect.dwr.wsi.get_wsi_forecast" title="Permalink to this definition"></a></dt>
+<dd><p><a class="reference external" href="http://cdec.water.ca.gov/reportapp/javareports?name=wsi">http://cdec.water.ca.gov/reportapp/javareports?name=wsi</a></p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cnrfc.html" class="btn btn-neutral float-left" title="collect.cnrfc" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="nid.html" class="btn btn-neutral float-right" title="collect.nid" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MBK Engineers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>collect.cnrfc &mdash; collect 0.1 documentation</title>
+      <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../static/documentation_options.js"></script>
+        <script src="../static/jquery.js"></script>
+        <script src="../static/underscore.js"></script>
+        <script src="../static/doctools.js"></script>
+    <script src="../static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="collect.dwr" href="dwr.html" />
+    <link rel="prev" title="collect.alert" href="alert.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> collect
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#project-source-code">Project Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#contributing">Contributing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#updating-documentation">Updating Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Setup instructions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#create-a-virtual-environment">Create a virtual environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#download-source-code">Download source code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#install-collect">Install <code class="docutils literal notranslate"><span class="pre">collect</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#updating-documentation">Updating Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#configure-package-variables">Configure package variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#namespace">Namespace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#adding-new-modules">Adding new modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Example usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">collect</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alert.html">collect.alert</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="alert.html#collect-alert-alert">collect.alert.alert</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">collect.cnrfc</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#collect-cnrfc-cnrfc">collect.cnrfc.cnrfc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#collect-cnrfc-gages">collect.cnrfc.gages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#collect-cnrfc-utilities">collect.cnrfc.utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="dwr.html">collect.dwr</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-b120">collect.dwr.b120</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-casgem">collect.dwr.casgem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-cawdl-cawdl">collect.dwr.cawdl.cawdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-cdec">collect.dwr.cdec</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="dwr.html#collect-dwr-cdec-queries">collect.dwr.cdec.queries</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-errors">collect.dwr.errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-info">collect.dwr.info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-swp">collect.dwr.swp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-wsi">collect.dwr.wsi</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nid.html">collect.nid</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nid.html#collect-nid-nid">collect.nid.nid</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usace.html">collect.usace</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usace.html#collect-usace-wcds">collect.usace.wcds</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usgs.html">collect.usgs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usgs.html#collect-usgs-usgs">collect.usgs.usgs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">collect.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="utils.html#collect-utils-utils">collect.utils.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cvo.html">collect.cvo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cvo.html#collect-cvo-cvo">collect.cvo.cvo</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">collect</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">collect</a> &raquo;</li>
+      <li>collect.cnrfc</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../sources/reference/cnrfc.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <span class="target" id="module-collect.cnrfc"></span><section id="collect-cnrfc">
+<h1>collect.cnrfc<a class="headerlink" href="#collect-cnrfc" title="Permalink to this headline"></a></h1>
+<p>access CNRFC forecasts</p>
+<span class="target" id="module-collect.cnrfc.cnrfc"></span><section id="collect-cnrfc-cnrfc">
+<h2>collect.cnrfc.cnrfc<a class="headerlink" href="#collect-cnrfc-cnrfc" title="Permalink to this headline"></a></h2>
+<p>access CNRFC forecasts</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.esp_trace_analysis_wrapper">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">esp_trace_analysis_wrapper</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.esp_trace_analysis_wrapper" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_data_report_part_8">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_data_report_part_8</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_data_report_part_8" title="Permalink to this definition"></a></dt>
+<dd><p><a class="reference external" href="https://www.wrh.noaa.gov/cnrfc/rsa_getprod.php?prod=RNORR8RSA&amp;wfo=cnrfc&amp;version=0">https://www.wrh.noaa.gov/cnrfc/rsa_getprod.php?prod=RNORR8RSA&amp;wfo=cnrfc&amp;version=0</a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_deterministic_forecast">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_deterministic_forecast</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">truncate_historical</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_deterministic_forecast" title="Permalink to this definition"></a></dt>
+<dd><p>Adapted from SAFCA portal project
+—
+reads the url and returns a pandas dataframe from a file or the CNRFC url
+cnrfc_id:  CNRFC station id (5 letter id) (e.g. FOLC1)
+convert CSV data to DataFrame, separating historical from forecast inflow series</p>
+<dl class="simple">
+<dt>Note: as of March 2022, deterministic forecasts retrieved with the graphicalRVF or</dt><dd><p>graphicalRelease URLs return CSVs of 3 different formats with headers that
+may also include stage information</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cnrfc_id</strong> (<em>str</em>) – the forecast location ID</p></li>
+<li><p><strong>truncate_historical</strong> (<em>bool</em>) – flag for whether to trim historical timeseries from record</p></li>
+<li><p><strong>release</strong> (<em>bool</em>) – flag for whether to query deterministic release forecast</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary result with dataframe containing forecast data and additional metadata</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_deterministic_forecast_watershed">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_deterministic_forecast_watershed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">watershed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_string</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acre_feet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pdt_convert</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_pdt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_deterministic_forecast_watershed" title="Permalink to this definition"></a></dt>
+<dd><p>download the deterministic forecasts for an entire watershed, as linked on
+<a class="reference external" href="https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php">https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>watershed</strong> (<em>str</em>) – the string identifier for the watershed</p></li>
+<li><p><strong>date_string</strong> (<em>str</em>) – date as a string in format YYYYMMDDHH</p></li>
+<li><p><strong>acre_feet</strong> (<em>bool</em>) – flag to convert flow forecasts to volumes in acre-feet</p></li>
+<li><p><strong>pdt_convert</strong> (<em>bool</em>) – flag to convert to Pacific timezone</p></li>
+<li><p><strong>as_pdt</strong> (<em>bool</em>) – localize the data in Pacific timezone</p></li>
+<li><p><strong>cnrfc_id</strong> (<em>str</em>) – optional single forecast location for filtering</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>resulting dictionary with data key mapping to dataframe and info containing query metadata</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_first_forecast_ordinate">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_first_forecast_ordinate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_first_forecast_ordinate" title="Permalink to this definition"></a></dt>
+<dd><p>return the first date of the forecast (GMT) as datetime object</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_forecast">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_forecast</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acre_feet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pdt_convert</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_pdt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_forecast" title="Permalink to this definition"></a></dt>
+<dd><p>ported from SAFCA Portal project</p>
+<p>The hourly ensemble traces (product 4) are available at this URL pattern for certain forecast points
+<a class="reference external" href="https://www.cnrfc.noaa.gov/ensembleProduct.php?id=XXXC1&amp;prodID=4">https://www.cnrfc.noaa.gov/ensembleProduct.php?id=XXXC1&amp;prodID=4</a></p>
+<p>The csv is directly available at
+<a class="reference external" href="https://www.cnrfc.noaa.gov/csv/XXXC1_hefs_csv_XXXXX.csv">https://www.cnrfc.noaa.gov/csv/XXXC1_hefs_csv_XXXXX.csv</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cnrfc_id</strong> (<em>str</em>) – the 5-character CNRFC forecast location code</p></li>
+<li><p><strong>duration</strong> (<em>str</em>) – forecast data timestep (hourly or daily)</p></li>
+<li><p><strong>acre_feet</strong> (<em>bool</em>) – flag to convert flows to volumes</p></li>
+<li><p><strong>pdf_convert</strong> (<em>bool</em>) – flag to convert from UTC/GMT to Pacific timezone</p></li>
+<li><p><strong>as_pdt</strong> (<em>bool</em>) – flag to parse datetimes assuming Pacific timezone (no conversion from UTC)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary with data (dataframe) entry and info metadata dict</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_forecast_watershed">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_forecast_watershed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">watershed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_string</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">acre_feet</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pdt_convert</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_pdt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_forecast_watershed" title="Permalink to this definition"></a></dt>
+<dd><dl class="simple">
+<dt>from: get_watershed_ensemble_issue_time</dt><dd><p>get_watershed_ensemble_daily</p>
+</dd>
+</dl>
+<p>download seasonal outlook for the watershed as zipped file, unzip…</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>watershed</strong> (<em>str</em>) – the forecast group identifier</p></li>
+<li><p><strong>duration</strong> (<em>str</em>) – forecast data timestep (hourly or daily)</p></li>
+<li><p><strong>date_string</strong> (<em>str</em>) – the forecast issuance date as a YYYYMMDDHH formatted string</p></li>
+<li><p><strong>acre_feet</strong> (<em>bool</em>) – flag to convert flows to volumes</p></li>
+<li><p><strong>pdf_convert</strong> (<em>bool</em>) – flag to convert from UTC/GMT to Pacific timezone</p></li>
+<li><p><strong>as_pdt</strong> (<em>bool</em>) – flag to parse datetimes assuming Pacific timezone (no conversion from UTC)</p></li>
+<li><p><strong>cnrfc_id</strong> (<em>str</em>) – the 5-character CNRFC forecast location code</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary with data (dataframe) entry and info metadata dict</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_1">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_1" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_10">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_10</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_10" title="Permalink to this definition"></a></dt>
+<dd><p>Water Year Accumulated Volume Plot - chart data available through highchart download CSV api
+Tabular Monthly Volume Accumulation</p>
+<p>&#64;narlesky TO DO - recreate graphic</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_11">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_11</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_11" title="Permalink to this definition"></a></dt>
+<dd><p>Multi-Year Accumulated Volume Plot - chart data available through highchart download CSV api
+Tabular Monthly Volume Accumulation</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_12">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_12</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_12" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_13">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_13</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_13" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_2">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_2" title="Permalink to this definition"></a></dt>
+<dd><p><a class="reference external" href="http://www.cnrfc.noaa.gov/ensembleProduct.php?id=XXXC1&amp;prodID=2">http://www.cnrfc.noaa.gov/ensembleProduct.php?id=XXXC1&amp;prodID=2</a></p>
+<p>(alt text source: <a class="reference external" href="https://www.cnrfc.noaa.gov/awipsProducts/RNOWRK10D.php">https://www.cnrfc.noaa.gov/awipsProducts/RNOWRK10D.php</a>)</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_3">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_3</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_3" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_5">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_5</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_5" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_6">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_6</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_6" title="Permalink to this definition"></a></dt>
+<dd><p>Monthly exceedance volume data is presented in tabular format or plotted as a barchart at
+the ensemble product page</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_ensemble_product_url">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_ensemble_product_url</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">product_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_format</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_ensemble_product_url" title="Permalink to this definition"></a></dt>
+<dd><p>return the URL for the product display</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_forecast_meta_deterministic">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_forecast_meta_deterministic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">first_ordinate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">release</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_forecast_meta_deterministic" title="Permalink to this definition"></a></dt>
+<dd><p>Get issuance time from the deterministic inflow forecast page</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cnrfc_id</strong> (<em>str</em>) – the 5-character CNRFC forecast location code</p></li>
+<li><p><strong>first_ordinate</strong> (<em>bool</em>) – flag for whether to extract first forecast timestep</p></li>
+<li><p><strong>release</strong> (<em>bool</em>) – flag for whether to query deterministic release forecast</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>tuple of forecast issuance time, next issuance time (as datetimes) and plot_type (None)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(tuple)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_rating_curve">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_rating_curve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_rating_curve" title="Permalink to this definition"></a></dt>
+<dd><p>returns paired flow and stage data parsed from the text of CNRFC rating curve JavaScript files</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>cnrfc_id</strong> (<em>str</em>) – forecast point (such as FOLC1)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>query result dictionary with ‘data’ and ‘info’ keys</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_seasonal_trend_tabular">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_seasonal_trend_tabular</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">water_year</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_seasonal_trend_tabular" title="Permalink to this definition"></a></dt>
+<dd><p>CNRFC Ensemble Product 7, includes Apr-Jul Forecast 90%, 75%, 50%, 25%, and 10% Exceedance, NWS Apr-Jul Forecast,
+Raw Obs Apr-Jul To Date, Raw Avg Apr-Jul To Date, Raw Daily Observation
+adapted from data accessed in py_water_supply_reporter.py
+example url: <a class="reference external" href="https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=HLEC1&amp;prodID=7&amp;year=2013">https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=HLEC1&amp;prodID=7&amp;year=2013</a>
+:param cnrfc_id: forecast point (such as FOLC1)
+:type cnrfc_id: str
+:param water_year: water year for forecast
+:type water_year: str/int</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>data and info</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_water_year_trend_tabular">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_water_year_trend_tabular</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">water_year</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_water_year_trend_tabular" title="Permalink to this definition"></a></dt>
+<dd><p>CNRFC Ensemble Product 9, which includes WY Forecast 90% Exceedance, 75% Exceedance, 50% Exceedance, 25% Exceedance,
+10% Exceedance, Raw WY To Date Observation, Raw WY To Date Average, Raw Daily Observation
+#example url: <a class="reference external" href="https://www.cnrfc.noaa.gov/ensembleProductTabular.php">https://www.cnrfc.noaa.gov/ensembleProductTabular.php</a>?id=FOLC1&amp;prodID=9&amp;year=2022#
+:param cnrfc_id: forecast point (such as FOLC1)
+:type cnrfc_id: str
+:param water_year: water year for forecast
+:type water_year: str/int</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>data and info</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_watershed">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_watershed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cnrfc_id</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_watershed" title="Permalink to this definition"></a></dt>
+<dd><p>get associated hydrologic region for CNRFC forecast location</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.cnrfc.get_watershed_forecast_issue_time">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.cnrfc.</span></span><span class="sig-name descname"><span class="pre">get_watershed_forecast_issue_time</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">duration</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">watershed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_string</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deterministic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.cnrfc.get_watershed_forecast_issue_time" title="Permalink to this definition"></a></dt>
+<dd><p>get “last modified” date/time stamp from CNRFC watershed ensemble product table</p>
+</dd></dl>
+
+</section>
+<span class="target" id="module-collect.cnrfc.gages"></span><section id="collect-cnrfc-gages">
+<h2>collect.cnrfc.gages<a class="headerlink" href="#collect-cnrfc-gages" title="Permalink to this headline"></a></h2>
+<p>gages and watershed info for CNRFC forecast points</p>
+</section>
+<span class="target" id="module-collect.cnrfc.utilities"></span><section id="collect-cnrfc-utilities">
+<h2>collect.cnrfc.utilities<a class="headerlink" href="#collect-cnrfc-utilities" title="Permalink to this headline"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.utilities.get_ranked_members">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.utilities.</span></span><span class="sig-name descname"><span class="pre">get_ranked_members</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">duration</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'H'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exceedences</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[10,</span> <span class="pre">50,</span> <span class="pre">90]</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.utilities.get_ranked_members" title="Permalink to this definition"></a></dt>
+<dd><p>assign max envelope, min envelope, and 5%, 10%, 25%, 50% exceedence members
+horizon (days) | int | 5, 30</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>pandas.DataFrame</em>) – description</p></li>
+<li><p><strong>duration</strong> (<em>str</em>) – description</p></li>
+<li><p><strong>horizon</strong> (<em>int</em>) – description</p></li>
+<li><p><strong>exceedences</strong> (<em>list</em>) – description</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.cnrfc.utilities.rank_by_peak_average_flow">
+<span class="sig-prename descclassname"><span class="pre">collect.cnrfc.utilities.</span></span><span class="sig-name descname"><span class="pre">rank_by_peak_average_flow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">horizon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exceedences</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.cnrfc.utilities.rank_by_peak_average_flow" title="Permalink to this definition"></a></dt>
+<dd><p>placeholder</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>pandas.DataFrame</em>) – description</p></li>
+<li><p><strong>horizon</strong> (<em>str</em>) – description</p></li>
+<li><p><strong>exceedences</strong> (<em>list</em>) – description</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(list)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="alert.html" class="btn btn-neutral float-left" title="collect.alert" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="dwr.html" class="btn btn-neutral float-right" title="collect.dwr" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MBK Engineers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script> 
+
+</body>
+</html>

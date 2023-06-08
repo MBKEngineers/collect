@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to the collect documentation! &mdash; collect 0.1 documentation</title>
+      <link rel="stylesheet" href="static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="static/css/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="static/documentation_options.js"></script>
+        <script src="static/jquery.js"></script>
+        <script src="static/underscore.js"></script>
+        <script src="static/doctools.js"></script>
+    <script src="static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="About collect" href="about.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="#" class="icon icon-home"> collect
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="about.html#project-source-code">Project Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="about.html#contributing">Contributing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="about.html#updating-documentation">Updating Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Setup instructions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#create-a-virtual-environment">Create a virtual environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#download-source-code">Download source code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#install-collect">Install <code class="docutils literal notranslate"><span class="pre">collect</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#updating-documentation">Updating Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#configure-package-variables">Configure package variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#namespace">Namespace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#adding-new-modules">Adding new modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Example usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="reference/alert.html">collect.alert</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/alert.html#collect-alert-alert">collect.alert.alert</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/cnrfc.html">collect.cnrfc</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/cnrfc.html#collect-cnrfc-cnrfc">collect.cnrfc.cnrfc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/cnrfc.html#collect-cnrfc-gages">collect.cnrfc.gages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/cnrfc.html#collect-cnrfc-utilities">collect.cnrfc.utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/dwr.html">collect.dwr</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-b120">collect.dwr.b120</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-casgem">collect.dwr.casgem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-cawdl-cawdl">collect.dwr.cawdl.cawdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-cdec">collect.dwr.cdec</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="reference/dwr.html#collect-dwr-cdec-queries">collect.dwr.cdec.queries</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-errors">collect.dwr.errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-info">collect.dwr.info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-swp">collect.dwr.swp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-wsi">collect.dwr.wsi</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/nid.html">collect.nid</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/nid.html#collect-nid-nid">collect.nid.nid</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/usace.html">collect.usace</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/usace.html#collect-usace-wcds">collect.usace.wcds</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/usgs.html">collect.usgs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/usgs.html#collect-usgs-usgs">collect.usgs.usgs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/utils.html">collect.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/utils.html#collect-utils-utils">collect.utils.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/cvo.html">collect.cvo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/cvo.html#collect-cvo-cvo">collect.cvo.cvo</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">collect</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+      <li>Welcome to the collect documentation!</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="welcome-to-the-collect-documentation">
+<h1>Welcome to the collect documentation!<a class="headerlink" href="#welcome-to-the-collect-documentation" title="Permalink to this headline"></a></h1>
+</section>
+<section id="collect">
+<h1>collect<a class="headerlink" href="#collect" title="Permalink to this headline"></a></h1>
+<p>Web tools for public water resources data.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="about.html">About collect</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Setup instructions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Example usage</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="reference/alert.html">collect.alert</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/alert.html#collect-alert-alert">collect.alert.alert</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/cnrfc.html">collect.cnrfc</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/cnrfc.html#collect-cnrfc-cnrfc">collect.cnrfc.cnrfc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/cnrfc.html#collect-cnrfc-gages">collect.cnrfc.gages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/cnrfc.html#collect-cnrfc-utilities">collect.cnrfc.utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/dwr.html">collect.dwr</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-b120">collect.dwr.b120</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-casgem">collect.dwr.casgem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-cawdl-cawdl">collect.dwr.cawdl.cawdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-cdec">collect.dwr.cdec</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="reference/dwr.html#collect-dwr-cdec-queries">collect.dwr.cdec.queries</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-errors">collect.dwr.errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-info">collect.dwr.info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-swp">collect.dwr.swp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-wsi">collect.dwr.wsi</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/nid.html">collect.nid</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/nid.html#collect-nid-nid">collect.nid.nid</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/usace.html">collect.usace</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/usace.html#collect-usace-wcds">collect.usace.wcds</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/usgs.html">collect.usgs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/usgs.html#collect-usgs-usgs">collect.usgs.usgs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/utils.html">collect.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/utils.html#collect-utils-utils">collect.utils.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/cvo.html">collect.cvo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/cvo.html#collect-cvo-cvo">collect.cvo.cvo</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="about.html" class="btn btn-neutral float-right" title="About collect" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MBK Engineers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script> 
+
+</body>
+</html>

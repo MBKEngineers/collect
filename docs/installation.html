@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Setup instructions &mdash; collect 0.1 documentation</title>
+      <link rel="stylesheet" href="static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="static/css/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="static/documentation_options.js"></script>
+        <script src="static/jquery.js"></script>
+        <script src="static/underscore.js"></script>
+        <script src="static/doctools.js"></script>
+    <script src="static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="about.html" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Example usage" href="examples.html" />
+    <link rel="prev" title="About collect" href="about.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> collect
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="about.html">About collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="about.html#project-source-code">Project Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="about.html#contributing">Contributing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="about.html#updating-documentation">Updating Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Setup instructions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#create-a-virtual-environment">Create a virtual environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#download-source-code">Download source code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-collect">Install <code class="docutils literal notranslate"><span class="pre">collect</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#updating-documentation">Updating Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configure-package-variables">Configure package variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#namespace">Namespace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-new-modules">Adding new modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Example usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="reference/index.html">collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="reference/alert.html">collect.alert</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/alert.html#collect-alert-alert">collect.alert.alert</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/cnrfc.html">collect.cnrfc</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/cnrfc.html#collect-cnrfc-cnrfc">collect.cnrfc.cnrfc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/cnrfc.html#collect-cnrfc-gages">collect.cnrfc.gages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/cnrfc.html#collect-cnrfc-utilities">collect.cnrfc.utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/dwr.html">collect.dwr</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-b120">collect.dwr.b120</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-casgem">collect.dwr.casgem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-cawdl-cawdl">collect.dwr.cawdl.cawdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-cdec">collect.dwr.cdec</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="reference/dwr.html#collect-dwr-cdec-queries">collect.dwr.cdec.queries</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-errors">collect.dwr.errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-info">collect.dwr.info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-swp">collect.dwr.swp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="reference/dwr.html#collect-dwr-wsi">collect.dwr.wsi</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/nid.html">collect.nid</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/nid.html#collect-nid-nid">collect.nid.nid</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/usace.html">collect.usace</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/usace.html#collect-usace-wcds">collect.usace.wcds</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/usgs.html">collect.usgs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/usgs.html#collect-usgs-usgs">collect.usgs.usgs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/utils.html">collect.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/utils.html#collect-utils-utils">collect.utils.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="reference/cvo.html">collect.cvo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="reference/cvo.html#collect-cvo-cvo">collect.cvo.cvo</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">collect</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Setup instructions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="sources/installation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="setup-instructions">
+<h1>Setup instructions<a class="headerlink" href="#setup-instructions" title="Permalink to this headline"></a></h1>
+<section id="create-a-virtual-environment">
+<h2>Create a virtual environment<a class="headerlink" href="#create-a-virtual-environment" title="Permalink to this headline"></a></h2>
+<p>Create a virtual environment, specifying Python version &gt;=3.6:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python -m venv ~/.virtualenvs/collect
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This depends on the location/name of your Python 3 executable. On windows, check the location of your Python installation with <code class="docutils literal notranslate"><span class="pre">where</span></code>. On MacOS, use <code class="docutils literal notranslate"><span class="pre">which</span></code>.</p>
+</div>
+</section>
+<section id="download-source-code">
+<h2>Download source code<a class="headerlink" href="#download-source-code" title="Permalink to this headline"></a></h2>
+<p>Download the project source code from <a class="reference external" href="https://github.com/MBKEngineers/collect.git">https://github.com/MBKEngineers/collect.git</a>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/MBKEngineers/collect.git
+</pre></div>
+</div>
+</section>
+<section id="install-collect">
+<h2>Install <code class="docutils literal notranslate"><span class="pre">collect</span></code><a class="headerlink" href="#install-collect" title="Permalink to this headline"></a></h2>
+<p>Install <code class="docutils literal notranslate"><span class="pre">collect</span></code> to the active virtual environment as a Python package available for local use.  Use the <code class="docutils literal notranslate"><span class="pre">setup.py</span></code> file to install <code class="docutils literal notranslate"><span class="pre">collect</span></code> to the active virtual environment. Using the <code class="docutils literal notranslate"><span class="pre">develop</span></code> flag ensures any changes made to your local repository propagate to the virtual environment. To freeze the version of <code class="docutils literal notranslate"><span class="pre">collect</span></code> installed to the environment, use the <code class="docutils literal notranslate"><span class="pre">install</span></code> flag.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd collect
+$ python setup.py develop
+</pre></div>
+</div>
+<p>Or, install package requirements to the active virtual environment with <code class="docutils literal notranslate"><span class="pre">pip</span></code> or <code class="docutils literal notranslate"><span class="pre">pip3</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ cd collect
+$ python -m pip install -e .
+</pre></div>
+</div>
+</section>
+<section id="updating-documentation">
+<h2>Updating Documentation<a class="headerlink" href="#updating-documentation" title="Permalink to this headline"></a></h2>
+<p>The collect module uses Sphinx to generate documentation from doc-strings in the project. This dependency is included as an extra. To update and access documentation files, make sure that Sphinx is installed:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ python -m pip install -e &quot;.[docs]&quot;
+</pre></div>
+</div>
+</section>
+<section id="configure-package-variables">
+<h2>Configure package variables<a class="headerlink" href="#configure-package-variables" title="Permalink to this headline"></a></h2>
+<p>Create a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file containing the path to installed ChromeDriver for use with Selenium. If accessing password-protected data, include your credentials in the <code class="docutils literal notranslate"><span class="pre">.env</span></code> file.:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">CHROMEDRIVER</span><span class="o">=/</span><span class="n">usr</span><span class="o">/</span><span class="n">local</span><span class="o">/</span><span class="nb">bin</span><span class="o">/</span><span class="n">chromedriver</span>
+<span class="n">CNRFC_USER</span><span class="o">=</span>
+<span class="n">CNRFC_PASSWORD</span><span class="o">=</span>
+<span class="n">WATERBOARDS_USER</span><span class="o">=</span>
+<span class="n">WATERBOARDS_PASSWORD</span><span class="o">=</span>
+</pre></div>
+</div>
+</section>
+<section id="namespace">
+<h2>Namespace<a class="headerlink" href="#namespace" title="Permalink to this headline"></a></h2>
+<p>Note, there is one other Python package on PyPi named  <code class="docutils literal notranslate"><span class="pre">collect</span></code>.  However, it is not maintained and is dated 2011, so not expecting MBK codebase to use that tool.</p>
+</section>
+<section id="adding-new-modules">
+<h2>Adding new modules<a class="headerlink" href="#adding-new-modules" title="Permalink to this headline"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">collect</span></code> now includes a command line interface for starting a new module called <code class="docutils literal notranslate"><span class="pre">collect-start</span></code>. Initialize a new module from a template with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ collect-start modulename
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="about.html" class="btn btn-neutral float-left" title="About collect" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples.html" class="btn btn-neutral float-right" title="Example usage" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MBK Engineers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script> 
+
+</body>
+</html>

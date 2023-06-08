@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>collect.utils &mdash; collect 0.1 documentation</title>
+      <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../static/documentation_options.js"></script>
+        <script src="../static/jquery.js"></script>
+        <script src="../static/underscore.js"></script>
+        <script src="../static/doctools.js"></script>
+    <script src="../static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="collect.cvo" href="cvo.html" />
+    <link rel="prev" title="collect.usgs" href="usgs.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> collect
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#project-source-code">Project Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#contributing">Contributing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#updating-documentation">Updating Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Setup instructions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#create-a-virtual-environment">Create a virtual environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#download-source-code">Download source code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#install-collect">Install <code class="docutils literal notranslate"><span class="pre">collect</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#updating-documentation">Updating Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#configure-package-variables">Configure package variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#namespace">Namespace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#adding-new-modules">Adding new modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Example usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">collect</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alert.html">collect.alert</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="alert.html#collect-alert-alert">collect.alert.alert</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cnrfc.html">collect.cnrfc</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-cnrfc">collect.cnrfc.cnrfc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-gages">collect.cnrfc.gages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-utilities">collect.cnrfc.utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="dwr.html">collect.dwr</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-b120">collect.dwr.b120</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-casgem">collect.dwr.casgem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-cawdl-cawdl">collect.dwr.cawdl.cawdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-cdec">collect.dwr.cdec</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="dwr.html#collect-dwr-cdec-queries">collect.dwr.cdec.queries</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-errors">collect.dwr.errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-info">collect.dwr.info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-swp">collect.dwr.swp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-wsi">collect.dwr.wsi</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nid.html">collect.nid</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nid.html#collect-nid-nid">collect.nid.nid</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usace.html">collect.usace</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usace.html#collect-usace-wcds">collect.usace.wcds</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usgs.html">collect.usgs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usgs.html#collect-usgs-usgs">collect.usgs.usgs</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">collect.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#collect-utils-utils">collect.utils.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cvo.html">collect.cvo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cvo.html#collect-cvo-cvo">collect.cvo.cvo</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">collect</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">collect</a> &raquo;</li>
+      <li>collect.utils</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../sources/reference/utils.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <p>collect.utils</p>
+<span class="target" id="module-collect.utils"></span><section id="collect-utils">
+<h1>collect.utils<a class="headerlink" href="#collect-utils" title="Permalink to this headline"></a></h1>
+<p>The utilities module of MBK Engineers’ collect project</p>
+<span class="target" id="module-collect.utils.filters"></span><dl class="py function">
+<dt class="sig sig-object py" id="collect.utils.filters.filter_peaks">
+<span class="sig-prename descclassname"><span class="pre">collect.utils.filters.</span></span><span class="sig-name descname"><span class="pre">filter_peaks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.utils.filters.filter_peaks" title="Permalink to this definition"></a></dt>
+<dd><p>identify local maxima that are measurement or data entry faults and replace with None</p>
+</dd></dl>
+
+<span class="target" id="module-collect.utils.utils"></span><section id="collect-utils-utils">
+<h2>collect.utils.utils<a class="headerlink" href="#collect-utils-utils" title="Permalink to this headline"></a></h2>
+<p>The utilities module of MBK Engineers’ collect project</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.utils.utils.clean_fixed_width_headers">
+<span class="sig-prename descclassname"><span class="pre">collect.utils.utils.</span></span><span class="sig-name descname"><span class="pre">clean_fixed_width_headers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">columns</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.utils.utils.clean_fixed_width_headers" title="Permalink to this definition"></a></dt>
+<dd><p>for dataframe column headers defined as multi-level index,
+collapsed headers into human-readable names</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.utils.utils.get_session_response">
+<span class="sig-prename descclassname"><span class="pre">collect.utils.utils.</span></span><span class="sig-name descname"><span class="pre">get_session_response</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.utils.utils.get_session_response" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>url</strong> (<em>str</em>) – valid web URL</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>the response object with site content specified by URL</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(requests.models.Response)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.utils.utils.get_water_year">
+<span class="sig-prename descclassname"><span class="pre">collect.utils.utils.</span></span><span class="sig-name descname"><span class="pre">get_water_year</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datetime_structure</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.utils.utils.get_water_year" title="Permalink to this definition"></a></dt>
+<dd><p>Returns water year of current datetime object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>datetime_structure</strong> (<em>datetime.datetime</em>) – a Python datetime</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.utils.utils.get_web_status">
+<span class="sig-prename descclassname"><span class="pre">collect.utils.utils.</span></span><span class="sig-name descname"><span class="pre">get_web_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.utils.utils.get_web_status" title="Permalink to this definition"></a></dt>
+<dd><p>check status of a URL</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="usgs.html" class="btn btn-neutral float-left" title="collect.usgs" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="cvo.html" class="btn btn-neutral float-right" title="collect.cvo" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MBK Engineers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script> 
+
+</body>
+</html>

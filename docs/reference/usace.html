@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>collect.usace &mdash; collect 0.1 documentation</title>
+      <link rel="stylesheet" href="../static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../static/css/custom.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../static/documentation_options.js"></script>
+        <script src="../static/jquery.js"></script>
+        <script src="../static/underscore.js"></script>
+        <script src="../static/doctools.js"></script>
+    <script src="../static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="collect.usgs" href="usgs.html" />
+    <link rel="prev" title="collect.nid" href="nid.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> collect
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About collect</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#project-source-code">Project Source Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#contributing">Contributing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#updating-documentation">Updating Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Setup instructions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#create-a-virtual-environment">Create a virtual environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#download-source-code">Download source code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#install-collect">Install <code class="docutils literal notranslate"><span class="pre">collect</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#updating-documentation">Updating Documentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#configure-package-variables">Configure package variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#namespace">Namespace</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation.html#adding-new-modules">Adding new modules</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Example usage</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">collect</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="alert.html">collect.alert</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="alert.html#collect-alert-alert">collect.alert.alert</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cnrfc.html">collect.cnrfc</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-cnrfc">collect.cnrfc.cnrfc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-gages">collect.cnrfc.gages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="cnrfc.html#collect-cnrfc-utilities">collect.cnrfc.utilities</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="dwr.html">collect.dwr</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-b120">collect.dwr.b120</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-casgem">collect.dwr.casgem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-cawdl-cawdl">collect.dwr.cawdl.cawdl</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-cdec">collect.dwr.cdec</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="dwr.html#collect-dwr-cdec-queries">collect.dwr.cdec.queries</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-errors">collect.dwr.errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-info">collect.dwr.info</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-swp">collect.dwr.swp</a></li>
+<li class="toctree-l3"><a class="reference internal" href="dwr.html#collect-dwr-wsi">collect.dwr.wsi</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nid.html">collect.nid</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nid.html#collect-nid-nid">collect.nid.nid</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">collect.usace</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#collect-usace-wcds">collect.usace.wcds</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usgs.html">collect.usgs</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usgs.html#collect-usgs-usgs">collect.usgs.usgs</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">collect.utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="utils.html#collect-utils-utils">collect.utils.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="cvo.html">collect.cvo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="cvo.html#collect-cvo-cvo">collect.cvo.cvo</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">collect</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">collect</a> &raquo;</li>
+      <li>collect.usace</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../sources/reference/usace.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <p>collect.usace</p>
+<span class="target" id="module-collect.usace"></span><section id="collect-usace">
+<h1>collect.usace<a class="headerlink" href="#collect-usace" title="Permalink to this headline"></a></h1>
+<p>download data from the USACE Water Control Data System (WCDS)</p>
+<span class="target" id="module-collect.usace.wcds"></span><section id="collect-usace-wcds">
+<h2>collect.usace.wcds<a class="headerlink" href="#collect-usace-wcds" title="Permalink to this headline"></a></h2>
+<p>USACE Water Control Data System (WCDS)</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.usace.wcds.get_data">
+<span class="sig-prename descclassname"><span class="pre">collect.usace.wcds.</span></span><span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reservoir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'d'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clean_column_headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.usace.wcds.get_data" title="Permalink to this definition"></a></dt>
+<dd><p>TODO:  trim this to start and end
+Scrape water year operations data from reservoir page on USACE-SPK’s WCDS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reservoir</strong> (<em>str</em>) – three-letter reservoir code</p></li>
+<li><p><strong>start_time</strong> (<em>datetime.datetime</em>) – query start datetime</p></li>
+<li><p><strong>end_time</strong> (<em>datetime.datetime</em>) – query end datetime</p></li>
+<li><p><strong>interval</strong> (<em>str</em>) – data interval</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>query result dictionary with data and info keys</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.usace.wcds.get_release_report">
+<span class="sig-prename descclassname"><span class="pre">collect.usace.wcds.</span></span><span class="sig-name descname"><span class="pre">get_release_report</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reservoir</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.usace.wcds.get_release_report" title="Permalink to this definition"></a></dt>
+<dd><p>download release change data reports from <a class="reference external" href="https://www.spk-wc.usace.army.mil/reports/release_changes.html">https://www.spk-wc.usace.army.mil/reports/release_changes.html</a>
+each reservoir release change report is provided via email; as such, there is no one standard format
+for the timeseries of release changes; email content is provided in string format</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>reservoir</strong> (<em>str</em>) – three-letter reservoir code, lowercase</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary containing the release change email and other reservoir info</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.usace.wcds.get_reservoir_metadata">
+<span class="sig-prename descclassname"><span class="pre">collect.usace.wcds.</span></span><span class="sig-name descname"><span class="pre">get_reservoir_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reservoir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">water_year</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'d'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.usace.wcds.get_reservoir_metadata" title="Permalink to this definition"></a></dt>
+<dd><p>Retrieves website metadata from USACE-SPK’s WCDS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reservoir</strong> (<em>str</em>) – three-letter reservoir code; i.e. ‘fol’</p></li>
+<li><p><strong>water_year</strong> (<em>int</em>) – the water year</p></li>
+<li><p><strong>interval</strong> (<em>str</em>) – data interval; i.e. ‘d’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>query result dictionary</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.usace.wcds.get_water_year_data">
+<span class="sig-prename descclassname"><span class="pre">collect.usace.wcds.</span></span><span class="sig-name descname"><span class="pre">get_water_year_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reservoir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">water_year</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'d'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.usace.wcds.get_water_year_data" title="Permalink to this definition"></a></dt>
+<dd><p>Scrape water year operations data from Folsom entry on USACE-SPK’s WCDS.
+Note: times formatted as 2400 are assigned to 0000 of the next date. (hourly and daily)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reservoir</strong> (<em>str</em>) – three-letter reservoir code; i.e. ‘fol’</p></li>
+<li><p><strong>water_year</strong> (<em>int</em>) – the water year</p></li>
+<li><p><strong>interval</strong> (<em>str</em>) – data interval; i.e. ‘d’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>query result dictionary with ‘data’ and ‘info’ keys</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.usace.wcds.get_wcds_data">
+<span class="sig-prename descclassname"><span class="pre">collect.usace.wcds.</span></span><span class="sig-name descname"><span class="pre">get_wcds_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reservoir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_time</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interval</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'d'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clean_column_headers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#collect.usace.wcds.get_wcds_data" title="Permalink to this definition"></a></dt>
+<dd><p>alias for wcds.get_data function, to support backwards compatibility</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reservoir</strong> (<em>str</em>) – three-letter reservoir code</p></li>
+<li><p><strong>start_time</strong> (<em>datetime.datetime</em>) – query start datetime</p></li>
+<li><p><strong>end_time</strong> (<em>datetime.datetime</em>) – query end datetime</p></li>
+<li><p><strong>interval</strong> (<em>str</em>) – data interval</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>query result dictionary with data and info keys</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>result (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="collect.usace.wcds.get_wcds_reservoirs">
+<span class="sig-prename descclassname"><span class="pre">collect.usace.wcds.</span></span><span class="sig-name descname"><span class="pre">get_wcds_reservoirs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#collect.usace.wcds.get_wcds_reservoirs" title="Permalink to this definition"></a></dt>
+<dd><p>Corps and Section 7 Projects in California
+<a class="reference external" href="http://www.spk-wc.usace.army.mil/plots/california.html">http://www.spk-wc.usace.army.mil/plots/california.html</a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dataframe containing table of WCDS reservoirs</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>(pandas.DataFrame)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="nid.html" class="btn btn-neutral float-left" title="collect.nid" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="usgs.html" class="btn btn-neutral float-right" title="collect.usgs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, MBK Engineers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(false);
+      });
+  </script> 
+
+</body>
+</html>
