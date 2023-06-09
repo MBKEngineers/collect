@@ -493,6 +493,63 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
+def download_watershed_file(watershed, date_string, forecast_type, duration=None, path=None):
+    """
+    download short range ensemble, deterministic forecast, and seasonal outlook for the 
+    watershed as zipped file, unzip, save as csv to path
+
+    Arguments:
+        watershed (str): the forecast group identifier
+        date_string (str): the forecast issuance date as a YYYYMMDDHH formatted string
+        forecast_type (str): one of deterministic or ensemble
+        duration (str): forecast data timestep (hourly or daily)
+        path (str): file name including file path/s3 key
+    Returns:
+        (path): file name including file path/s3 key
+    """
+    # store original date_string
+    _date_string = date_string
+
+    # forecast datestamp prefix
+    date_string = _default_date_string(date_string)
+
+    # define URL
+    url_end = ''
+
+    if forecast_type == 'deterministic':
+        url_end = '{0}_{1}_csv_export.zip'.format(date_string, watershed)
+    elif forecast_type == 'ensemble':
+        duration = _validate_duration(duration)
+        url_end = '{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
+    
+    url = 'https://www.cnrfc.noaa.gov/csv/' + url_end
+
+    # extract CSV from zip object
+    if get_web_status(url):
+        try:
+            csvdata = _get_forecast_csv(url)
+        except zipfile.BadZipFile:
+            print(f'ERROR: forecast for {date_string} has not yet been issued.')
+            raise zipfile.BadZipFile
+    
+    # raise error if user supplied an actual date string but that forecast doesn't exist
+    elif _date_string is not None:
+        print(f'ERROR: forecast for {date_string} has not yet been issued.')
+        raise zipfile.BadZipFile
+
+    # set path for case where path set to None
+    if path is None:
+        path = url.split('/')[-1].replace('.zip', '.csv')
+
+    # write csvdata to specified path
+    path = path.replace('/', os.sep)
+    if not os.path.exists(os.path.dirname(path)):
+        os.makedirs(os.path.dirname(path))
+    with open(path, 'wb') as f:
+        f.write(csvdata.read())
+
+    return path
+
 def get_watershed_forecast_issue_time(duration, watershed, date_string=None, deterministic=False):
     """
     get "last modified" date/time stamp from CNRFC watershed ensemble product table
