@@ -544,6 +544,8 @@ def get_watershed_forecast_file(watershed, date_string, forecast_type, duration=
 
     # write csvdata to specified path
     path = path.replace('/', os.sep)
+    if not os.path.exists(os.path.dirname(path)):
+        os.makedirs(os.path.dirname(path))
     with open(path, 'wb') as f:
         f.write(csvdata.read())
 
