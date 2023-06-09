@@ -493,9 +493,8 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_watershed_forecast_file(watershed, date_string, forecast_type, duration=None, path=None):
+def download_watershed_file(watershed, date_string, forecast_type, duration=None, path=None):
     """
-
     download short range ensemble, deterministic forecast, and seasonal outlook for the 
     watershed as zipped file, unzip, save as csv to path
 
