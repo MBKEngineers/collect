@@ -540,8 +540,7 @@ def get_watershed_forecast_file(watershed, date_string, forecast_type, duration=
 
     # set path for case where path set to None
     if path is None:
-        path = '{}/{}'.format(os.getcwd(), 
-                                url.split('/')[-1].replace('.zip','.csv'))
+        path = url.split('/')[-1].replace('.zip', '.csv')
 
     # write csvdata to specified path
     path = path.replace('/', os.sep)
