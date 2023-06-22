@@ -539,13 +539,13 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
 
     # set path for case where path set to None
     if path is None:
-        filename = url.split('/')[-1].replace('.zip', '.csv')
-        path = os.path.join(os.getcwd(), filename)
+        path = url.split('/')[-1].replace('.zip', '.csv')
 
     # write csvdata to specified path
     path = path.replace('/', os.sep)
-    if not os.path.exists(os.path.dirname(path)):
-        os.makedirs(os.path.dirname(path))
+    if os.path.dirname(path) != '':
+        if not os.path.exists(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
     with open(path, 'wb') as f:
         f.write(csvdata.read())
 
