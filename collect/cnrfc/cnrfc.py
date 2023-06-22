@@ -503,9 +503,9 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
         date_string (str): the forecast issuance date as a YYYYMMDDHH formatted string
         forecast_type (str): one of deterministic or ensemble
         duration (str): forecast data timestep (hourly or daily)
-        path (str): file name including file path/s3 key
+        path (str): file name including file path
     Returns:
-        (path): file name including file path/s3 key
+        (path): file name including file path
     """
     # store original date_string
     _date_string = date_string
@@ -550,6 +550,7 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
         f.write(csvdata.read())
 
     return path
+
 
 def get_watershed_forecast_issue_time(duration, watershed, date_string=None, deterministic=False):
     """
