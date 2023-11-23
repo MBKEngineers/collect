@@ -9,11 +9,15 @@ import io
 import re
 
 import pandas as pd
-try:
-    import pdftotext
-except:
-    print('Module pdftotext is required for SWP report collection.  Install with `pip install pdftotext==2.2.2`')
 import requests
+
+
+def prompt_installation_and_exit():
+    try:
+        import pdftotext
+    except:
+        print('Module pdftotext is required for SWP report collection.  Install with `pip install pdftotext==2.2.2`')
+    exit()
 
 
 def get_report_catalog(console=True):
@@ -108,6 +112,7 @@ def get_raw_text(report, filename=None, preserve_white_space=True):
     f.seek(0)
 
     # parse PDF and extract as string
+    prompt_installation_and_exit()
     content = pdftotext.PDF(f, raw=False, physical=True)[0]
 
     # optionally export the raw report as text
@@ -281,6 +286,7 @@ def get_oco_tabular_data(report):
     f.seek(0)
 
     # parse PDF and extract as string
+    prompt_installation_and_exit()
     content = list(pdftotext.PDF(f, raw=False, physical=True))
 
     # report information
