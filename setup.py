@@ -3,7 +3,7 @@ import setuptools
 
 
 setuptools.setup(name='collect',
-                 version='0.0.1',
+                 version='0.0.2',
                  author='MBK Engineers',
                  author_email='narlesky@mbkengineers.com',
                  classifiers=(
@@ -18,9 +18,10 @@ setuptools.setup(name='collect',
                  packages=setuptools.find_packages(),
                  setup_requires=['numpy>=1.21.3'],
                  install_requires=['beautifulsoup4==4.12.2',
+                                   'html5lib==1.1',
                                    'lxml==4.9.3',
                                    'pandas==1.5.3',
-                                   'python-dateutil==2.8.2',
+                                   'python-dateutil>=2.8.2',
                                    'python-dotenv==0.19.2',
                                    'requests>=2.26.0',
                                    'scipy>=1.8.0',
