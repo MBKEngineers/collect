@@ -13,15 +13,22 @@ from bs4 import BeautifulSoup
 from dateutil import parser
 from dotenv import load_dotenv
 import pandas as pd
-import pytz
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from collect.cnrfc.gages import *
 from collect.utils.utils import clean_fixed_width_headers, get_web_status
 
-UTC = pytz.timezone('UTC')
-PACIFIC = pytz.timezone('America/Los_Angeles')
+try:
+    from zoneinfo import ZoneInfo
+    UTC = ZoneInfo('UTC')
+    PACIFIC = ZoneInfo('America/Los_Angeles')
+
+except:
+    import pytz
+    UTC = pytz.timezone('UTC')
+    PACIFIC = pytz.timezone('America/Los_Angeles')
+
 TODAY = dt.datetime.now().strftime('%Y%m%d')
 
 
