@@ -4,7 +4,7 @@ collect.usgs.usgs
 USGS National Water Information System (NWIS)
 """
 # -*- coding: utf-8 -*-
-
+import datetime as dt
 from bs4 import BeautifulSoup
 import dateutil.parser
 import pandas as pd
@@ -121,16 +121,21 @@ def get_peak_streamflow(station_id):
     url = '?'.join(['https://nwis.waterdata.usgs.gov/nwis/peak', 
                     'site_no={station_id}&agency_cd=USGS&format=rdb']).format(station_id=station_id)
 
+    def leap_filter(x):
+        if x.split('-', 1)[-1] == '03-00':
+            x = x.replace('03-00', '02-29')
+        return dt.datetime.strptime(x, '%Y-%m-%d')
+
     # process annual peak time series from tab-delimited table
     frame = pd.read_csv(url,
                         comment='#', 
-                        parse_dates=True,
+                        parse_dates=False,
                         header=0,
                         delimiter='\t')
     frame.drop(0, axis=0, inplace=True)
-    frame.index = pd.to_datetime(frame['peak_dt'])
+    frame.index = pd.to_datetime(frame['peak_dt'].apply(leap_filter))
 
-    # load USGS site informatiokn
+    # load USGS site information
     result = BeautifulSoup(requests.get(url.rstrip('rdb')).content, 'lxml')
     info = {'site number': station_id, 'site name': result.find('h2').text}
     meta = result.findAll('div', {'class': 'leftsidetext'})[0]
