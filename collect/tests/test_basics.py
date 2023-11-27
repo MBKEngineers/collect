@@ -25,12 +25,13 @@ from collect import cnrfc
 from collect import cvo
 from collect import nid
 from collect import usgs
+from collect import utils
 from collect.usace import wcds
 
 
 class TestSacAlert(unittest.TestCase):
 
-    def test_alert_get_site_notes(self):
+    def test_get_site_notes(self):
         """
         test the function for retrieving site metadata produces the expected entries
         """
@@ -40,8 +41,13 @@ class TestSacAlert(unittest.TestCase):
         self.assertEqual(result['Location:'], 'Upstream of Alpine Frost Dr. west of Bruceville Rd.')
         self.assertEqual(result['Date Installed:'], '2/6/1994')
 
-    def test_alert_get_data(self):
-        result = alert.get_data('1137', dt.datetime(2021, 3, 18, 14), dt.datetime(2021, 3, 18, 20), device_ids=[4])
+    def test_get_data(self):
+        result = alert.get_data('1137',
+                                dt.datetime(2021, 3, 18, 14),
+                                dt.datetime(2021, 3, 18, 20),
+                                device_ids=[4],
+                                ascending=True,
+                                as_dataframe=True)
         
         # check the queried sensor values for the specified date range
         self.assertEqual(result['data']['Value'].tolist(),
@@ -51,17 +57,33 @@ class TestSacAlert(unittest.TestCase):
         self.assertEqual(result['data']['Receive'].tolist()[:4],
                          ['2021-03-18 14:00:25', '2021-03-18 14:36:20', '2021-03-18 15:00:30', '2021-03-18 15:24:21'])
 
-    def test_alert_get_site_sensors(self):
+    def test_get_site_sensors(self):
         """
         test the function for retrieving site metadata sensors list produces the expected number of entries
         """
         self.assertEqual(len(alert.get_site_sensors(1122)['sensors']), 7)
 
-    def test_alert_get_sites(self):
+    def test_get_sites(self):
         """
         test the function for retrieving site list for a particular gage types returns the expected number of entries
         """
         self.assertEqual(alert.get_sites(as_dataframe=True, datatype='rain').shape, (81, 12))
+        # self.assertEqual(alert.get_sites(as_dataframe=True, datatype='stream').shape, (81, 12))
+
+    def test_get_sites_from_list(self):
+        alert.get_sites_from_list(as_dataframe=True, sensor_class=None)
+
+    def test_ustrip(self):
+        alert._ustrip(x)
+
+    def test_get_site_location(self):
+        alert.get_site_location(site_id)
+
+    def test_get_query_url(self):
+        alert.get_query_url(site_id, device_id, start, end)
+
+    def test_get_device_series(self):
+        alert.get_device_series(site_id, device_id, start, end, ascending=True)
 
 
 class TestCNRFC(unittest.TestCase):
@@ -207,41 +229,310 @@ class TestCNRFC(unittest.TestCase):
         df = cnrfc.get_water_year_trend_tabular('FOLC1', '2022')['data']
         self.assertEqual(df.shape, (365, 9))
 
+    def test_get_seasonal_trend_tabular(self):
+        cnrfc.get_seasonal_trend_tabular(cnrfc_id, water_year)
 
-# class TestCASGEM(unittest.TestCase):
+    def test_get_water_year_trend_tabular(self):
+        cnrfc.get_water_year_trend_tabular(cnrfc_id, water_year)
 
-#     def test(self):
-#         pass
+    def test_get_deterministic_forecast(self):
+        cnrfc.get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=False)
+
+    def test_get_deterministic_forecast_watershed(self):
+        cnrfc.get_deterministic_forecast_watershed(watershed,
+                                                   date_string,
+                                                   acre_feet=False,
+                                                   pdt_convert=False,
+                                                   as_pdt=False,
+                                                   cnrfc_id=None)
+
+    def test_get_forecast_meta_deterministic(self):
+        cnrfc.get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=False)
+
+    def test_get_ensemble_forecast(self):
+        cnrfc.get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False, as_pdt=False)
+
+    def test_get_ensemble_forecast_watershed(self):
+        cnrfc.get_ensemble_forecast_watershed(watershed,
+                                              duration,
+                                              date_string,
+                                              acre_feet=False,
+                                              pdt_convert=False,
+                                              as_pdt=False,
+                                              cnrfc_id=None)
+
+    def test_download_watershed_file(self):
+        cnrfc.download_watershed_file(watershed, date_string, forecast_type, duration=None, path=None)
+
+    def test_get_watershed_forecast_issue_time(self):
+        cnrfc.get_watershed_forecast_issue_time(duration, watershed, date_string=None, deterministic=False)
+
+    def test_get_watershed(self):
+        cnrfc.get_watershed(cnrfc_id)
+
+    def test_get_ensemble_first_forecast_ordinate(self):
+        cnrfc.get_ensemble_first_forecast_ordinate(url=None, df=None)
+
+    def test_get_ensemble_product_url(self):
+        cnrfc.get_ensemble_product_url(product_id, cnrfc_id, data_format='')
+
+    def test_get_ensemble_product_1(self):
+        cnrfc.get_ensemble_product_1(cnrfc_id)
+
+    def test_get_ensemble_product_2(self):
+        cnrfc.get_ensemble_product_2(cnrfc_id)
+
+    def test_get_ensemble_product_3(self):
+        cnrfc.get_ensemble_product_3(cnrfc_id)
+
+    def test_get_ensemble_product_5(self):
+        cnrfc.get_ensemble_product_5(cnrfc_id)
+
+    def test_get_ensemble_product_6(self):
+        cnrfc.get_ensemble_product_6(cnrfc_id)
+
+    def test_get_ensemble_product_10(self):
+        cnrfc.get_ensemble_product_10(cnrfc_id)
+
+    def test_get_ensemble_product_11(self):
+        cnrfc.get_ensemble_product_11(cnrfc_id)
+
+    def test_get_ensemble_product_12(self):
+        cnrfc.get_ensemble_product_12(cnrfc_id)
+
+    def test_get_ensemble_product_13(self):
+        cnrfc.get_ensemble_product_13(cnrfc_id)
+
+    def test_get_data_report_part_8(self):
+        cnrfc.get_data_report_part_8()
+
+    def test_get_monthly_reservoir_storage_summary(self):
+        cnrfc.get_monthly_reservoir_storage_summary()
+
+    def test_esp_trace_analysis_wrapper(self):
+        cnrfc.esp_trace_analysis_wrapper()
+
+    def test__apply_conversions(self):
+        cnrfc._apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
+
+    def test__get_cnrfc_restricted_content(self):
+        cnrfc._get_cnrfc_restricted_content(url)
+
+    def test__get_forecast_csv(self):
+        cnrfc._get_forecast_csv(url)
+
+    def test_get_forecast_csvdata(self):
+        cnrfc.get_forecast_csvdata(url)
+
+    def test_get_rating_curve(self):
+        cnrfc.get_rating_curve(cnrfc_id)
+
+    def test__default_date_string(self):
+        cnrfc._default_date_string(date_string)
+
+    def test__parse_blue_table(self):
+        cnrfc._parse_blue_table(table_soup)
 
 
-# class TestCAWDL(unittest.TestCase):
+class TestCASGEM(unittest.TestCase):
 
-#     def test(self):
-#         pass
-
-
-# class TestCDEC(unittest.TestCase):
-
-#     def test(self):
-#         pass
+    def test_get_casgem_data(self):
+        casgem.get_casgem_data(casgem_id=None,
+                               state_well_number=None,
+                               local_well_designation=None,
+                               master_site_code=None,
+                               write_to_html_file=False)
 
 
-# class TestCVO(unittest.TestCase):
+class TestCAWDL(unittest.TestCase):
 
-#     def test(self):
-#         pass
+    def test_get_cawdl_data(self):
+        cawdl.get_cawdl_data(site_id)
+
+    def test_get_cawdl_surface_water_data(self):
+        cawdl.get_cawdl_surface_water_data(site_id, water_year, variable, interval=None)
+
+    def test_get_cawdl_surface_water_por(self):
+        cawdl.get_cawdl_surface_water_por(site_id, variable, interval=None)
+
+    def test_get_cawdl_surface_water_site_report(self):
+        cawdl.get_cawdl_surface_water_site_report(site_id)
 
 
-# class TestNID(unittest.TestCase):
+class TestCDEC(unittest.TestCase):
 
-#     def test(self):
-#         pass
+    def test_get_b120_data(self):
+        b120.get_b120_data(date_suffix='')
+
+    def test_validate_date_suffix(self):
+        b120.validate_date_suffix(date_suffix, min_year=2017)
+
+    def test_clean_td(self):
+        b120.clean_td(text)
+
+    def test_get_b120_update_data(self):
+        b120.get_b120_update_data(date_suffix='')
+
+    def test_get_120_archived_reports(self):
+        b120.get_120_archived_reports(year, month)
+
+    def test_april_july_dataframe(self):
+        b120.april_july_dataframe(data_list)
+
+    def test_get_station_url(self):
+        cdec.get_station_url(station, start, end, data_format='CSV', sensors=[], duration='')
+
+    def test_get_station_sensors(self):
+        cdec.get_station_sensors(station, start, end)
+
+    def test_get_station_data(self):
+        cdec.get_station_data(station, start, end, sensors=[], duration='')
+
+    def test_get_raw_station_csv(self):
+        cdec.get_raw_station_csv(station, start, end, sensors=[], duration='', filename='')
+
+    def test_get_raw_station_json(self):
+        cdec.get_raw_station_json(station, start, end, sensors=[], duration='', filename='')
+
+    def test_get_sensor_frame(self):
+        cdec.get_sensor_frame(station, start, end, sensor='', duration='')
+
+    def test_get_station_metadata(self):
+        cdec.get_station_metadata(station, as_geojson=False)
+
+    def test_get_dam_metadata(self):
+        cdec.get_dam_metadata(station)
+
+    def test_get_reservoir_metadata(self):
+        cdec.get_reservoir_metadata(station)
+
+    def test__get_table_index(self):
+        cdec._get_table_index(table_type, tables)
+
+    def test__parse_station_generic_table(self):
+        cdec._parse_station_generic_table(table)
+
+    def test__parse_station_sensors_table(self):
+        cdec._parse_station_sensors_table(table)
+
+    def test__parse_station_comments_table(self):
+        cdec._parse_station_comments_table(table)
+
+    def test__parse_data_available(self):
+        cdec._parse_data_available(text)
+
+    def test_get_data(self):
+        cdec.get_data(station, start, end, sensor='', duration='')
+
+    def test_get_daily_snowpack_data(self):
+        cdec.get_daily_snowpack_data(region, start, end)
 
 
-# class TestSWP(unittest.TestCase):
+class TestCVO(unittest.TestCase):
 
-#     def test(self):
-#         pass
+    def test(self):
+        pass
+
+        # prn test
+        result = cvo.get_data(dt.date(2000, 2, 1), dt.date(2011, 3, 31), 'doutdly')
+
+        # pdf test
+        result = cvo.get_data(dt.date(2013, 12, 1), dt.date(2014, 1, 31), 'doutdly')
+        result = cvo.get_data(dt.date(2000, 2, 1), dt.date(2023, 5, 1), 'shafln')
+        result = cvo.get_data(dt.date(2012, 6, 1), dt.date(2013, 12, 31), 'slunit')
+        result = cvo.get_data(dt.date(2020, 6, 1), dt.date(2021, 1, 1), 'fedslu')
+        result = cvo.get_data(dt.date(2021, 1, 10), dt.date.now(), 'shadop')
+        result = cvo.get_data(dt.date(2023, 5, 1), dt.date.now(), 'kesdop')
+
+    def test_get_area(self):
+        cvo.get_area(date_structure, report_type)
+    
+    def test_get_data(self):
+        cvo.get_data(start, end, report_type)
+    
+    def test_get_date_published(self):
+        cvo.get_date_published(url, date_structure, report_type)
+    
+    def test_get_report_columns(self):
+        cvo.get_report_columns(report_type, date_structure, expected_length=None, default=False)
+    
+    def test_get_report(self):
+        cvo.get_report(date_structure, report_type)
+    
+    def test_get_title(self):
+        cvo.get_title(report_type)
+    
+    def test_get_url(self):
+        cvo.get_url(date_structure, report_type)
+    
+    def test_months_between(self):
+        cvo.months_between(start_date, end_date)
+    
+    def test_doutdly_data_cleaner(self):
+        cvo.doutdly_data_cleaner(content, report_type, date_structure)
+    
+    def test_load_pdf_to_dataframe(self):
+        cvo.load_pdf_to_dataframe(content, date_structure, report_type, to_csv=False)
+    
+    def test_download_files(self):
+        cvo.download_files(start, end, report_type, destination='.')
+
+
+class TestNID(unittest.TestCase):
+
+    def test_get_sites(self):
+        nid.get_sites()
+
+    def test_get_issue_date(self):
+        nid.get_issue_date()
+
+    def test_get_site_files(self):
+        nid.get_site_files(site)
+
+    def test_get_site_metric(self):
+        nid.get_site_metric(site, interval='daily')
+
+    def test_get_station_url(self):
+        nid.get_station_url(site, metric='index', interval=None)
+
+    def test_get_daily_data(self):
+        nid.get_daily_data(site, json_compatible=False)
+
+    def test_get_daily_meta(self):
+        nid.get_daily_meta(url=None, content=None)
+
+    def test_get_hourly_data(self):
+        nid.get_hourly_data(site, json_compatible=False)
+
+    def test_parse_qualifiers(self):
+        nid.parse_qualifiers(series)
+
+    def test_serialize(self):
+        nid.serialize(df, day_format='%Y-%-m-%-d')
+
+
+class TestSWP(unittest.TestCase):
+
+    def test_prompt_installation_and_exit(self):
+        swp.prompt_installation_and_exit()
+
+    def test_get_report_catalog(self):
+        swp.get_report_catalog()
+
+    def test_get_report_url(self):
+        swp.get_report_url()
+
+    def test_get_raw_text(self):
+        swp.get_raw_text()
+
+    def test_get_delta_daily_data(self):
+        swp.get_delta_daily_data()
+
+    def test_get_barker_slough_data(self):
+        swp.get_barker_slough_data()
+
+    def test_get_oco_tabular_data(self):
+        swp.get_oco_tabular_data()
 
 
 class TestUSACE(unittest.TestCase):
@@ -295,10 +586,34 @@ class TestUSACE(unittest.TestCase):
         self.assertTrue('Precip @ Dam (in; elev 712 ft)' in result['data headers'])
 
 
-# class TestUSGS(unittest.TestCase):
+class TestUSGS(unittest.TestCase):
 
-#     def test(self):
-#         pass
+    def test_get_query_url(self):
+        usgs.get_query_url(station_id, sensor, start_time, end_time, interval)
+
+    def test_get_data(self):
+        usgs.get_data(station_id, sensor, start_time, end_time, interval='instantaneous')
+
+    def test_get_usgs_data(self):
+        usgs.get_usgs_data(station_id, sensor, start_time, end_time, interval='instantaneous')
+
+    def test_get_peak_streamflow(self):
+        usgs.get_peak_streamflow(station_id)
+
+
+class TestUtils(unittest.TestCase):
+
+    def test_get_session_response(self):
+        utils.get_session_response(url)
+
+    def test_get_web_status(self):
+        utils.get_web_status(url)
+
+    def test_clean_fixed_width_headers(self):
+        utils.clean_fixed_width_headers(columns)
+
+    def test_get_water_year(self):
+        utils.get_water_year(datetime_structure)
 
 
 if __name__ == '__main__':
