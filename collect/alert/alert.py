@@ -33,7 +33,7 @@ SENSORS = {10: "Rain Increment",
 
 def _ustrip(x):
     """
-    strips whitespace represented by unicode non-breaking space in additon to default white
+    strips whitespace represented by unicode non-breaking space in addition to default white
     space stripping by python's str.strip() method
     Arguments:
         x (str): string containing an encoded whitespace
