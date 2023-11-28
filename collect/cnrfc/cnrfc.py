@@ -150,7 +150,7 @@ def get_water_year_trend_tabular(cnrfc_id, water_year):
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=False, stage=False):
+def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=False):
     """
     Adapted from SAFCA portal project
     ---
@@ -172,9 +172,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     # forecast type
     forecast_type = 'Release' if release else 'RVF'
     flow_prefix = 'Release ' if release else ''
-
-    variable = f'{flow_prefix}Stage (Feet)' if stage else f'{flow_prefix}Flow (CFS)'
-    units = 'ft' if stage else 'cfs'
+    variable = [f'{flow_prefix}Flow (CFS)', f'{flow_prefix}Stage (Feet)']
 
     # default deterministic URL and index name
     url = 'https://www.cnrfc.noaa.gov/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
@@ -192,7 +190,8 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
         url = 'https://www.cnrfc.noaa.gov/restricted/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
         date_column_header = 'Date/Time (Pacific Time)'
         specified_dtypes = {date_column_header: str, 
-                            f'{flow_prefix}Flow (CFS)': float, 
+                            f'{flow_prefix}Flow (CFS)': float,
+                            'Stage (Feet)': float,
                             'Trend': str}
 
     # get forecast file from csv url
@@ -210,6 +209,9 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
 
     # add timezone info
     df.index.name = 'PDT/PST'
+
+    # use whichever variable exists to determine forecast vs historical
+    variable = [x for x in variable if x in df.columns][0]
 
     # Trend value is null for first historical and first forecast entry; select forecast entry
     first_ordinate = df.where(df['Trend'].isnull()).dropna(subset=[variable]).last_valid_index()
@@ -236,7 +238,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
                                  'first_ordinate': first_ordinate.strftime('%Y-%m-%d %H:%M'),
                                  'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
                                  'next_issue': next_issue_time.strftime('%Y-%m-%d %H:%M'),
-                                 'units': units,
+                                 # 'units': units,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
