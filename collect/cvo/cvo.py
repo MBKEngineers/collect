@@ -17,8 +17,6 @@ except:
     print('Module tabula is required for CVO report collection')
 
 
-
-
 REPORTS = [
     'doutdly',
     'kesdop',
