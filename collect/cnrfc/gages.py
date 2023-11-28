@@ -43,7 +43,7 @@ AMERICAN_GAGES = ['NFDC1', 'FMDC1', 'FMDC1O', 'BCTC1', 'LNLC1', 'RRGC1', 'HLLC1'
                   'HLLC1SPL']
 
 LOWERSACRAMENTO_GAGES = ['SAMC1', 'SACC1', 'VONC1', 'FMWC1', 'DRMC1', 'RCVC1', 
-                         'FMWC1L', 'SACC1L', 'SAMC1L', 'NCOC1L']
+                         'FMWC1L', 'SACC1L', 'SAMC1L', 'NCOC1', 'NCOC1L']
 
 CENTRALCOAST_GAGES = ['LWDC1', 'SNRC1', 'NBYC1', 'NACC1', 'PRBC1', 'RDRC1', 
                       'BSRC1', 'PIIC1', 'TESC1', 'HOSC1', 'PHOC1', 'AROC1', 
