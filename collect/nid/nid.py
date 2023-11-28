@@ -36,7 +36,8 @@ import re
 
 from bs4 import BeautifulSoup
 import pandas as pd
-import requests
+
+from collect import utils
 
 
 def get_sites():
@@ -46,8 +47,8 @@ def get_sites():
     Returns:
         sites (dict): dictionary of site IDs and titles
     """
-    url = "https://river-lake.nidwater.com/hyquick/index.htm"
-    df = pd.read_html(requests.get(url).content, header=1, index_col=0)[0]
+    url = 'https://river-lake.nidwater.com/hyquick/index.htm'
+    df = pd.read_html(utils.get_session_response(url).content, header=1, index_col=0)[0]
     sites = df.to_dict()['Name']
     return sites
 
@@ -59,8 +60,8 @@ def get_issue_date():
     Returns:
         issue_date (datetime.datetime): the last update of the NID hyquick page
     """
-    url = "https://river-lake.nidwater.com/hyquick/index.htm"
-    df = pd.read_html(requests.get(url).content, header=None)[0]
+    url = 'https://river-lake.nidwater.com/hyquick/index.htm'
+    df = pd.read_html(utils.get_session_response(url).content, header=None)[0]
     return dt.datetime.strptime(df.iloc[0, 1], 'Run on %Y/%m/%d %H:%M:%S')
 
 
@@ -73,7 +74,7 @@ def get_site_files(site):
         links (list): sorted list of linked files available for site
     """
     url = get_station_url(site, metric='index')
-    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+    soup = BeautifulSoup(utils.get_session_response(url).content, 'lxml')
     links = {a.get('href') for a in soup.find_all('a')}
     return sorted(links)
 
@@ -127,7 +128,7 @@ def get_daily_data(site, json_compatible=False):
     """
     metric = get_site_metric(site, interval='daily')
     url = get_station_url(site, metric=metric, interval='daily')
-    response = requests.get(url).text
+    response = utils.get_session_response(url).text
 
     frames = []
     for group in re.split(r'(?=Nevada Irrigation District\s+)', response):
@@ -136,23 +137,27 @@ def get_daily_data(site, json_compatible=False):
             continue
 
         # split by start of table header line
-        pre_table, table = re.split(r'(?=Day\s{2,}OCT)', group)
+        pre_table, table = re.split(r'(?=Day\s{2,}JAN)', group)
 
         # get water year, site info for water year table
         meta = get_daily_meta(content=pre_table)
 
         # load water year table to dataframe
-        data = pd.read_fwf(io.StringIO(re.split(r'\nTotal', table)[0]), 
+        data = pd.read_fwf(io.StringIO(re.split(r'\nMax', table)[0]),
                            header=0, 
-                           skiprows=[1], 
+                           skiprows=[1],
                            nrows=36,
                            na_values=['------', 'NaN', '']).dropna(how='all')
 
         # convert from monthly table to water-year series
         df = pd.melt(data, id_vars='Day').rename({'variable': 'month', 'value': metric}, axis=1)
 
+        # defunct for report formatted by water year
+        # df['year'] = df['month'].apply(lambda x: meta['water_year'] -1 if x in ['OCT', 'NOV', 'DEC']
+        #                                           else meta['water_year'])
+
         # assign calendar year to each entry
-        df['year'] = df['month'].apply(lambda x: meta['water_year'] -1 if x in ['OCT', 'NOV', 'DEC'] else meta['water_year'])
+        df['year'] = meta['year']
         df.index = df['Day'].astype(str) + df['month'] + df['year'].astype(str)
 
         # drop non-existent date entries (i.e. 31NOVYYYY)
@@ -172,6 +177,7 @@ def get_daily_data(site, json_compatible=False):
                      'district': meta['district'],
                      'version': meta['version'],
                      'report_stamp': meta['report_stamp'],
+                     'year': meta['year'],
                      'url': url,
                      'metric': metric, 
                      'timeseries_type': {'flow': 'flows', 'volume': 'storages'}.get(metric),
@@ -188,7 +194,7 @@ def get_daily_meta(url=None, content=None):
     """
     if url:
         data = [re.sub(r'\s{2,}|:\s+|:', '|', x.strip()).split('|') 
-                for x in requests.get(url).text.splitlines()[:10]]
+                for x in utils.get_session_response(url).text.splitlines()[:10]]
     elif content:
         data = [re.sub(r'\s{2,}|:\s+|:', '|', x.strip()).split('|') 
                 for x in content.splitlines()]
@@ -199,7 +205,7 @@ def get_daily_meta(url=None, content=None):
             result.update({row[0]: row[1]})
 
     # extract water year from end date entry
-    result.update({'water_year': dt.datetime.strptime(result['Ending Date'], '%m/%d/%Y').year})
+    result.update({'year': dt.datetime.strptime(result['Ending Date'], '%m/%d/%Y').year})
     return result
 
 
