@@ -11,7 +11,6 @@ import textwrap
 import unittest
 import unittest.mock
 
-from dotenv import load_dotenv
 import pandas as pd
 
 from collect.dwr import cdec
@@ -20,13 +19,9 @@ from collect.dwr import cawdl
 from collect.dwr import b120
 from collect.dwr import swp
 
-from collect import alert
-from collect import cnrfc
-from collect import cvo
-from collect import nid
-from collect import usgs
-from collect import utils
-from collect.usace import wcds
+
+class TestB120(unittest.TestCase):
+    pass
 
 
 class TestCASGEM(unittest.TestCase):
@@ -71,9 +66,9 @@ class TestCASGEM(unittest.TestCase):
 
 
 class TestCAWDL(unittest.TestCase):
-    # """
-    # dwr.cawdl module references inactive API; CAWDL tools must be updated once CNRA/DWR completes web transition
-    # """
+    """
+    dwr.cawdl module references inactive API; CAWDL tools must be updated once CNRA/DWR completes web transition
+    """
     def test_get_cawdl_data(self):
         cawdl.get_cawdl_data('17202')
 
@@ -178,6 +173,10 @@ class TestSWP(unittest.TestCase):
 
     def test_get_oco_tabular_data(self):
         swp.get_oco_tabular_data()
+
+
+class TestWSI(unittest.TestCase):
+    pass
 
 
 if __name__ == '__main__':
