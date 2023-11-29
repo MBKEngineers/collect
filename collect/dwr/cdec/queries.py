@@ -5,7 +5,6 @@ access CDEC gage data
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
-import numpy as np
 import json
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -110,7 +109,7 @@ def get_station_sensors(station, start, end):
     return sensors
 
 
-def get_station_data(station, start, end, sensors=[], duration='', filename=None):
+def get_station_data(station, start, end, sensors=[], duration=''):
     """
     General purpose function for returning a pandas DataFrame for all available
     data for CDEC `station` in the given time window, with optional `duration` argument.
@@ -121,11 +120,10 @@ def get_station_data(station, start, end, sensors=[], duration='', filename=None
         end (dt.datetime): query end date
         sensors (list): list of the numeric sensor codes
         duration (str): interval code for timeseries data (ex: 'H')
-        filename (str): optional filename for locally saving data
     Returns:
         df (pandas.DataFrame): the queried timeseries as a DataFrame
     """
-    return get_raw_station_csv(station, start, end, sensors, duration, filename)
+    return get_raw_station_csv(station, start, end, sensors, duration)
 
 
 def get_raw_station_csv(station, start, end, sensors=[], duration='', filename=None):
@@ -170,8 +168,7 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename=N
     #report if the data is BRT or ART (below/above rating table)
     df.loc[df['VALUE'] == 'BRT', 'RATING_FLAG'] = 'BRT'
     df.loc[df['VALUE'] == 'ART', 'RATING_FLAG'] = 'ART'
-    df['VALUE'] = df['VALUE'].replace({'BRT': np.nan, 'ART': np.nan})
-    df['DATE TIME'] = df.index
+    df['VALUE'] = df['VALUE'].replace({'BRT': None, 'ART': None}).astype(float)
 
     if bool(filename):
         df.to_csv(filename)
