@@ -109,7 +109,7 @@ def get_station_sensors(station, start, end):
     return sensors
 
 
-def get_station_data(station, start, end, sensors=[], duration=''):
+def get_station_data(station, start, end, sensors=[], duration='', filename=None):
     """
     General purpose function for returning a pandas DataFrame for all available
     data for CDEC `station` in the given time window, with optional `duration` argument.
@@ -120,13 +120,14 @@ def get_station_data(station, start, end, sensors=[], duration=''):
         end (dt.datetime): query end date
         sensors (list): list of the numeric sensor codes
         duration (str): interval code for timeseries data (ex: 'H')
+        filename (str): optional filename for locally saving data
     Returns:
         df (pandas.DataFrame): the queried timeseries as a DataFrame
     """
-    return get_raw_station_csv(station, start, end, sensors, duration)
+    return get_raw_station_csv(station, start, end, sensors, duration, filename)
 
 
-def get_raw_station_csv(station, start, end, sensors=[], duration='', filename=''):
+def get_raw_station_csv(station, start, end, sensors=[], duration='', filename=None):
     """
     Use CDEC CSV query URL to download available data.  Optional `filename` argument
     specifies custom file location for download of CSV records.
@@ -152,7 +153,6 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
         'SENSOR_TYPE': str,
         'DATE TIME': str,
         'OBS DATE': str,
-        'VALUE': float,
         'DATA_FLAG': str,
         'UNITS': str,
     }
@@ -162,10 +162,14 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
                      header=0, 
                      parse_dates=True, 
                      index_col=4, 
-                     na_values=['m', '---', ' ', 'ART', 'BRT', -9999, -9998, -9997],
+                     na_values=['m', '---', ' ', -9999, -9998, -9997],
                      float_precision='high',
                      dtype=default_data_types)
-    df['DATE TIME'] = df.index
+
+    #report if the data is BRT or ART (below/above rating table)
+    df.loc[df['VALUE'] == 'BRT', 'RATING_FLAG'] = 'BRT'
+    df.loc[df['VALUE'] == 'ART', 'RATING_FLAG'] = 'ART'
+    df['VALUE'] = df['VALUE'].replace({'BRT': None, 'ART': None}).astype(float)
 
     if bool(filename):
         df.to_csv(filename)
