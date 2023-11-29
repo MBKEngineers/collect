@@ -6,7 +6,6 @@ initial test suite for collect.alert data access and utility functions; note: th
 # -*- coding: utf-8 -*-
 import datetime as dt
 import unittest
-import unittest.mock
 from collect import alert
 
 

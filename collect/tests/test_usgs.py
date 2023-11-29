@@ -6,7 +6,6 @@ initial test suite for collect.usgs data access and utility functions; note: the
 # -*- coding: utf-8 -*-
 import datetime as dt
 import unittest
-import unittest.mock
 from collect import usgs
 
 

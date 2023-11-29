@@ -5,11 +5,7 @@ initial test suite for collect.utils utility functions; note: these tests requir
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
-import io
-import os
-import textwrap
 import unittest
-import unittest.mock
 import pandas as pd
 import requests
 from collect import utils
