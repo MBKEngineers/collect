@@ -4,8 +4,13 @@ collect.utils.utils
 The utilities module of MBK Engineers' collect project
 """
 # -*- coding: utf-8 -*-
+import urllib3
+# disable warnings in crontab logs
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 import urllib3.contrib.pyopenssl
 urllib3.contrib.pyopenssl.inject_into_urllib3()
+
 import ssl
 
 import requests
@@ -13,7 +18,7 @@ from requests.packages.urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
 
 
-def get_session_response(url):
+def get_session_response(url, auth=None):
     """
     Arguments:
         url (str): valid web URL
@@ -25,7 +30,7 @@ def get_session_response(url):
                     backoff_factor=0.1,
                     status_forcelist=[500, 502, 503, 504])
     session.mount('https://', HTTPAdapter(max_retries=retries))
-    return session.get(url, verify=ssl.CERT_NONE)
+    return session.get(url, auth=auth, verify=ssl.CERT_NONE)
 
 
 def get_web_status(url):
