@@ -1,7 +1,7 @@
 """
-collect.tests.test_basics
+collect.tests.test_cnrfc
 ============================================================
-initial test suite for collect data access and utility functions; note: these tests require internet connection
+initial test suite for collect.cnrfc data access and utility functions; note: these tests require internet connection
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
