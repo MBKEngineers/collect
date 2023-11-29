@@ -11,10 +11,15 @@ import textwrap
 import unittest
 import unittest.mock
 
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import pandas as pd
 
 from collect import cnrfc
+
+
+def mocked_strftime(*args, **kwargs):
+    return '2023110112'
 
 
 class TestCNRFC(unittest.TestCase):
@@ -96,142 +101,293 @@ class TestCNRFC(unittest.TestCase):
                                                     dtype={'GMT': str}).mul(1000)
         return self._deterministic_frame
 
-    # def test_cnrfc_credentials(self):
-    #     """
-    #     load sensitive info from .env file and test CNRFC credentials exist
-    #     """
-    #     load_dotenv()
-    #     self.assertTrue(('CNRFC_USER' in os.environ) & ('CNRFC_PASSWORD' in os.environ))
+    def test_cnrfc_credentials(self):
+        """
+        load sensitive info from .env file and test CNRFC credentials exist
+        """
+        load_dotenv()
+        self.assertTrue(('CNRFC_USER' in os.environ) & ('CNRFC_PASSWORD' in os.environ))
 
-    # def test_convert_date_columns(self):
-    #     """Ensure datetime data converted to string format"""
-    #     test_index = self.deterministic_frame.index.strftime('%Y-%m-%d')
-    #     self.assertEqual(test_index.tolist()[0], '2019-03-30')
+    def test_convert_date_columns(self):
+        """Ensure datetime data converted to string format"""
+        test_index = self.deterministic_frame.index.strftime('%Y-%m-%d')
+        self.assertEqual(test_index.tolist()[0], '2019-03-30')
 
-    # def test_validate_duration(self):
-    #     """
-    #     function to properly format/case hourly or daily durations
-    #     """
-    #     duration = 'Hourly'
-    #     self.assertEqual(cnrfc.cnrfc._validate_duration(duration), 'hourly')
+    def test_validate_duration(self):
+        """
+        function to properly format/case hourly or daily durations
+        """
+        duration = 'Hourly'
+        self.assertEqual(cnrfc.cnrfc._validate_duration(duration), 'hourly')
 
-    # def test_validate_duration_invalid(self):
-    #     """
-    #     test that invalid duration raises a ValueError
-    #     """
-    #     bad_input = 'monthly'
-    #     self.assertRaises(ValueError,
-    #                       cnrfc.cnrfc._validate_duration,
-    #                       bad_input)
+    def test_validate_duration_invalid(self):
+        """
+        test that invalid duration raises a ValueError
+        """
+        bad_input = 'monthly'
+        self.assertRaises(ValueError,
+                          cnrfc.cnrfc._validate_duration,
+                          bad_input)
 
-    # def test_get_deterministic_forecast(self):
-    #     """
-    #     Test that deterministic forecast start from Graphical_RVF page matches
-    #     CSV start of forecast
-    #     """
-    #     cnrfc_id = 'FOLC1'
-    #     first_ordinate = cnrfc.get_forecast_meta_deterministic(cnrfc_id, first_ordinate=True)[-1]
-    #     df = cnrfc.get_deterministic_forecast(cnrfc_id, truncate_historical=False)['data']
-    #     first_forecast_entry = df['forecast'].dropna().index.tolist()[0]
+    def test_get_deterministic_forecast(self):
+        """
+        Test that deterministic forecast start from Graphical_RVF page matches
+        CSV start of forecast
+        """
+        cnrfc_id = 'FOLC1'
+        first_ordinate = cnrfc.get_forecast_meta_deterministic(cnrfc_id, first_ordinate=True)[-1]
+        df = cnrfc.get_deterministic_forecast(cnrfc_id, truncate_historical=False)['data']
+        first_forecast_entry = df['forecast'].dropna().index.tolist()[0]
 
-    #     # check that the date/time representation in the timestamp and datetime.datetime objects are the same
-    #     self.assertEqual(first_forecast_entry.year, first_ordinate.year)
-    #     self.assertEqual(first_forecast_entry.month, first_ordinate.month)
-    #     self.assertEqual(first_forecast_entry.day, first_ordinate.day)
-    #     self.assertEqual(first_forecast_entry.hour, first_ordinate.hour)
-    #     self.assertEqual(first_forecast_entry.minute, first_ordinate.minute)
+        # check that the date/time representation in the timestamp and datetime.datetime objects are the same
+        self.assertEqual(first_forecast_entry.year, first_ordinate.year)
+        self.assertEqual(first_forecast_entry.month, first_ordinate.month)
+        self.assertEqual(first_forecast_entry.day, first_ordinate.day)
+        self.assertEqual(first_forecast_entry.hour, first_ordinate.hour)
+        self.assertEqual(first_forecast_entry.minute, first_ordinate.minute)
 
-    #     # for now, strip the local tzinfo from `first_ordinate`
-    #     self.assertEqual(first_forecast_entry.tzinfo, first_ordinate.replace(tzinfo=None).tzinfo)
+        # for now, strip the local tzinfo from `first_ordinate`
+        self.assertEqual(first_forecast_entry.tzinfo, first_ordinate.replace(tzinfo=None).tzinfo)
 
-    # def test_get_deterministic_forecast_watershed(self):
-    #     """
-    #     test watershed deterministic forecast download for North San Joaquin on a particular date;
-    #     additional future tests to add coverage for arguments:
-    #         - watershed
-    #         - date_string
-    #         - acre_feet=False
-    #         - pdt_convert=False
-    #         - as_pdt=False
-    #         - cnrfc_id=None
-    #     """
-    #     df = cnrfc.get_deterministic_forecast_watershed('N_SanJoaquin', '2019040412')['data']
-    #     self.assertEqual(df.head(20)['NHGC1'].values.tolist(),
-    #                      self.deterministic_frame.head(20)['NHGC1'].values.tolist())
-    #     self.assertIsNone(df.index.tzinfo)
+    def test_get_deterministic_forecast_watershed(self):
+        """
+        test watershed deterministic forecast download for North San Joaquin on a particular date;
+        additional future tests to add coverage for arguments:
+            - watershed
+            - date_string
+            - acre_feet=False
+            - pdt_convert=False
+            - as_pdt=False
+            - cnrfc_id=None
+        """
+        df = cnrfc.get_deterministic_forecast_watershed('N_SanJoaquin', '2019040412')['data']
+        self.assertEqual(df.head(20)['NHGC1'].values.tolist(),
+                         self.deterministic_frame.head(20)['NHGC1'].values.tolist())
+        self.assertIsNone(df.index.tzinfo)
 
-    # def test_get_water_year_trend_tabular(self):
-    #     """
-    #     test water year trend tabular download for a past year for Folsom reservoir forecast point
-    #     """
-    #     df = cnrfc.get_water_year_trend_tabular('FOLC1', '2022')['data']
-    #     self.assertEqual(df.shape, (365, 9))
+    def test_get_water_year_trend_tabular(self):
+        """
+        test water year trend tabular download for a past year for Folsom reservoir forecast point
+        """
+        df = cnrfc.get_water_year_trend_tabular('FOLC1', '2022')['data']
+        self.assertEqual(df.shape, (365, 9))
 
-    # def test_get_seasonal_trend_tabular(self):
-    #     """
-    #     test seasonal trend tabular download for a past year for Shasta reservoir forecast point
-    #     """
-    #     df = cnrfc.get_seasonal_trend_tabular('SHDC1', 2022)['data']
-    #     self.assertEqual(df.shape, (365, 10))
+    def test_get_seasonal_trend_tabular(self):
+        """
+        test seasonal trend tabular download for a past year for Shasta reservoir forecast point
+        """
+        df = cnrfc.get_seasonal_trend_tabular('SHDC1', 2022)['data']
+        self.assertEqual(df.shape, (365, 10))
 
-    # def test_get_ensemble_forecast(self):
-    #     """
-    #     test for current ensemble forecast file schema, using Vernalis forecast location
-    #     """
-    #     result = cnrfc.get_ensemble_forecast('VNSC1', 'hourly', acre_feet=False, pdt_convert=False, as_pdt=False)
-    #     self.assertEqual(result['data'].shape, (721, 43))
-    #     self.assertIsNone(result['data'].index.tzinfo)
-    #     self.assertEqual(result['info']['watershed'], 'SanJoaquin')
-    #     self.assertEqual(result['info']['units'], 'cfs')
+    def test_get_ensemble_forecast(self):
+        """
+        test for current ensemble forecast file schema, using Vernalis forecast location
+        """
+        result = cnrfc.get_ensemble_forecast('VNSC1', 'hourly', acre_feet=False, pdt_convert=False, as_pdt=False)
+        self.assertEqual(result['data'].shape, (721, 43))
+        self.assertIsNone(result['data'].index.tzinfo)
+        self.assertEqual(result['info']['watershed'], 'SanJoaquin')
+        self.assertEqual(result['info']['units'], 'cfs')
 
-    # def test_get_ensemble_product_1(self):
-    #     self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_1, 'ORDC1')
+    def test_get_ensemble_product_1(self):
+        self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_1, 'ORDC1')
 
-    # def test_get_ensemble_product_3(self):
-    #     self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_3, 'ORDC1')
+    def test_get_ensemble_product_3(self):
+        self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_3, 'ORDC1')
 
-    # def test_get_ensemble_product_5(self):
-    #     self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_5, 'ORDC1')
+    def test_get_ensemble_product_5(self):
+        self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_5, 'ORDC1')
 
-    # def test_get_ensemble_product_11(self):
-    #     self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_11, 'ORDC1')
+    def test_get_ensemble_product_11(self):
+        self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_11, 'ORDC1')
 
-    # def test_get_ensemble_product_12(self):
-    #     self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_12, 'ORDC1')
+    def test_get_ensemble_product_12(self):
+        self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_12, 'ORDC1')
 
-    # def test_get_ensemble_product_13(self):
-    #     self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_13, 'ORDC1')
+    def test_get_ensemble_product_13(self):
+        self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_13, 'ORDC1')
 
-    # def test_get_data_report_part_8(self):
-    #     self.assertRaises(NotImplementedError, cnrfc.get_data_report_part_8)
+    def test_get_data_report_part_8(self):
+        self.assertRaises(NotImplementedError, cnrfc.get_data_report_part_8)
 
-    # def test_get_monthly_reservoir_storage_summary(self):
-    #     self.assertRaises(NotImplementedError, cnrfc.get_monthly_reservoir_storage_summary)
+    def test_get_monthly_reservoir_storage_summary(self):
+        self.assertRaises(NotImplementedError, cnrfc.get_monthly_reservoir_storage_summary)
 
-    # def test_get_rating_curve(self):
-    #     """
-    #     example expected output from get_rating_curve method
-    #     """
-    #     result = cnrfc.get_rating_curve('DCSC1')
-    #     self.assertEqual(result['data'][0], (0.92, 0.45))
-    #     self.assertEqual(result['data'][-1], (15.0, 16300.0))
-    #     self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/data/ratings/DCSC1_rating.js')
+    def test_get_rating_curve(self):
+        """
+        example expected output from get_rating_curve method
+        """
+        result = cnrfc.get_rating_curve('DCSC1')
+        self.assertEqual(result['data'][0], (0.92, 0.45))
+        self.assertEqual(result['data'][-1], (15.0, 16300.0))
+        self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/data/ratings/DCSC1_rating.js')
 
-    # def test_get_watershed(self):
-    #     """
-    #     example usage for looking up watershed group by forecast point ID
-    #     """
-    #     self.assertEqual(cnrfc.get_watershed('NCOC1'), 'LowerSacramento')
+    def test_get_watershed(self):
+        """
+        example usage for looking up watershed group by forecast point ID
+        """
+        self.assertEqual(cnrfc.get_watershed('NCOC1'), 'LowerSacramento')
 
-    # def test_get_forecast_meta_deterministic(self):
-    #     """
-    #     test for predicted response with get_forecast_meta_deterministic for Oroville forecast point
-    #     """
-    #     result = cnrfc.get_forecast_meta_deterministic('ORDC1', first_ordinate=False, release=False)
-    #     self.assertTrue(isinstance(result[0], (dt.date, dt.datetime)))
-    #     self.assertTrue(isinstance(result[1], (dt.date, dt.datetime)))
-    #     self.assertEqual(result[2], 'FEATHER RIVER - LAKE OROVILLE (ORDC1)')
-    #     self.assertEqual(result[3], 'Impaired Inflows')
+    def test_get_forecast_meta_deterministic(self):
+        """
+        test for predicted response with get_forecast_meta_deterministic for Oroville forecast point
+        """
+        result = cnrfc.get_forecast_meta_deterministic('ORDC1', first_ordinate=False, release=False)
+        self.assertIsInstance(result[0], (dt.date, dt.datetime))
+        self.assertIsInstance(result[1], (dt.date, dt.datetime))
+        self.assertEqual(result[2], 'FEATHER RIVER - LAKE OROVILLE (ORDC1)')
+        self.assertEqual(result[3], 'Impaired Inflows')
+
+    def test_get_ensemble_product_2(self):
+        """
+        test for the expected format of ensemble produce #2
+        """
+        result = cnrfc.get_ensemble_product_2('BDBC1')
+        self.assertEqual(result['info']['type'], 'Tabular 10-Day Streamflow Volume Accumulation')
+        self.assertEqual(result['info']['units'], 'TAF')
+        self.assertEqual(result['data'].shape, (6, 10))
+        self.assertEqual(result['data'].index.tolist(),
+                         ['10%', '25%', '50%(Median)', '75%', '90%', 'CNRFCDeterministic Forecast'])
+
+    def test_get_watershed_forecast_issue_time(self):
+        # test for the long range ensemble product
+        self.assertIsInstance(cnrfc.get_watershed_forecast_issue_time('daily',
+                                                                      'North Coast',
+                                                                      date_string=None,
+                                                                      deterministic=False), dt.datetime)
+
+        # test for the hourly deterministic product
+        self.assertIsInstance(cnrfc.get_watershed_forecast_issue_time('hourly',
+                                                                      'North Coast',
+                                                                      date_string=None,
+                                                                      deterministic=True), dt.datetime)
+
+        # the value None is returned for a specified forecast issuance in the past
+        self.assertIsNone(cnrfc.get_watershed_forecast_issue_time('daily',
+                                                                  'North Coast',
+                                                                  date_string='2023010112',
+                                                                  deterministic=False))
+
+    def test__default_date_string(self):
+        result = cnrfc.cnrfc._default_date_string(None)
+        result_dt = dt.datetime.strptime(result, '%Y%m%d%H')
+        self.assertIsInstance(result, str)
+        self.assertIsInstance(result_dt, dt.datetime)
+        self.assertIn(result_dt.hour, [0, 6, 12, 18])
+        self.assertEqual(cnrfc.cnrfc._default_date_string('2023112818'), '2023112818')
+        self.assertRaises(ValueError, cnrfc.cnrfc._default_date_string, '2023112805')
+
+    def test_get_ensemble_product_url(self):
+        self.assertEqual(cnrfc.get_ensemble_product_url(1, 'VNSC1', data_format=''),
+                         'https://www.cnrfc.noaa.gov/ensembleProduct.php?id=VNSC1&prodID=1')
+        self.assertEqual(cnrfc.get_ensemble_product_url(3, 'VNSC1', data_format=''),
+                         'https://www.cnrfc.noaa.gov/ensembleProduct.php?id=VNSC1&prodID=3')
+        self.assertEqual(cnrfc.get_ensemble_product_url(7, 'SHDC1', data_format='Tabular')
+                        'https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=SHDC1&prodID=7')
+
+    def test_get_ensemble_product_6(self):
+        """
+        test download and parsing of monthly probability rainbow barchart plot for Shasta location
+        """
+        result = cnrfc.get_ensemble_product_6('SHDC1')
+        self.assertEqual(result['data'].shape, (7, 12))
+        self.assertEqual(result['data'].index.tolist(), ['10%', '25%', '50%', '75%', '90%', 'Mean', '%Mean'])
+        self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id=SHDC1&prodID=6')
+        self.assertEqual(result['info']['type'], 'Monthly Streamflow Volume (1000s of Acre-Feet)')
+        self.assertEqual(result['info']['units'], 'TAF')
+
+    def test_get_ensemble_product_10(self):
+        """
+        test download and parsing of water year accumulated volume plot for Shasta location
+        """
+        result = cnrfc.get_ensemble_product_10('SHDC1')
+        self.assertEqual(result['data'].shape, (5, 12))
+        self.assertEqual(result['data'].index.tolist(), ['10%', '25%', '50%(Median)', '75%', '90%'])
+        self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id=SHDC1&prodID=10')
+        self.assertEqual(result['info']['type'], 'Water Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation')
+        self.assertEqual(result['info']['units'], 'TAF')
+
+    def test__parse_blue_table(self):
+        """
+        test the processing of included data table for monthly summary associated with ensemble products like 2, 10, etc
+        """
+        table_soup = BeautifulSoup(textwrap.dedent("""/
+            <table border="0" cellpadding="0" style="standardTable" width="100%">
+            <tr bgcolor="#003399">
+            <td align="center" class="medBlue-background" colspan="11" valign="middle"><strong>Title</strong></td>
+            </tr>
+            <tr>
+            <td align="center" class="blue-background" width="20%"><b>Probability</b></td>
+            <td align="center" class="blue-background" width="8%"><b>Nov<br/>29</b></td>
+            <td align="center" class="blue-background" width="8%"><b>Nov<br/>30</b></td>
+            <td align="center" class="blue-background" width="8%"><b>Dec<br/>01</b></td>
+            <td align="center" class="blue-background" width="8%"><b>Dec<br/>02</b></td>
+            <td align="center" class="blue-background" width="8%"><b>Dec<br/>03</b></td>
+            </tr>
+            <tr>
+            <td align="center" bgcolor="#999999" class="normalText" height="33" width="20%">
+                <font color="#0033FF"><b>10%</b></font></td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">12.2</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">24.4</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">36.7</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">49.0</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">62.5</td>
+            </tr>
+            <tr>
+            <td align="center" bgcolor="#999999" class="normalText" height="33" width="20%">
+                <font color="#00FFFF"><b>25%</b></font></td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">12.2</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">24.4</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">36.7</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">48.9</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">61.4</td>
+            </tr>
+            <tr>
+            <td align="center" bgcolor="#999999" class="normalText" height="33" width="20%"><b>
+                <font color="#33FF33">50%<br/>(Median)</font></b></td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">12.2</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">24.4</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">36.6</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">48.9</td>
+            <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">61.2</td>
+            </tr>
+            </table>
+        """))
+        result = cnrfc.cnrfc._parse_blue_table(table_soup)
+        self.assertIsInstance(result[0], pd.DataFrame)
+        self.assertEqual(result[0]['Probability'].tolist(), ['10%', '25%', '50%(Median)'])
+        self.assertIsInstance(result[1], list)
+
+    def test__apply_conversions(self):
+        """
+        test application of UTC->PST/PDT and kcfs->cfs or kcfs->acre-feet unit conversions for a sample ensemble
+        """
+        df = pd.DataFrame(data=[[0.111, 0.222, 0.333]] * 6,
+                          index=pd.date_range('2023-11-01 12:00:00', periods=6, freq='H'))
+        
+        # test for conversion of kcfs -> acre-feet, no timezone handling
+        result = cnrfc.cnrfc._apply_conversions(df, 'hourly', True, False, False)
+        self.assertIsInstance(result[0], pd.DataFrame)
+        self.assertEqual(pd.to_datetime(result[0].first_valid_index()), dt.datetime(2023, 11, 1, 12, tzinfo=None))
+        self.assertEqual(round(result[0].loc[result[0].first_valid_index(), 0], 6), 9.173554)
+        self.assertEqual(result[1], 'acre-feet')
+
+        # reset test frame
+        df = pd.DataFrame(data=[[0.111, 0.222, 0.333]] * 6,
+                          index=pd.date_range('2023-11-01 12:00:00', periods=6, freq='H'))
+
+        # test for conversion of timezone and kcfs -> cfs
+        result = cnrfc.cnrfc._apply_conversions(df, 'hourly', False, True, True)
+        self.assertIsInstance(result[0], pd.DataFrame)
+        try:
+            from zoneinfo import ZoneInfo
+            tz_function = ZoneInfo
+        except:
+            from pytz import timezone
+            tz_function = timezone
+        self.assertEqual(pd.to_datetime(result[0].first_valid_index()),
+                         dt.datetime(2023, 11, 1, 5, tzinfo=tz_function('America/Los_Angeles')))
+        self.assertEqual(result[1], 'cfs')
 
     def deferred_test_get_ensemble_forecast_watershed(self):
         result = cnrfc.get_ensemble_forecast_watershed(watershed,
@@ -245,52 +401,20 @@ class TestCNRFC(unittest.TestCase):
     def deferred_test_download_watershed_file(self):
         result = cnrfc.download_watershed_file(watershed, date_string, forecast_type, duration=None, path=None)
 
-    def deferred_test_get_watershed_forecast_issue_time(self):
-        result = cnrfc.get_watershed_forecast_issue_time(duration, watershed, date_string=None, deterministic=False)
-
     def deferred_test_get_ensemble_first_forecast_ordinate(self):
         result = cnrfc.get_ensemble_first_forecast_ordinate(url=None, df=None)
-
-    def deferred_test_get_ensemble_product_url(self):
-        result = cnrfc.get_ensemble_product_url(product_id, cnrfc_id, data_format='')
-
-    def test_get_ensemble_product_2(self):
-        """
-        test for the expected format of ensemble produce #2
-        """
-        result = cnrfc.get_ensemble_product_2('BDBC1')
-        self.assertEqual(result['info']['type'], 'Tabular 10-Day Streamflow Volume Accumulation')
-        self.assertEqual(result['info']['units'], 'TAF')
-        self.assertEqual(result['data'].shape, (6, 10))
-        self.assertEqual(result['data'].index.tolist(),
-                         ['10%', '25%', '50%(Median)', '75%', '90%', 'CNRFCDeterministic Forecast'])
-
-    def deferred_test_get_ensemble_product_6(self):
-        result = cnrfc.get_ensemble_product_6(cnrfc_id)
-
-    def deferred_test_get_ensemble_product_10(self):
-        result = cnrfc.get_ensemble_product_10(cnrfc_id)
 
     def deferred_test_esp_trace_analysis_wrapper(self):
         result = cnrfc.esp_trace_analysis_wrapper()
 
-    def deferred_test__apply_conversions(self):
-        result = cnrfc._apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
-
     def deferred_test__get_cnrfc_restricted_content(self):
-        result = cnrfc._get_cnrfc_restricted_content(url)
+        result = cnrfc.cnrfc._get_cnrfc_restricted_content(url)
 
     def deferred_test__get_forecast_csv(self):
-        result = cnrfc._get_forecast_csv(url)
+        result = cnrfc.cnrfc._get_forecast_csv(url)
 
     def deferred_test_get_forecast_csvdata(self):
         result = cnrfc.get_forecast_csvdata(url)
-
-    def deferred_test__default_date_string(self):
-        result = cnrfc._default_date_string(date_string)
-
-    def deferred_test__parse_blue_table(self):
-        result = cnrfc._parse_blue_table(table_soup)
 
 
 if __name__ == '__main__':

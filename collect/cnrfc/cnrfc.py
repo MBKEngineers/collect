@@ -17,7 +17,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from collect.cnrfc.gages import *
-from collect.utils.utils import clean_fixed_width_headers, get_web_status
+from collect.utils.utils import clean_fixed_width_headers, get_web_status, get_session_response
 
 try:
     from zoneinfo import ZoneInfo
@@ -574,38 +574,67 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
     return path
 
 
+def parse_forecast_archive_table(url):
+    """
+    get the table of Forecast Group, Filename, Date/Time Last Modified and Size for deterministic and ensemble short
+    and long-range forecasts for watershed groups
+
+    Arguments:
+        url (str): identifies the product page for watershed forecast products
+    Returns:
+        df (pandas.DataFrame): dataframe containing HTML table summarizing last forecast issuances for product page
+    """
+    df = pd.read_html(get_session_response(url).text)[0]
+
+    # extract the header row and assign as column names
+    df.columns = df.iloc[1,:]
+
+    # drop the invalid headers and filter to relevant columns
+    df = df.drop([0, 1], axis=0).reindex()[['Forecast Group', 'Filename', 'Date/Time Last Modified', 'Size']]
+
+    # limit frame to valid files containing size info
+    return df.loc[df['Size'].str.endswith('K')]
+
+
 def get_watershed_forecast_issue_time(duration, watershed, date_string=None, deterministic=False):
     """
     get "last modified" date/time stamp from CNRFC watershed ensemble product table
+
+    Arguments:
+        duration (str): one of 'daily' or 'hourly'
+        watershed (str): the name of the watershed forecast group
+        date_string (None or str): None for the latest forecast product or the the YYYYMMDDHH-formatted date
+        deterministic (bool): flag for whether the watershed deterministic forecast is specified
+    Returns:
+        (datetime.datetime or None): the specified last modified date for the watershed product
     """
     duration = _validate_duration(duration)
 
-    if duration == 'daily':
-        #" only on the 12"
-        date_string = date_string[:-2] + '12'
-        url = 'https://www.cnrfc.noaa.gov/ensembleProductCSV.php'
-        file_name = '{0}_{1}_hefs_csv_{2}.zip'
-    
-    elif duration == 'hourly':
-        url = 'https://www.cnrfc.noaa.gov/ensembleHourlyProductCSV.php'
-        file_name = '{0}_{1}_hefs_csv_{2}.zip'
-    
-    if deterministic:
-        url = 'https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php'
-        file_name = '{0}_{1}_csv_export.zip'
+    # store original date_string
+    _date_string = date_string
 
     # forecast datestamp prefix
     date_string = _default_date_string(date_string)
-    
-    # request table from ensemble product page and parse HTML
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
-    for td in soup.find_all('td', {'class': 'table-listing-content'}):
-        if file_name.format(date_string, watershed, duration) in td.text:
-            issue_time = parser.parse(td.next_sibling.text).astimezone(PACIFIC)
-            return issue_time
 
-    return None
-    # raise ValueError('No valid issue time for URL.')
+    # do not return a datetime if the provided date_string is for a past forecast issuance (this is not stored on the
+    # CNRFC site)
+    if _date_string is not None and _date_string != _default_date_string(None):
+        return None
+
+    if duration == 'daily':
+        url = 'https://www.cnrfc.noaa.gov/ensembleProductCSV.php'
+    
+    elif duration == 'hourly':
+        url = 'https://www.cnrfc.noaa.gov/ensembleHourlyProductCSV.php'
+    
+    if deterministic:
+        if duration == 'daily':
+            raise ValueError('Long-range (daily) deterministic product does not exist.')
+        url = 'https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php'
+
+    # extract last-modified details and filenames from forecast product zipfile table
+    table = parse_forecast_archive_table(url)
+    return parser.parse(table.loc[table['Forecast Group']==watershed, 'Date/Time Last Modified'].values[0])
 
 
 def get_watershed(cnrfc_id):
@@ -685,6 +714,7 @@ def get_ensemble_product_2(cnrfc_id):
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
+    print(data_table)
     df, notes = _parse_blue_table(data_table)
     df.set_index('Probability', inplace=True)
 
