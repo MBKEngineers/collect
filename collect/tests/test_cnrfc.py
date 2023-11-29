@@ -17,9 +17,13 @@ import pandas as pd
 
 from collect import cnrfc
 
-
-def mocked_strftime(*args, **kwargs):
-    return '2023110112'
+# alternate timezone representation depending on Python version
+try:
+    from zoneinfo import ZoneInfo
+    tz_function = ZoneInfo
+except:
+    from pytz import timezone
+    tz_function = timezone
 
 
 class TestCNRFC(unittest.TestCase):
@@ -190,27 +194,51 @@ class TestCNRFC(unittest.TestCase):
         self.assertEqual(result['info']['units'], 'cfs')
 
     def test_get_ensemble_product_1(self):
+        """
+        as this method is not yet implemented in the cnrfc module, it is expected to raise an error
+        """
         self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_1, 'ORDC1')
 
     def test_get_ensemble_product_3(self):
+        """
+        as this method is not yet implemented in the cnrfc module, it is expected to raise an error
+        """
         self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_3, 'ORDC1')
 
     def test_get_ensemble_product_5(self):
+        """
+        as this method is not yet implemented in the cnrfc module, it is expected to raise an error
+        """
         self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_5, 'ORDC1')
 
     def test_get_ensemble_product_11(self):
+        """
+        as this method is not yet implemented in the cnrfc module, it is expected to raise an error
+        """
         self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_11, 'ORDC1')
 
     def test_get_ensemble_product_12(self):
+        """
+        as this method is not yet implemented in the cnrfc module, it is expected to raise an error
+        """
         self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_12, 'ORDC1')
 
     def test_get_ensemble_product_13(self):
+        """
+        as this method is not yet implemented in the cnrfc module, it is expected to raise an error
+        """
         self.assertRaises(NotImplementedError, cnrfc.get_ensemble_product_13, 'ORDC1')
 
     def test_get_data_report_part_8(self):
+        """
+        as this method is not yet implemented in the cnrfc module, it is expected to raise an error
+        """
         self.assertRaises(NotImplementedError, cnrfc.get_data_report_part_8)
 
     def test_get_monthly_reservoir_storage_summary(self):
+        """
+        as this method is not yet implemented in the cnrfc module, it is expected to raise an error
+        """
         self.assertRaises(NotImplementedError, cnrfc.get_monthly_reservoir_storage_summary)
 
     def test_get_rating_curve(self):
@@ -282,7 +310,7 @@ class TestCNRFC(unittest.TestCase):
                          'https://www.cnrfc.noaa.gov/ensembleProduct.php?id=VNSC1&prodID=1')
         self.assertEqual(cnrfc.get_ensemble_product_url(3, 'VNSC1', data_format=''),
                          'https://www.cnrfc.noaa.gov/ensembleProduct.php?id=VNSC1&prodID=3')
-        self.assertEqual(cnrfc.get_ensemble_product_url(7, 'SHDC1', data_format='Tabular')
+        self.assertEqual(cnrfc.get_ensemble_product_url(7, 'SHDC1', data_format='Tabular'),
                         'https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=SHDC1&prodID=7')
 
     def test_get_ensemble_product_6(self):
@@ -352,7 +380,7 @@ class TestCNRFC(unittest.TestCase):
             <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">61.2</td>
             </tr>
             </table>
-        """))
+        """), 'lxml')
         result = cnrfc.cnrfc._parse_blue_table(table_soup)
         self.assertIsInstance(result[0], pd.DataFrame)
         self.assertEqual(result[0]['Probability'].tolist(), ['10%', '25%', '50%(Median)'])
@@ -364,7 +392,7 @@ class TestCNRFC(unittest.TestCase):
         """
         df = pd.DataFrame(data=[[0.111, 0.222, 0.333]] * 6,
                           index=pd.date_range('2023-11-01 12:00:00', periods=6, freq='H'))
-        
+
         # test for conversion of kcfs -> acre-feet, no timezone handling
         result = cnrfc.cnrfc._apply_conversions(df, 'hourly', True, False, False)
         self.assertIsInstance(result[0], pd.DataFrame)
@@ -379,42 +407,119 @@ class TestCNRFC(unittest.TestCase):
         # test for conversion of timezone and kcfs -> cfs
         result = cnrfc.cnrfc._apply_conversions(df, 'hourly', False, True, True)
         self.assertIsInstance(result[0], pd.DataFrame)
-        try:
-            from zoneinfo import ZoneInfo
-            tz_function = ZoneInfo
-        except:
-            from pytz import timezone
-            tz_function = timezone
         self.assertEqual(pd.to_datetime(result[0].first_valid_index()),
                          dt.datetime(2023, 11, 1, 5, tzinfo=tz_function('America/Los_Angeles')))
         self.assertEqual(result[1], 'cfs')
 
-    def deferred_test_get_ensemble_forecast_watershed(self):
-        result = cnrfc.get_ensemble_forecast_watershed(watershed,
-                                                       duration,
-                                                       date_string,
+    def test_get_ensemble_forecast_watershed(self):
+        """
+        test for retrieiving an ensemble forecast watershed file for a forecast issuance prior to most recent
+        """
+        result = cnrfc.get_ensemble_forecast_watershed('SalinasPajaro',
+                                                       'hourly',
+                                                       '2023010118',
                                                        acre_feet=False,
                                                        pdt_convert=False,
                                                        as_pdt=False,
                                                        cnrfc_id=None)
+        self.assertEqual(result['data'].shape, (721, 924))
+        self.assertEqual(result['data'].tail(1)['BTEC1'].values[0], 226.94)
+        self.assertEqual(pd.to_datetime(result['data'].last_valid_index()), dt.datetime(2023, 1, 31, 18, 0, 0))
+        self.assertEqual(result['info']['watershed'], 'SalinasPajaro')
+        self.assertEqual(result['info']['url'],
+                         'https://www.cnrfc.noaa.gov/csv/2023010118_SalinasPajaro_hefs_csv_hourly.zip')
+        self.assertIsNone(result['info']['issue_time'])
 
-    def deferred_test_download_watershed_file(self):
-        result = cnrfc.download_watershed_file(watershed, date_string, forecast_type, duration=None, path=None)
+    def test_get_esp_trace_analysis_url(self):
+        """
+        test that the build-your-own trace analysis product url is properly constructed for the provided options
+        """
+        url = cnrfc.get_esp_trace_analysis_url('BTYO3',
+                                               interval='day',
+                                               value_type='mean',
+                                               plot_type='traces',
+                                               table_type='forecastInfo',
+                                               product_type='table',
+                                               date_string='20231106',
+                                               end_date_string='20231231')
+        expected_url = '&'.join(['https://www.cnrfc.noaa.gov/ensembleProduct.php?id=BTYO3',
+                                 'prodID=8',
+                                 'interval=day',
+                                 'valueType=mean',
+                                 'plotType=traces',
+                                 'tableType=forecastInfo',
+                                 'productType=table',
+                                 'dateSelection=custom',
+                                 'date=20231106',
+                                 'endDate=20231231'])
+        self.maxDiff = 800
+        self.assertEqual(url, expected_url)
 
-    def deferred_test_get_ensemble_first_forecast_ordinate(self):
-        result = cnrfc.get_ensemble_first_forecast_ordinate(url=None, df=None)
+    def test_get_ensemble_first_forecast_ordinate(self):
+        """
+        test that the first ensemble forecast ordinate is a datetime in the past
+        """
+        result = cnrfc.get_ensemble_first_forecast_ordinate(
+            url='https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv',
+            df=None
+        )
+        self.assertIsInstance(result, dt.datetime)
+        result_utc = result.replace(tzinfo=tz_function('UTC'))
+        self.assertLess(result_utc, dt.datetime.now(tz=tz_function('UTC')))
 
-    def deferred_test_esp_trace_analysis_wrapper(self):
-        result = cnrfc.esp_trace_analysis_wrapper()
+    def test__get_forecast_csv(self):
+        """
+        test for forecast CSV data retrieval to in-memory filelike object (private method)
+        """
+        result = cnrfc.cnrfc._get_forecast_csv('https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv')
+        self.assertIsInstance(result, io.BytesIO)
 
-    def deferred_test__get_cnrfc_restricted_content(self):
-        result = cnrfc.cnrfc._get_cnrfc_restricted_content(url)
+        # check first line contains forecast point headers
+        self.assertTrue(result.readline().decode('utf-8').startswith('GMT,HLEC1'))
 
-    def deferred_test__get_forecast_csv(self):
-        result = cnrfc.cnrfc._get_forecast_csv(url)
+        # check second line contains variables identifiers
+        self.assertTrue(result.readline().decode('utf-8').startswith(',QINE,QINE'))
 
-    def deferred_test_get_forecast_csvdata(self):
-        result = cnrfc.get_forecast_csvdata(url)
+        # check third line contains expected timeseries info
+        self.assertTrue(result.readline().decode('utf-8').startswith('2023-11-29 12:00:00,0.89311'))
+
+    def test_get_forecast_csvdata(self):
+        """
+        test for forecast CSV data retrieval to in-memory filelike object (public method); duplicate of
+        test__get_forecast_csv
+        """
+        result = cnrfc.get_forecast_csvdata('https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv')
+        self.assertIsInstance(result, io.BytesIO)
+        self.assertTrue(result.readline().decode('utf-8').startswith('GMT,HLEC1'))
+        self.assertTrue(result.readline().decode('utf-8').startswith(',QINE,QINE'))
+        self.assertTrue(result.readline().decode('utf-8').startswith('2023-11-29 12:00:00,0.89311'))
+
+    def test__get_cnrfc_restricted_content(self):
+        """
+        test that restricted content can be accessed through the provided credentials
+        """
+        result = cnrfc.cnrfc._get_cnrfc_restricted_content(
+            'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_tabular.php?id=FOLC1'
+        )
+        sample = BeautifulSoup(result, 'lxml').find('pre').text.splitlines()[:9]
+        self.assertEqual(sample[2], '# Location: American River - Folsom Lake (FOLC1)')
+        self.assertTrue(sample[-1].startswith('# Maximum Observed Flow:'))
+
+    def test_download_watershed_file(self):
+        """
+        test for downloading watershed file to local file system (in this case, downloaded to in-memory object)
+        """
+        result = cnrfc.download_watershed_file('WSI', '2023010112', 'ensemble', duration='daily', path=io.BytesIO())
+        self.assertIsInstance(result, io.BytesIO)
+
+        # check first line contains forecast point headers
+        self.assertTrue(result.readline().decode('utf-8').startswith('GMT,SACC0'))
+
+        # check second line contains variables identifiers
+        self.assertTrue(result.readline().decode('utf-8').startswith(',SQME,SQME'))
+
+        # check third line contains expected timeseries info
+        self.assertTrue(result.readline().decode('utf-8').startswith('2023-01-01 12:00:00,252.83904,'))
 
 
 if __name__ == '__main__':
