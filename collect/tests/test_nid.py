@@ -8,7 +8,6 @@ import datetime as dt
 import io
 import textwrap
 import unittest
-import unittest.mock
 import pandas as pd
 from collect import nid
 

@@ -6,7 +6,6 @@ initial test suite for collect.usace data access and utility functions; note: th
 # -*- coding: utf-8 -*-
 import datetime as dt
 import unittest
-import unittest.mock
 from collect.usace import wcds
 
 
