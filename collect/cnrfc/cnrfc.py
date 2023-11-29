@@ -17,18 +17,6 @@ import requests
 from collect.cnrfc.gages import *
 from collect.utils import utils
 
-try:
-    from zoneinfo import ZoneInfo
-    UTC = ZoneInfo('UTC')
-    PACIFIC = ZoneInfo('America/Los_Angeles')
-
-except:
-    import pytz
-    UTC = pytz.timezone('UTC')
-    PACIFIC = pytz.timezone('America/Los_Angeles')
-
-TODAY = dt.datetime.now().strftime('%Y%m%d')
-
 
 # load credentials
 load_dotenv()
@@ -981,9 +969,9 @@ def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
     if pdt_convert:
         df.index = df.index.tz_localize('UTC').tz_convert('America/Los_Angeles')
         df.index.name = 'America/Los_Angeles'
-    
+
     elif as_pdt:
-        df.index = [PACIFIC.localize(x) for x in df.index]
+        df.index = [utils.get_localized_datetime(x, 'America/Los_Angeles') for x in df.index]
         df.index.name = 'America/Los_Angeles'
 
     return df, units
@@ -1088,7 +1076,7 @@ def _default_date_string(date_string):
     supply expected latest forecast datestamp or use defined date_string argument
     """
     if date_string is None:
-        now = dt.datetime.now().astimezone(UTC)
+        now = utils.get_localized_datetime(dt.datetime.now(), 'UTC')
         date_string = now.strftime('%Y%m%d{0:02.0f}'.format(6 * math.floor(now.hour/6)))
     
     # hour validation
