@@ -1,7 +1,7 @@
 """
-collect.tests.test_basics
+collect.tests.test_usgs
 ============================================================
-initial test suite for collect data access and utility functions; note: these tests require internet connection
+initial test suite for collect.usgs data access and utility functions; note: these tests require internet connection
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
