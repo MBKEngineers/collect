@@ -154,25 +154,83 @@ class TestCDEC(unittest.TestCase):
 class TestSWP(unittest.TestCase):
 
     def deferred_test_prompt_installation_and_exit(self):
+        """
+        test to ensure appropriate warning is printed when pdftotext is not installed; not yet implemented
+        """
         swp.prompt_installation_and_exit()
 
-    def deferred_test_get_report_catalog(self):
-        swp.get_report_catalog()
+    def test_get_report_catalog(self):
+        """
+        test the default message behavior for get_report_catalog
+        """ 
+        result = swp.get_report_catalog(console=False)
+        self.assertTrue('Oroville Operations' in result)
+        self.assertTrue('Weekly Summaries' in result)
 
-    def deferred_test_get_report_url(self):
-        swp.get_report_url()
+    def test_get_report_url(self):
+        """
+        verify get_report_url produces the expected URL formats
+        """
+        # check one of the reservoir PDF reports
+        expected_url = '/'.join(['https://water.ca.gov/-/media',
+                                 'DWR-Website',
+                                 'Web-Pages',
+                                 'Programs',
+                                 'State-Water-Project',
+                                 'Operations-And-Maintenance',
+                                 'Files',
+                                 'Operations-Control-Office',
+                                 'Project-Wide-Operations',
+                                 'Oroville-Weekly-Reservoir-Storage-Chart.pdf'])
+        self.assertEqual(swp.get_report_url('Oroville'), expected_url)
 
-    def deferred_test_get_raw_text(self):
-        swp.get_raw_text()
+        # check one of the txt-formatted reports
+        expected_url = '/'.join(['https://data.cnra.ca.gov/dataset',
+                                 '742110dc-0d96-40bc-8e4e-f3594c6c4fe4',
+                                 'resource',
+                                 '45c01d10-4da2-4ebb-8927-367b3bb1e601',
+                                 'download',
+                                 'dispatchers-monday-water-report.txt'])
+        self.assertEqual(swp.get_report_url('Mon'), expected_url)
 
-    def deferred_test_get_delta_daily_data(self):
-        swp.get_delta_daily_data()
+        # check for invalid input
+        self.assertIsNone(swp.get_report_url('invalid'))
 
-    def deferred_test_get_barker_slough_data(self):
-        swp.get_barker_slough_data()
+    def test_get_raw_text(self):
+        """
+        test expected behavior for get_raw_text for pdf report and invalid text report
+        """
+        # test for a PDF-formatted report
+        result = swp.get_raw_text('Delta Operations Summary (daily)')
+        self.assertIsInstance(result, str)
+        self.assertTrue(result.startswith('PRELIMINARY DATA'))
+        self.assertTrue(result.strip().endswith('please contact OCO_Export_Management@water.ca.gov'))
 
-    def deferred_test_get_oco_tabular_data(self):
-        swp.get_oco_tabular_data()
+        # test for a text-formatted report
+        self.assertRaises(ValueError, swp.get_raw_text, 'Mon')
+
+    def test_get_delta_daily_data(self):
+        result = swp.get_delta_daily_data('dict')
+        self.assertTrue(result['info']['title'].startswith('EXECUTIVE OPERATIONS SUMMARY ON '))
+        self.assertIsInstance(result['data'], dict)
+        self.assertTrue('Reservoir Releases' in result['data'])
+
+    def test_get_barker_slough_data(self):
+        result = swp.get_barker_slough_data()
+        self.assertEqual(result['info']['title'], 'BARKER SLOUGH PUMPING PLANT WEEKLY REPORT')
+        self.assertEqual(result['data'].shape, (7, 3))
+        self.assertIsInstance(result['data'].index, pd.core.indexes.datetimes.DatetimeIndex)
+
+    def test_get_oco_tabular_data(self):
+        """
+        test tabular data extraction for the Water Quality Summary report using get_oco_tabular_data
+        """
+        result = swp.get_oco_tabular_data('Water Quality Summary (daily)')
+        self.assertEqual(result['info']['filename'], 'Delta-Water-Quality-Daily-Summary.pdf')
+        self.assertIsInstance(result['info']['pages'], int)
+        self.assertIsInstance(result['data'], pd.DataFrame)
+        self.assertEqual(result['data'].shape, (30, 46))
+        self.assertEqual(result['data'].index.name, 'Date (30 days)')
 
 
 class TestWSI(unittest.TestCase):
