@@ -42,9 +42,16 @@ AMERICAN_GAGES = ['NFDC1', 'FMDC1', 'FMDC1O', 'BCTC1', 'LNLC1', 'RRGC1', 'HLLC1'
                   'RRGC1L', 'RRGC1F', 'RUFC1L', 'SVCC1F', 'SVCC1L', 'HLLC1L', 
                   'HLLC1SPL']
 
-LOWERSACRAMENTO_GAGES = ['SAMC1', 'SACC1', 'VONC1', 'FMWC1', 'DRMC1', 'RCVC1', 
-                         'FMWC1L', 'SACC1L', 'SAMC1L', 'NCOC1L']
+# Oct 2022 onwards
+SALINASPAJARO_GAGES = []
 
+# Oct 2022 onwards
+SOUTHBAY_GAGES = []
+
+LOWERSACRAMENTO_GAGES = ['SAMC1', 'SACC1', 'VONC1', 'FMWC1', 'DRMC1', 'RCVC1', 
+                         'FMWC1L', 'SACC1L', 'SAMC1L', 'NCOC1', 'NCOC1L']
+
+# before Oct 2022
 CENTRALCOAST_GAGES = ['LWDC1', 'SNRC1', 'NBYC1', 'NACC1', 'PRBC1', 'RDRC1', 
                       'BSRC1', 'PIIC1', 'TESC1', 'HOSC1', 'PHOC1', 'AROC1', 
                       'BTEC1', 'COYC1', 'ANDC1', 'CYTC1', 'CYEC1', 'CMIC1', 
@@ -59,6 +66,9 @@ SOUTHERNCALIFORNIA_GAGES = ['TWDC1', 'SSQC1', 'GARC1', 'LLYC1', 'CCHC1', 'SLUC1'
                             'MWXC1', 'TSLC1', 'ADOC1', 'SVWC1', 'DKHC1', 'WFMC1', 
                             'MVDC1O', 'MVVC1', 'HAWC1', 'ELPC1', 'SVIC1', 'FSNC1', 
                             'CYBC1', 'HSAC1']
+
+# Oct 2022 onwards
+SANDIEGO_INLAND_GAGES = []
 
 TULARE_GAGES = ['KKVC1', 'SKRC1', 'ISAC1', 'SCSC1', 'KTRC1', 'TMDC1', 'PFTC1', 
                 'DLMC1', 'MLPC1']
@@ -80,6 +90,9 @@ EASTSIERRA_GAGES = ['SUSC1', 'SCRN2', 'SCWN2', 'WOOC1', 'CEMC1', 'GRDN2',
 
 HUMBOLDT_GAGES = ['MBON2', 'MHSN2', 'DVGN2', 'HREN2', 'DIXN2', 'HRCN2', 'PALN2', 
                   'ROCN2', 'HBMN2', 'CMSN2', 'HRIN2', 'LHPN2', 'MARN2', 'MDCN2']
+
+
+WATER_SUPPLY_INDICES = ['SACC0', 'VNSC0', 'MLIC0']
 
 
 ALL = sorted(set(KLAMATH_GAGES + 

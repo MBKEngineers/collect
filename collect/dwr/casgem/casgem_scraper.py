@@ -4,6 +4,7 @@ collect.dwr.casgem.casgem_scraper
 access CASGEM well data
 """
 # -*- coding: utf-8 -*-
+from io import StringIO
 import os
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -14,26 +15,21 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-try:
-    # Python 2.7
-    from StringIO import StringIO
-except ModuleNotFoundError:
-    # Python 3
-    from io import StringIO
 
-
-def get_casgem_data(casgem_id=None, state_well_number=None, local_well_designation=None, master_site_code=None, write_to_html_file=False):
+def get_casgem_data(casgem_id=None,
+                    state_well_number=None,
+                    local_well_designation=None,
+                    master_site_code=None,
+                    write_to_html_file=False):
     """
     Download well timeseries data from CASGEM database; return as dataframe
 
     search term                 | type  |  example
-
+    ----------------------------------------------------------------------
         casgem_id               |  str  |  '34318'
         state_well_number       |  str  |  '19N02W36H001M'
         local_well_designation  |  str  |  '19N02W36H001M'
         master_site_code        |  str  |  '394564N1220246W001'
-
-
 
     Args:
         casgem_id (str): desc
@@ -45,18 +41,15 @@ def get_casgem_data(casgem_id=None, state_well_number=None, local_well_designati
     Returns:
         dict
     """
-
-    if os.name == 'posix':
-        chromedriver = '/usr/local/bin/chromedriver'
-    elif os.name == 'windows':
-        # update Chromedriver to 2.36 (latest on Win32)
-        chromedriver = 'C:/Python27/Scripts/chromedriver'
-
-    os.environ['webdriver.chrome.driver'] = chromedriver
-
-    chrome_options = Options()
-    chrome_options.add_argument('--dns-prefetch-disable')
-    driver = webdriver.Chrome(chrome_options=chrome_options)
+    # if os.name == 'posix':
+    #     chromedriver = '/usr/local/bin/chromedriver'
+    # elif os.name == 'windows':
+    #     # update Chromedriver to 2.36 (latest on Win32)
+    #     chromedriver = 'C:/Python27/Scripts/chromedriver'
+    # os.environ['webdriver.chrome.driver'] = chromedriver
+    # chrome_options = Options()
+    # chrome_options.add_argument('--dns-prefetch-disable')
+    driver = webdriver.Chrome()
 
     # fetch log in url
     url = 'https://www.casgem.water.ca.gov'
