@@ -89,26 +89,6 @@ def get_station_url(station, start, end, data_format='CSV', sensors=[], duration
     return url
 
 
-def get_station_sensors(station, start, end):
-    """
-    Returns a `dict` of the available sensors for `station` for each duration in window
-    defined by `start` and `end`.
-
-    Arguments:
-        station (str): the 3-letter CDEC station ID
-        start (dt.datetime): query start date
-        end (dt.datetime): query end date
-    Returns:
-        sensors (list): the available sensors for the station in this window
-    """
-    sensors = {}
-    for duration in ['E', 'H', 'D', 'M']:
-        url = get_station_url(station, start, end, duration=duration)
-        df = pd.read_csv(url, header=0, na_values=['m', '---', ' ', 'ART', 'BRT', -9999, -9998, -9997], usecols=[0, 1, 2, 3])
-        sensors.update({duration: list(df['SENSOR_TYPE'].unique())})
-    return sensors
-
-
 def get_station_data(station, start, end, sensors=[], duration='', filename=None):
     """
     General purpose function for returning a pandas DataFrame for all available
@@ -207,7 +187,7 @@ def get_raw_station_json(station, start, end, sensors=[], duration='', filename=
     return result
 
 
-def get_sensor_frame(station, start, end, sensor='', duration=''):
+def get_sensor_frame(station, start, end, sensor=None, duration=''):
     """
     return a pandas DataFrame of `station` data for a particular sensor, filtered
     by `duration` and `start` and `end` dates.
@@ -216,7 +196,7 @@ def get_sensor_frame(station, start, end, sensor='', duration=''):
         station (str): the 3-letter CDEC station ID
         start (dt.datetime): query start date
         end (dt.datetime): query end date
-        sensor (str): the numeric sensor code
+        sensor (int): the numeric sensor code
         duration (str): interval code for timeseries data (ex: 'H')
     Returns:
         df (pandas.DataFrame): the queried timeseries for a single sensor as a DataFrame
@@ -271,10 +251,10 @@ def get_station_metadata(station, as_geojson=False):
     # add site url
     site_info.update({'CDEC URL': f"<a target=\"_blank\" href=\"{url}\">{station}</a>"})
 
-    if soup.find('a', href=True, text='Dam Information'):
+    if soup.find('a', href=True, string='Dam Information'):
         site_info.update(get_dam_metadata(station))
 
-    if soup.find('a', href=True, text='Reservoir Information'):
+    if soup.find('a', href=True, string='Reservoir Information'):
         site_info.update(get_reservoir_metadata(station))
 
     # export a geojson feature (as dictionary)
@@ -447,7 +427,7 @@ def _parse_data_available(text):
     return list(range(start.year, end.year + 1))
 
 
-def get_data(station, start, end, sensor='', duration=''):
+def get_data(station, start, end, sensor=None, duration=''):
     """
     return station date for a query bounded by start and end datetimes for
     a particular sensor/duration combination

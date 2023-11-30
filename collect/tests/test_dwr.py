@@ -11,6 +11,7 @@ import textwrap
 import unittest
 import unittest.mock
 
+from bs4 import BeautifulSoup
 import pandas as pd
 
 from collect.dwr import cdec
@@ -148,150 +149,332 @@ class TestCDEC(unittest.TestCase):
         self.assertEqual(result.columns.tolist(), ['Hydrologic Region', 'Watershed', 'Apr-Jul Forecast',
                                                    '% of Avg', '90% Exceedance', '10% Exceedance'])
 
-#     def deferred_test_get_station_url(self):
-#         result = cdec.get_station_url(station, start, end, data_format='CSV', sensors=[], duration='')
-#         print(result)
+    def test_get_station_url(self):
+        """
+        test the creation of query URL for a particular station, sensor set, data interval, and date range
+        """
+        result = cdec.get_station_url('CFW',
+                                      dt.datetime(2023, 1, 1),
+                                      dt.datetime(2023, 1, 3),
+                                      data_format='CSV',
+                                      sensors=[6], 
+                                      duration='H')
+        self.assertEqual(result, '&'.join(['https://cdec.water.ca.gov/dynamicapp/req/CSVDataServlet?Stations=CFW',
+                                           'dur_code=H',
+                                           'SensorNums=6',
+                                           'Start=2023-01-01',
+                                           'End=2023-01-03']))
 
-#     def deferred_test_get_station_sensors(self):
-#         result = cdec.get_station_sensors(station, start, end)
-#         print(result)
+    def test_get_data(self):
+        """
+        test retrieval of station timeseries and details data
+        """
+        result = cdec.get_data('CFW', dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 3), sensor=6, duration='D')
+        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result['info'], dict)
+        self.assertEqual(result['info']['title'], 'BEAR RIVER AT CAMP FAR WEST DAM')
+        self.assertIsInstance(result['data'], pd.DataFrame)
+        self.assertEqual(result['data']['VALUE'].values.tolist(), [300.48, 300.98, 300.72])
 
-#     def deferred_test_get_station_data(self):
-#         result = cdec.get_station_data(station, start, end, sensors=[], duration='')
-#         print(result)
+    def test_get_sensor_frame(self):
+        """
+        test timeseries data retrieval using the CSV query service for a particular date range and sensor combo
+        """
+        result = cdec.get_sensor_frame('CFW', dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 3), sensor=15, duration='D')
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(result['VALUE'].values.tolist(), [105419.0, 106489.0, 105931.0])
 
-#     def deferred_test_get_raw_station_csv(self):
-#         result = cdec.get_raw_station_csv(station, start, end, sensors=[], duration='', filename='')
-#         print(result)
+    def test_get_station_data(self):
+        """
+        test duplicate function (with get_raw_station_csv) for retrieval of timeseries data
+        """
+        result = cdec.get_station_data('CFW',
+                                       dt.datetime(2023, 1, 1),
+                                       dt.datetime(2023, 6, 3),
+                                       sensors=[15],
+                                       duration='M')
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(result.shape, (6, 9))
+        self.assertEqual(result.tail(1).values.tolist()[0][:6], ['CFW', 'M', 15, 'STORAGE', '20230601 0000', 73931.0])
 
-#     def deferred_test_get_raw_station_json(self):
-#         result = cdec.get_raw_station_json(station, start, end, sensors=[], duration='', filename='')
-#         print(result)
+    def test_get_raw_station_csv(self):
+        """
+        test expected values for an hourly elevation data query
+        """
+        result = cdec.get_raw_station_csv('CFW',
+                                          dt.datetime(2023, 1, 1),
+                                          dt.datetime(2023, 1, 3),
+                                          sensors=[6],
+                                          duration='H',
+                                          filename='')
+        self.assertIsInstance(result, pd.DataFrame)
+        self.assertEqual(result.shape, (49, 9))
+        self.assertEqual(result.tail(1).values.tolist()[0][:6], ['CFW', 'H', 6, 'RES ELE', '20230103 0000', 300.98])
 
-#     def deferred_test_get_sensor_frame(self):
-#         result = cdec.get_sensor_frame(station, start, end, sensor='', duration='')
-#         print(result)
+    def test_get_raw_station_json(self):
+        """
+        test retrieval of timeseries station data using the JSON query service
+        """
+        result = cdec.get_raw_station_json('CFW',
+                                           dt.datetime(2023, 1, 1),
+                                           dt.datetime(2023, 1, 4),
+                                           sensors=[15],
+                                           duration='D',
+                                           filename='')
+        self.assertIsInstance(result, list)
+        self.assertEqual([(x['date'], x['value']) for x in result], [('2023-1-1 00:00', 105419),
+                                                                     ('2023-1-2 00:00', 106489),
+                                                                     ('2023-1-3 00:00', 105931),
+                                                                     ('2023-1-4 00:00', 105185)])
 
-#     def deferred_test_get_station_metadata(self):
-#         result = cdec.get_station_metadata(station, as_geojson=False)
-#         print(result)
+    def test_get_station_metadata(self):
+        """
+        test for retrieving station information from the CDEC detail page
+        """
+        result = cdec.get_station_metadata('CFW', as_geojson=False)
+        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result['info'], dict)
+        self.assertIsInstance(result['info']['dam'], dict)
+        self.assertIsInstance(result['info']['reservoir'], dict)
+        self.assertIsInstance(result['info']['sensors'], dict)
+        self.assertEqual(result['info']['title'], 'BEAR RIVER AT CAMP FAR WEST DAM')
+        self.assertEqual(result['info']['Station ID'], 'CFW')
+        self.assertEqual(result['info']['Latitude'], '39.049858°')
 
-#     def deferred_test_get_dam_metadata(self):
-#         result = cdec.get_dam_metadata(station)
-#         print(result)
+    def test_get_dam_metadata(self):
+        """
+        test for retrieving dam information from the CDEC detail page
+        """
+        result = cdec.get_dam_metadata('CFW')
+        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result['dam'], dict)
+        self.assertEqual(result['dam']['title'], 'Dam Information')
+        self.assertEqual(result['dam']['Station ID'], 'CFW')
+        self.assertEqual(result['dam']['Dam Name'], 'CAMP FAR WEST')
+        self.assertEqual(result['dam']['National ID'], 'CA00227')
 
-#     def deferred_test_get_reservoir_metadata(self):
-#         result = cdec.get_reservoir_metadata(station)
-#         print(result)
+    def test_get_reservoir_metadata(self):
+        """
+        test for retrieving reservoir information from the CDEC detail page
+        """
+        result = cdec.get_reservoir_metadata('CFW')
+        self.assertIsInstance(result, dict)
+        self.assertIsInstance(result['reservoir'], dict)
+        self.assertEqual(result['reservoir']['title'], 'BEAR RIVER AT CAMP FAR WEST DAM (CFW)')
+        self.assertEqual(result['reservoir']['Station ID'], 'CFW')
+        self.assertEqual(result['reservoir']['Stream Name'], 'Bear River')
+        self.assertEqual(result['reservoir']['Capacity'], '104,500 af')
 
-#     def deferred_test__get_table_index(self):
-#         result = cdec._get_table_index(table_type, tables)
-#         print(result)
+    def test__get_table_index(self):
+        """
+        test function used to determine position of table in station detail page relative to other tables
+        """
+        self.assertEqual(cdec.queries._get_table_index('site', [1]), 0)
+        self.assertEqual(cdec.queries._get_table_index('datum', [1, 1, 1, 1]), 1)
+        self.assertIsNone(cdec.queries._get_table_index('datum', [1, 1, 1]))
+        self.assertEqual(cdec.queries._get_table_index('sensors', [1, 1, 1, 1]), 2)
+        self.assertEqual(cdec.queries._get_table_index('comments', [1, 1, 1, 1]), 3)
+        self.assertIsNone(cdec.queries._get_table_index('other', []))
 
-#     def deferred_test__parse_station_generic_table(self):
-#         result = cdec._parse_station_generic_table(table)
-#         print(result)
+    def test__parse_station_generic_table(self):
+        """
+        test extraction of station general information and data availability from station detail page
+        """
+        table = BeautifulSoup(textwrap.dedent("""\
+            <table border="1">
+                <tr>
+                    <td><b>Station ID</b></td>
+                    <td>CFW</td>
+                    <td><b>Elevation</b></td>
+                    <td>260 ft</td>
+                </tr>
+                <tr>
+                    <td><b>River Basin</b></td>
+                    <td>BEAR RIVER</td>
+                    <td><b>County</b></td>
+                    <td>YUBA</td>
+                </tr>
+                <tr>
+                    <td><b>Hydrologic Area</b></td>
+                    <td>SACRAMENTO RIVER</td>
+                    <td><b>Nearby City</b></td>
+                    <td>MARYSVILLE</td>
+                </tr>
+                <tr>
+                    <td><b>Latitude</b></td>
+                    <td>39.049858°</td>
+                    <td><b>Longitude</b></td>
+                    <td>-121.315941°</td>
+                </tr>
+                <tr>
+                    <td><b>Operator</b></td>
+                    <td>CA Dept of Water Resources/DFM-Hydro-SMN</td>
+                    <td><b>Maintenance</b></td>
+                    <td>CA Dept of Water Resources/DFM-Hydro-SMN</td>
+                </tr>
+            </table>
+        """))
+        result = cdec.queries._parse_station_generic_table(table)
+        self.assertEqual(result, {'Station ID': 'CFW',
+                                  'Elevation': '260 ft',
+                                  'River Basin': 'BEAR RIVER',
+                                  'County': 'YUBA',
+                                  'Hydrologic Area': 'SACRAMENTO RIVER',
+                                  'Nearby City': 'MARYSVILLE',
+                                  'Latitude': '39.049858°',
+                                  'Longitude': '-121.315941°',
+                                  'Operator': 'CA Dept of Water Resources/DFM-Hydro-SMN',
+                                  'Maintenance': 'CA Dept of Water Resources/DFM-Hydro-SMN'})
 
-#     def deferred_test__parse_station_sensors_table(self):
-#         cdec._parse_station_sensors_table(table)
+    def test__parse_station_sensors_table(self):
+        """
+        test extraction of sensor information and data availability from station detail page
+        """
+        table = BeautifulSoup(textwrap.dedent("""\
+            <table border="0" width="800">
+                <th bgcolor="e0e0e0"><b>Sensor Description</b></th>
+                <th bgcolor="e0e0e0"><b>Sensor Number</b></th>
+                <th bgcolor="e0e0e0"><b>Duration</b></th>
+                <th bgcolor="e0e0e0"><b>Plot</b></th>
+                <th bgcolor="e0e0e0"><b>Data Collection</b></th>
+                <th bgcolor="e0e0e0"><b>Data Available</b></th><p></p>
+                <tr>
+                    <td align="left"><b>FLOW, RIVER DISCHARGE</b>, CFS</td><p></p>
+                    <td align="center"><b>20</b></td>
+                    <td width="120"> (<a href="/dynamicapp/QueryF?s=CFW">event</a>) </td>
+                    <td width="120">(<a href="/jspplot/jspPlotServlet.jsp?sensor_no=7581&amp;end=&amp;geom=small&amp;interval=2&amp;cookies=cdec01">FLOW</a>)</td>
+                    <td align="left" width="180">COMPUTED</td>
+                    <td align="center" width="180"> 01/01/2021 to 01/01/2023</td>
+                </tr>
+            </table>
+        """))
+        result = cdec.queries._parse_station_sensors_table(table)
+        self.assertEqual(result, {'20': {'event': {'description': 'FLOW, RIVER DISCHARGE, CFS',
+                                                   'sensor': '20',
+                                                   'duration': 'event',
+                                                   'collection': 'COMPUTED',
+                                                   'availability': '01/01/2021 to 01/01/2023',
+                                                   'years': [2021, 2022, 2023]}}})
 
-#     def deferred_test__parse_station_comments_table(self):
-#         cdec._parse_station_comments_table(table)
+    def test__parse_station_comments_table(self):
+        table = BeautifulSoup(textwrap.dedent("""\
+            <table border="0" width="800">
+                <tr>
+                    <td width="100"><b>02/28/2023</b></td>
+                    <td>Example comment about data availability.</td>
+                </tr>
+                <tr><td width="100"><b>04/27/2020</b></td>
+                    <td>Example comment about datum info.</td>
+                </tr>
+            </table>
+        """))
+        result = cdec.queries._parse_station_comments_table(table)
+        self.assertEqual(result, {'02/28/2023': 'Example comment about data availability.',
+                                  '04/27/2020': 'Example comment about datum info.'})
 
-#     def deferred_test__parse_data_available(self):
-#         cdec._parse_data_available(text)
+    def test__parse_data_available(self):
+        """
+        test generation of year list for the data availability from sensor table on station detail page
+        """
+        result = cdec.queries._parse_data_available('01/01/2021 to 01/01/2023')
+        self.assertEqual(result, [2021, 2022, 2023])
 
-#     def deferred_test_get_data(self):
-#         cdec.get_data(station, start, end, sensor='', duration='')
-
-#     def deferred_test_get_daily_snowpack_data(self):
-#         cdec.get_daily_snowpack_data(region, start, end)
-
-
-# class TestSWP(unittest.TestCase):
-
-    # def deferred_test_prompt_installation_and_exit(self):
-    #     """
-    #     test to ensure appropriate warning is printed when pdftotext is not installed; not yet implemented
-    #     """
-    #     swp.prompt_installation_and_exit()
-
-    # def test_get_report_catalog(self):
-    #     """
-    #     test the default message behavior for get_report_catalog
-    #     """ 
-    #     result = swp.get_report_catalog(console=False)
-    #     self.assertTrue('Oroville Operations' in result)
-    #     self.assertTrue('Weekly Summaries' in result)
-
-    # def test_get_report_url(self):
-    #     """
-    #     verify get_report_url produces the expected URL formats
-    #     """
-    #     # check one of the reservoir PDF reports
-    #     expected_url = '/'.join(['https://water.ca.gov/-/media',
-    #                              'DWR-Website',
-    #                              'Web-Pages',
-    #                              'Programs',
-    #                              'State-Water-Project',
-    #                              'Operations-And-Maintenance',
-    #                              'Files',
-    #                              'Operations-Control-Office',
-    #                              'Project-Wide-Operations',
-    #                              'Oroville-Weekly-Reservoir-Storage-Chart.pdf'])
-    #     self.assertEqual(swp.get_report_url('Oroville'), expected_url)
-
-    #     # check one of the txt-formatted reports
-    #     expected_url = '/'.join(['https://data.cnra.ca.gov/dataset',
-    #                              '742110dc-0d96-40bc-8e4e-f3594c6c4fe4',
-    #                              'resource',
-    #                              '45c01d10-4da2-4ebb-8927-367b3bb1e601',
-    #                              'download',
-    #                              'dispatchers-monday-water-report.txt'])
-    #     self.assertEqual(swp.get_report_url('Mon'), expected_url)
-
-    #     # check for invalid input
-    #     self.assertIsNone(swp.get_report_url('invalid'))
-
-    # def test_get_raw_text(self):
-    #     """
-    #     test expected behavior for get_raw_text for pdf report and invalid text report
-    #     """
-    #     # test for a PDF-formatted report
-    #     result = swp.get_raw_text('Delta Operations Summary (daily)')
-    #     self.assertIsInstance(result, str)
-    #     self.assertTrue(result.startswith('PRELIMINARY DATA'))
-    #     self.assertTrue(result.strip().endswith('please contact OCO_Export_Management@water.ca.gov'))
-
-    #     # test for a text-formatted report
-    #     self.assertRaises(ValueError, swp.get_raw_text, 'Mon')
-
-    # def test_get_delta_daily_data(self):
-    #     result = swp.get_delta_daily_data('dict')
-    #     self.assertTrue(result['info']['title'].startswith('EXECUTIVE OPERATIONS SUMMARY ON '))
-    #     self.assertIsInstance(result['data'], dict)
-    #     self.assertTrue('Reservoir Releases' in result['data'])
-
-    # def test_get_barker_slough_data(self):
-    #     result = swp.get_barker_slough_data()
-    #     self.assertEqual(result['info']['title'], 'BARKER SLOUGH PUMPING PLANT WEEKLY REPORT')
-    #     self.assertEqual(result['data'].shape, (7, 3))
-    #     self.assertIsInstance(result['data'].index, pd.core.indexes.datetimes.DatetimeIndex)
-
-    # def test_get_oco_tabular_data(self):
-    #     """
-    #     test tabular data extraction for the Water Quality Summary report using get_oco_tabular_data
-    #     """
-    #     result = swp.get_oco_tabular_data('Water Quality Summary (daily)')
-    #     self.assertEqual(result['info']['filename'], 'Delta-Water-Quality-Daily-Summary.pdf')
-    #     self.assertIsInstance(result['info']['pages'], int)
-    #     self.assertIsInstance(result['data'], pd.DataFrame)
-    #     self.assertEqual(result['data'].shape, (30, 46))
-    #     self.assertEqual(result['data'].index.name, 'Date (30 days)')
+    def test_get_daily_snowpack_data(self):
+        """
+        test for retrieving past daily snowpack data
+        """
+        result = cdec.get_daily_snowpack_data('CENTRAL', dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 3))
+        self.assertEqual(result['info']['interval'], 'daily')
+        self.assertEqual(result['info']['region'], 'CENTRAL')
+        self.assertEqual(result['data'].shape, (3, 5))
+        self.assertEqual(result['data'].tail(1).values.tolist(), [['CENTRAL', 53, 19.0, 70, 185]])
 
 
-# class TestWSI(unittest.TestCase):
-#     pass
+class TestSWP(unittest.TestCase):
+
+    def deferred_test_prompt_installation_and_exit(self):
+        """
+        test to ensure appropriate warning is printed when pdftotext is not installed; not yet implemented
+        """
+        swp.prompt_installation_and_exit()
+
+    def test_get_report_catalog(self):
+        """
+        test the default message behavior for get_report_catalog
+        """ 
+        result = swp.get_report_catalog(console=False)
+        self.assertTrue('Oroville Operations' in result)
+        self.assertTrue('Weekly Summaries' in result)
+
+    def test_get_report_url(self):
+        """
+        verify get_report_url produces the expected URL formats
+        """
+        # check one of the reservoir PDF reports
+        expected_url = '/'.join(['https://water.ca.gov/-/media',
+                                 'DWR-Website',
+                                 'Web-Pages',
+                                 'Programs',
+                                 'State-Water-Project',
+                                 'Operations-And-Maintenance',
+                                 'Files',
+                                 'Operations-Control-Office',
+                                 'Project-Wide-Operations',
+                                 'Oroville-Weekly-Reservoir-Storage-Chart.pdf'])
+        self.assertEqual(swp.get_report_url('Oroville'), expected_url)
+
+        # check one of the txt-formatted reports
+        expected_url = '/'.join(['https://data.cnra.ca.gov/dataset',
+                                 '742110dc-0d96-40bc-8e4e-f3594c6c4fe4',
+                                 'resource',
+                                 '45c01d10-4da2-4ebb-8927-367b3bb1e601',
+                                 'download',
+                                 'dispatchers-monday-water-report.txt'])
+        self.assertEqual(swp.get_report_url('Mon'), expected_url)
+
+        # check for invalid input
+        self.assertIsNone(swp.get_report_url('invalid'))
+
+    def test_get_raw_text(self):
+        """
+        test expected behavior for get_raw_text for pdf report and invalid text report
+        """
+        # test for a PDF-formatted report
+        result = swp.get_raw_text('Delta Operations Summary (daily)')
+        self.assertIsInstance(result, str)
+        self.assertTrue(result.startswith('PRELIMINARY DATA'))
+        self.assertTrue(result.strip().endswith('please contact OCO_Export_Management@water.ca.gov'))
+
+        # test for a text-formatted report
+        self.assertRaises(ValueError, swp.get_raw_text, 'Mon')
+
+    def test_get_delta_daily_data(self):
+        result = swp.get_delta_daily_data('dict')
+        self.assertTrue(result['info']['title'].startswith('EXECUTIVE OPERATIONS SUMMARY ON '))
+        self.assertIsInstance(result['data'], dict)
+        self.assertTrue('Reservoir Releases' in result['data'])
+
+    def test_get_barker_slough_data(self):
+        result = swp.get_barker_slough_data()
+        self.assertEqual(result['info']['title'], 'BARKER SLOUGH PUMPING PLANT WEEKLY REPORT')
+        self.assertEqual(result['data'].shape, (7, 3))
+        self.assertIsInstance(result['data'].index, pd.core.indexes.datetimes.DatetimeIndex)
+
+    def test_get_oco_tabular_data(self):
+        """
+        test tabular data extraction for the Water Quality Summary report using get_oco_tabular_data
+        """
+        result = swp.get_oco_tabular_data('Water Quality Summary (daily)')
+        self.assertEqual(result['info']['filename'], 'Delta-Water-Quality-Daily-Summary.pdf')
+        self.assertIsInstance(result['info']['pages'], int)
+        self.assertIsInstance(result['data'], pd.DataFrame)
+        self.assertEqual(result['data'].shape, (30, 46))
+        self.assertEqual(result['data'].index.name, 'Date (30 days)')
+
+
+class TestWSI(unittest.TestCase):
+    pass
 
 
 if __name__ == '__main__':
