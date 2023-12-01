@@ -43,9 +43,8 @@ The collect module uses Sphinx to generate documentation from doc-strings in the
 
 Configure package variables
 ----------------------------------------
-Create a ``.env`` file containing the path to installed ChromeDriver for use with Selenium. If accessing password-protected data, include your credentials in the ``.env`` file.::
+Create a ``.env`` file containing module secrets and configuration details. If accessing password-protected data, include your credentials in the ``.env`` file.::
 
-   CHROMEDRIVER=/usr/local/bin/chromedriver
    CNRFC_USER=
    CNRFC_PASSWORD=
    WATERBOARDS_USER=
