@@ -537,9 +537,26 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
         print(f'ERROR: forecast for {date_string} has not yet been issued.')
         raise zipfile.BadZipFile
 
+
+
+
+    buf = None
+    if isinstance(path, (io.StringIO, io.BytesIO)):
+        buf = path
+        path = None
+
+
     # set path for case where path set to None
     if path is None:
         path = url.split('/')[-1].replace('.zip', '.csv')
+
+
+    if buf is not None:
+        buf.seek(0)
+        buf.write(csvdata.read())
+        buf.seek(0)
+        return buf, path
+
 
     # write csv data to specified path
     path = path.replace('/', os.sep)
