@@ -493,7 +493,7 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def download_watershed_file(watershed, date_string, forecast_type, duration=None, path=None):
+def download_watershed_file(watershed, date_string, forecast_type, duration=None, path=None, return_content=False):
     """
     download short range ensemble, deterministic forecast, and seasonal outlook for the 
     watershed as zipped file, unzip, save as csv to path
@@ -504,9 +504,12 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
         forecast_type (str): one of deterministic or ensemble
         duration (str): forecast data timestep (hourly or daily)
         path (str): file name including file path
+        return_content (bool): flag to include the retrieved content as io.BytesIO
     Returns:
-        (path): file name including file path
+        (path or tuple): file name including file path or a tuple of file content and the file name
     """
+    csvdata = None
+
     # store original date_string
     _date_string = date_string
 
@@ -521,7 +524,8 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
     elif forecast_type == 'ensemble':
         duration = _validate_duration(duration)
         url_end = '{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
-    
+
+    # the CNRFC resource path to zipped watershed file
     url = 'https://www.cnrfc.noaa.gov/csv/' + url_end
 
     # extract CSV from zip object
@@ -531,15 +535,25 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
         except zipfile.BadZipFile:
             print(f'ERROR: forecast for {date_string} has not yet been issued.')
             raise zipfile.BadZipFile
-    
+
     # raise error if user supplied an actual date string but that forecast doesn't exist
     elif _date_string is not None:
         print(f'ERROR: forecast for {date_string} has not yet been issued.')
         raise zipfile.BadZipFile
 
+    # raise error if no CSV data has been retrieved
+    elif csvdata is None:
+        raise UserWarning(f'ERROR: {watershed} {forecast_type} forecast was not retrieved for {date_string}.')
+
     # set path for case where path set to None
     if path is None:
         path = url.split('/')[-1].replace('.zip', '.csv')
+
+    # return the in-memory file-like object containing the unzipped csv data and the filename specified in the URL
+    if return_content:
+        content = io.BytesIO(csvdata.read())
+        content.seek(0)
+        return content, path
 
     # write csv data to specified path
     path = path.replace('/', os.sep)
