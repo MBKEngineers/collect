@@ -86,6 +86,8 @@ def get_station_url(station, start, end, data_format='CSV', sensors=[], duration
                                                 station=station.upper(), 
                                                 start=start, 
                                                 end=end)
+
+    print(url)
     return url
 
 
@@ -156,6 +158,7 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename='
         'DATA_FLAG': str,
         'UNITS': str,
     }
+    print(url)
 
     # fetch data from CDEC
     df = pd.read_csv(url, 

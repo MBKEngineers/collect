@@ -7,6 +7,7 @@ access CNRFC forecasts
 import datetime as dt
 import io
 import math
+import json
 import os
 import zipfile
 from bs4 import BeautifulSoup
@@ -263,6 +264,7 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
 
     # data source
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_csv_export.zip'.format(date_string, watershed)
+    print(url)
 
     # extract CSV from zip object
     if get_web_status(url):
@@ -270,12 +272,14 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
             csvdata = _get_forecast_csv(url)
         except zipfile.BadZipFile:
             print(f'ERROR: forecast for {date_string} has not yet been issued.')
-            raise zipfile.BadZipFile
+            # raise zipfile.BadZipFile
+            return None
     
     # raise error if user supplied an actual date string but that forecast doesn't exist
     elif _date_string is not None:
         print(f'ERROR: forecast for {date_string} has not yet been issued.')
-        raise zipfile.BadZipFile
+        # raise zipfile.BadZipFile
+        return None
 
     # try previous forecast until a valid file is found
     else:
@@ -381,7 +385,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     
     # get issue time of most recent hourly inflow forecast (no support for daily yet)
     date_string = _default_date_string(None)
-    time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
+    # time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
 
     # forecast data url
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_hefs_csv_{1}.csv'.format(cnrfc_id, duration)
@@ -405,7 +409,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     return {'data': df, 'info': {'url': url, 
                                  'watershed': get_watershed(cnrfc_id), 
                                  'type': '{0} Ensemble Forecast'.format(duration.title()),
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
+                                 # 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
                                  'duration': duration,
@@ -449,12 +453,14 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
             csvdata = _get_forecast_csv(url)
         except zipfile.BadZipFile:
             print(f'ERROR: forecast for {date_string} has not yet been issued.')
-            raise zipfile.BadZipFile
+            # raise zipfile.BadZipFile
+            return None
     
     # raise error if user supplied an actual date string but that forecast doesn't exist
     elif _date_string is not None:
         print(f'ERROR: forecast for {date_string} has not yet been issued.')
-        raise zipfile.BadZipFile
+        # raise zipfile.BadZipFile
+        return None
 
     # try previous forecast until a valid file is found
     else:
@@ -523,6 +529,7 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
         url_end = '{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
     
     url = 'https://www.cnrfc.noaa.gov/csv/' + url_end
+    # print(url)
 
     # extract CSV from zip object
     if get_web_status(url):
@@ -530,12 +537,14 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
             csvdata = _get_forecast_csv(url)
         except zipfile.BadZipFile:
             print(f'ERROR: forecast for {date_string} has not yet been issued.')
-            raise zipfile.BadZipFile
+            # raise zipfile.BadZipFile
+            return
     
     # raise error if user supplied an actual date string but that forecast doesn't exist
     elif _date_string is not None:
         print(f'ERROR: forecast for {date_string} has not yet been issued.')
-        raise zipfile.BadZipFile
+        # raise zipfile.BadZipFile
+        return
 
     # set path for case where path set to None
     if path is None:
@@ -817,6 +826,39 @@ def get_monthly_reservoir_storage_summary():
     return {'data': None, 'info': {'url': url, 
                                    'type': 'CNRFC Monthly Reservoir Storage Summary',
                                    'units': 'TAF'}}
+
+
+def get_daily_weather_summary(station, month, year):
+
+    # url = 'https://mesonet.agron.iastate.edu/cgi-bin/request/daily.py?sts=2019-01-01&ets=2019-01-31&network=IA_ASOS&stations=AMW&var=max_temp_f&format=csv'
+    # url = 'https://mesonet.agron.iastate.edu/api/1/daily.txt?network=CACLIMATE&station=CA0383&month=2&year=1986'
+    url = f'https://mesonet.agron.iastate.edu/api/1/daily.json?network=CACLIMATE&station={station}&month={month}&year={year}'
+    # url = 'https://mesonet.agron.iastate.edu/api/1/daily.txt?network=CACLIMATE&station=CA8332&month=2&year=1969'
+    # url = 'https://www.cnrfc.noaa.gov/awipsProducts/RNORR6RSA.php'
+    valid = get_web_status(url)
+    if valid:
+        response = requests.get(url, stream=True)
+        result = json.loads(response.text)
+
+        df = pd.DataFrame(result['data'])
+        return df
+
+    print(station, month, year, 'not valid')
+    return pd.DataFrame({'date': [], 'precip': []})
+    # raise NotImplementedError
+    #     print(result)
+    #     print(df)
+    #     print(ME)
+    # # request Ensemble Product 2 page content
+    # soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    # data_table = soup.find_all('table', {'style': 'standardTable'})[0]
+
+    # # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
+    # df, notes = _parse_blue_table(data_table)
+    # df.set_index('Probability', inplace=True)
+    # return {'data': None, 'info': {'url': url, 
+    #                                'type': 'CNRFC Monthly Reservoir Storage Summary',
+    #                                'units': 'TAF'}}
 
 
 def esp_trace_analysis_wrapper():
