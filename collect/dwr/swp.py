@@ -16,7 +16,6 @@ try:
     import pdftotext
 except:
     print('Module pdftotext is required for SWP report collection.  Install with `pip install pdftotext==2.2.2`')
-    exit()
 
 
 def get_report_catalog(console=True):
