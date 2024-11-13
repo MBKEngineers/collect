@@ -54,7 +54,7 @@ def get_water_year_data(reservoir, water_year, interval='d'):
 
     # Convert to date time object
     df.set_index('ISO 8601 Date Time', inplace=True)
-    df.index = pd.to_datetime(df.index)
+    df.index = pd.to_datetime(df.index.str.replace('T24:', ' '))
 
     # Define variable for reservoir metadata
     metadata_dict = get_reservoir_metadata(reservoir, water_year, interval)
