@@ -166,10 +166,11 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename=N
                      float_precision='high',
                      dtype=default_data_types)
 
-    #report if the data is BRT or ART (below/above rating table)
-    df.loc[df['VALUE'] == 'BRT', 'RATING_FLAG'] = 'BRT'
-    df.loc[df['VALUE'] == 'ART', 'RATING_FLAG'] = 'ART'
-    df['VALUE'] = df['VALUE'].replace({'BRT': None, 'ART': None}).astype(float)
+    # report if the data is BRT or ART (below/above rating table)
+    if not df.empty:
+        df.loc[df['VALUE'] == 'BRT', 'RATING_FLAG'] = 'BRT'
+        df.loc[df['VALUE'] == 'ART', 'RATING_FLAG'] = 'ART'
+        df['VALUE'] = df['VALUE'].replace({'BRT': None, 'ART': None}).astype(float)
 
     if bool(filename):
         df.to_csv(filename)
