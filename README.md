@@ -2,7 +2,7 @@
 Web scraping utilties for DWR, USACE, USGS, CNRFC, CVO and SacALERT data repositories.
 
 ## Setup instructions
-### Create a virtual environment, specifying Python version 3.8
+### Create a virtual environment, specifying Python version 3.11
 
 #### With pure Python (3+)
 Create a virtual environment with Python 3's built-in `venv` library.  
@@ -24,7 +24,7 @@ or ```$ source myenv/bin/activate``` (MacOS).
 Use the "editable" flag (-e) flag to make sure changes in your repo are propagated to any use of your virtualenv.
 ```
 $ cd collect
-$ python -m pip install -e .
+$ python -m pip install --use-pep517 -e .
 ```
 
 ### Install Java

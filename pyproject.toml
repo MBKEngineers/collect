@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+version = "0.0.2"
+dynamic = ["version"]
+name = "collect"
+description = "Contains various web-scraping utilities used at MBK Engineers"
+readme = "README.md"
+requires-python = ">= 3.11"
+dependencies = [
+  "numpy>=1.21.3",
+  "beautifulsoup4==4.12.2",
+  "html5lib==1.1",
+  "lxml==4.9.3",
+  "pandas==1.5.3",
+  "python-dateutil>=2.8.2",
+  "python-dotenv==0.19.2",
+  "requests>=2.26.0",
+  "scipy>=1.8.0",
+  "selenium==4.15.2",
+  "tabula-py==2.4.0"
+
+]
+authors = [
+  {name = "Carly Narlesky", email = "narlesky@mbkengineers.com"},
+  {name = "Olivia Alexander", email = "alexander@mbkengineers.com"},
+  {name = "Sophie Danielsen", email = "danielsen@mbkengineers.com"},
+  {name = "Carissa Abraham", email = "abraham@mbkengineers.com"},
+  {name = "Jeremy Inducil", email = "inducil@mbkengineers.com"},
+  {name = "Martin Liu", email = "liu@mbkengineers.com"},
+  {name = "Gerardo Veliz Carrillo", email = "carrillo@mbkengineers.com"},
+  {name = "Catherine Morales-Sandoval", email = "morales-sandoval@mbkengineers.com"},
+  {name = "Jeremy Inducil", email = "inducil@mbkengineers.com"},
+]
+maintainers = [
+  {name = "Carly Narlesky", email = "narlesky@mbkengineers.com"}
+]
+keywords = [""]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[project.optional-dependencies]
+swp = ["pdftotext==2.2.2"]
+docs = [
+    "Sphinx==4.3.0",
+    "sphinx-readable-theme==1.3.0",
+    "sphinx-rtd-theme==1.0.0"
+]
+
+[project.scripts]
+collect-start = "collect.bin.collect-start"
+
+[project.urls]
+Homepage = "https://github.com/MBKEngineers/collect"
+Documentation = "https://github.com/MBKEngineers/collect/docs"
+Repository = "https://github.com/MBKEngineers/collect.git"
+Issues = "https://github.com/MBKEngineers/collect/issues"
+
