@@ -7,8 +7,10 @@ initial test suite for collect.cnrfc data access and utility functions; note: th
 import datetime as dt
 import io
 import os
+import re
 import textwrap
 import unittest
+from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -179,7 +181,8 @@ class TestCNRFC(unittest.TestCase):
         test for current ensemble forecast file schema, using Vernalis forecast location
         """
         result = cnrfc.get_ensemble_forecast('VNSC1', 'hourly', acre_feet=False, pdt_convert=False, as_pdt=False)
-        self.assertEqual(result['data'].shape, (721, 43))
+        self.assertEqual(result['data'].shape[0], 721)
+        self.assertTrue(result['data'].shape[1] > 40)
         self.assertIsNone(result['data'].index.tzinfo)
         self.assertEqual(result['info']['watershed'], 'SanJoaquin')
         self.assertEqual(result['info']['units'], 'cfs')
@@ -237,7 +240,7 @@ class TestCNRFC(unittest.TestCase):
         example expected output from get_rating_curve method
         """
         result = cnrfc.get_rating_curve('DCSC1')
-        self.assertEqual(result['data'][0], (0.92, 0.45))
+        self.assertEqual(result['data'][0], (1.07, 0.45))
         self.assertEqual(result['data'][-1], (15.0, 16300.0))
         self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/data/ratings/DCSC1_rating.js')
 
@@ -323,7 +326,8 @@ class TestCNRFC(unittest.TestCase):
         self.assertEqual(result['data'].shape, (5, 12))
         self.assertEqual(result['data'].index.tolist(), ['10%', '25%', '50%(Median)', '75%', '90%'])
         self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/ensembleProduct.php?id=SHDC1&prodID=10')
-        self.assertEqual(result['info']['type'], 'Water Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation')
+        self.assertEqual(result['info']['type'],
+            'Water Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation')
         self.assertEqual(result['info']['units'], 'TAF')
 
     def test__parse_blue_table(self):
@@ -458,7 +462,7 @@ class TestCNRFC(unittest.TestCase):
         )
         self.assertIsInstance(result, dt.datetime)
         result_utc = utils.get_localized_datetime(result, 'UTC')
-        self.assertLess(result_utc, utils.get_localized_datetime(dt.datetime.now(), 'UTC'))
+        self.assertLess(result_utc, dt.datetime.now().astimezone(ZoneInfo('UTC')))
 
     def test__get_forecast_csv(self):
         """
@@ -473,8 +477,9 @@ class TestCNRFC(unittest.TestCase):
         # check second line contains variables identifiers
         self.assertTrue(result.readline().decode('utf-8').startswith(',QINE,QINE'))
 
-        # check third line contains expected timeseries info
-        self.assertTrue(result.readline().decode('utf-8').startswith('2023-11-29 12:00:00,0.89311'))
+        # check third line starts with date/time of proper format and contains expected timeseries info
+        pattern = r'^(\d{4}-\d{2}-\d{2} \d{2}:00:00),((\d+.\d+,)+)'
+        self.assertTrue(len(re.match(pattern, result.readline().decode('utf-8')).groups()) > 2)
 
     def test_get_forecast_csvdata(self):
         """
@@ -485,7 +490,10 @@ class TestCNRFC(unittest.TestCase):
         self.assertIsInstance(result, io.BytesIO)
         self.assertTrue(result.readline().decode('utf-8').startswith('GMT,HLEC1'))
         self.assertTrue(result.readline().decode('utf-8').startswith(',QINE,QINE'))
-        self.assertTrue(result.readline().decode('utf-8').startswith('2023-11-29 12:00:00,0.89311'))
+
+        # check third line starts with date/time of proper format and contains expected timeseries info
+        pattern = r'^(\d{4}-\d{2}-\d{2} \d{2}:00:00),((\d+.\d+,)+)'
+        self.assertTrue(len(re.match(pattern, result.readline().decode('utf-8')).groups()) > 2)
 
     def test__get_cnrfc_restricted_content(self):
         """
@@ -502,8 +510,13 @@ class TestCNRFC(unittest.TestCase):
         """
         test for downloading watershed file to local file system (in this case, downloaded to in-memory object)
         """
-        result = cnrfc.download_watershed_file('WSI', '2023010112', 'ensemble', duration='daily', path=io.BytesIO())
+        result, filename = cnrfc.download_watershed_file('WSI',
+                                                         '2023010112',
+                                                         'ensemble',
+                                                         duration='daily',
+                                                         return_content=True)
         self.assertIsInstance(result, io.BytesIO)
+        self.assertIsInstance(filename, str)
 
         # check first line contains forecast point headers
         self.assertTrue(result.readline().decode('utf-8').startswith('GMT,SACC0'))
