@@ -393,12 +393,6 @@ class TestCDEC(unittest.TestCase):
 
 class TestSWP(unittest.TestCase):
 
-    def deferred_test_prompt_installation_and_exit(self):
-        """
-        test to ensure appropriate warning is printed when pdftotext is not installed; not yet implemented
-        """
-        swp.prompt_installation_and_exit()
-
     def test_get_report_catalog(self):
         """
         test the default message behavior for get_report_catalog

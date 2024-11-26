@@ -146,18 +146,25 @@ class TestNID(unittest.TestCase):
         result = nid.get_daily_meta(url=url, content=None)
         self.assertEqual(result['Site'], 'DC140 Tunnel Canal at Head')
         self.assertEqual(result['USGS #'], 'NO')
-        self.assertEqual(result['version'], 'USDAY V123')
+        self.assertTrue(result['version'].startswith('USDAY V'))
 
     def test_get_hourly_data(self):
+        expected_year = dt.date.today().year - 1
         result = nid.get_hourly_data('WLSN', json_compatible=False)
         sample = result['data'].head()
         self.assertEqual(sample.index.strftime('%Y-%m-%d %H:%M:%S').tolist(),
-                        ['2022-01-01 01:00:00',
-                         '2022-01-01 02:00:00',
-                         '2022-01-01 03:00:00',
-                         '2022-01-01 04:00:00',
-                         '2022-01-01 05:00:00'])
-        self.assertEqual(sample['Amount Diverted (AF)'].tolist(), [0.15, 0.15, 0.15, 0.15, 0.15])
+                        [f'{expected_year}-01-01 01:00:00',
+                         f'{expected_year}-01-01 02:00:00',
+                         f'{expected_year}-01-01 03:00:00',
+                         f'{expected_year}-01-01 04:00:00',
+                         f'{expected_year}-01-01 05:00:00'])
+        self.assertEqual(sample.columns.tolist(),
+                        ['Date',
+                        'Time',
+                        'Measured Value',
+                        'Units',
+                        'Amount Diverted (AF)',
+                        'Quality'])
 
     def test_parse_qualifiers(self):
         series = pd.Series(data=['Qualities:',

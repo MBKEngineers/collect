@@ -11,10 +11,11 @@ import os
 import dateutil.parser
 import pandas as pd
 import requests
+
 try:
     from tabula import read_pdf
 except:
-    print('Module tabula is required for CVO report collection')
+    print('Module tabula is required for CVO report collection.  Install with `pip install tabula-py==2.4.0`')
 
 
 REPORTS = [
