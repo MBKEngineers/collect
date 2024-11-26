@@ -10,13 +10,6 @@ import re
 import textwrap
 import pandas as pd
 
-import urllib3.contrib.pyopenssl
-urllib3.contrib.pyopenssl.inject_into_urllib3()
-
-import requests
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
-import ssl
 from collect import utils
 
 
@@ -40,7 +33,7 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
 
     # Read url data
-    response = requests.get(url, verify=ssl.CERT_NONE).content
+    response = utils.get_session_response(url).content
     df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values=['-', 'M'])
 
     # Check that user chosen water year is within range with data
@@ -286,12 +279,7 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.meta'
     
     # read data from url using requests session with retries
-    session = requests.Session()
-    retries = Retry(total=5,
-                    backoff_factor=0.1,
-                    status_forcelist=[500, 502, 503, 504])
-    session.mount('https://', HTTPAdapter(max_retries=retries))
-    response = session.get(url, verify=ssl.CERT_NONE)
+    response = utils.get_session_response(url)
 
     # complete metadata dictionary
     metadata_dict = response.json()

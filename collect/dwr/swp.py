@@ -159,6 +159,9 @@ def get_delta_daily_data(export_as='dict'):
     """
     content = get_raw_text('Delta Operations Summary (daily)', 'raw_export.txt')
 
+    with open ('helper.txt', 'w') as f:
+        f.write(content)
+
     # extract current report's date
     rx = re.compile(r'(?P<date>\d{1,2}/\d{1,2}/\d{4})')
     date = rx.search(content).group('date')
@@ -181,6 +184,10 @@ def get_delta_daily_data(export_as='dict'):
 
     def _parse_entry(match):
         value = match.group('value')
+
+        # clean up dash to be parsed as minus sign for numeric entries
+        if re.match(r'^(‐\d+)', value) is not None:
+            value = value.replace('‐', '-')
 
         units_match = re.findall(r'(cfs|TAF|km|%|% \(14-day avg\))$', value)
         units = units_match[0] if bool(units_match) else ''
@@ -240,10 +247,14 @@ def get_delta_daily_data(export_as='dict'):
     for x, v in result.items():
         if isinstance(v, dict):
             for k in v.keys():
-                v.update({k: extract[k]})
+
+                # cleaning for n-dash vs m-dash in source content
+                element = extract.get(k, extract.get(k.replace('-', '‐')))
+
+                v.update({k: element})
 
                 # update frame
-                df[x, k, extract[k]['units']] = extract[k]['value']
+                df[x, k, element['units']] = element['value']
 
     df.columns = pd.MultiIndex.from_tuples(df.columns)
 

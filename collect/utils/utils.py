@@ -11,7 +11,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import urllib3.contrib.pyopenssl
 urllib3.contrib.pyopenssl.inject_into_urllib3()
 
-import ssl
+# import ssl
 
 import requests
 from requests.packages.urllib3.util.retry import Retry
@@ -27,19 +27,26 @@ except:
     tz_function = timezone
 
 
-def get_session_response(url, auth=None):
+def get_session_response(url, auth=None, verify=None):
     """
+    wraps request with a session and 5 retries; provides optional auth and verify parameters
+
     Arguments:
         url (str): valid web URL
+        auth (requests.auth.HTTPBasicAuth): username/password verification for authenticating request
+        verify (bool or ssl.CERT_NONE): if provided, this verify parameter is passed to session.get
     Returns:
         (requests.models.Response): the response object with site content specified by URL
     """
+    verify_kwarg = {} if verify is None else {'verify': verify}
+
+    # initialize connection
     session = requests.Session()
     retries = Retry(total=5,
                     backoff_factor=0.1,
                     status_forcelist=[500, 502, 503, 504])
     session.mount('https://', HTTPAdapter(max_retries=retries))
-    return session.get(url, auth=auth, verify=ssl.CERT_NONE)
+    return session.get(url, auth=auth, **verify_kwarg)
 
 
 def get_web_status(url):

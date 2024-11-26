@@ -6,9 +6,10 @@ USGS National Water Information System (NWIS)
 # -*- coding: utf-8 -*-
 import datetime as dt
 from bs4 import BeautifulSoup
-import dateutil.parser
+# import dateutil.parser
 import pandas as pd
-import requests
+
+from collect import utils
 
 
 def get_query_url(station_id, sensor, start_time, end_time, interval):
@@ -34,7 +35,7 @@ def get_query_url(station_id, sensor, start_time, end_time, interval):
         format_start = start_time.strftime('%Y-%m-%d')
         format_end = end_time.strftime('%Y-%m-%d')
 
-    # construct query URL
+    # construct query URL    
     url = '&'.join([f'https://waterservices.usgs.gov/nwis/{interval_code}v/?format=json',
                     f'sites={station_id}',
                     f'startDT={format_start}',
@@ -56,7 +57,7 @@ def get_data(station_id, sensor, start_time, end_time, interval='instantaneous')
     80155 Suspnd sedmnt disch(Mean)
 
     Arguments:
-        station_id (int or str): the USGS station code (ex: 11446220)
+        station_id (int or str): the USGS station code (ex: 11418500)
         sensor (str): ex '00060' (discharge)
         start_time (dt.datetime): ex dt.datetime(2016, 10, 1)
         end_time (dt.datetime): ex dt.datetime(2017, 10, 1)
@@ -71,8 +72,19 @@ def get_data(station_id, sensor, start_time, end_time, interval='instantaneous')
     url = get_query_url(station_id, sensor, start_time, end_time, interval)
 
     # get gage data as json
-    data = requests.get(url, verify=False).json()
-    
+    data = utils.get_session_response(url).json()
+
+    # if no timeseries data is available, return empty payload with only request parameters
+    if len(data['value']['timeSeries']) == 0:
+        return {
+            'data': None,
+            'info': {
+                'site number': station_id,
+                'sensor': sensor,
+                'interval': interval
+            }
+        }
+
     # process timeseries info
     series = data['value']['timeSeries'][0]['values'][0]['value']
     for entry in series:
@@ -136,7 +148,7 @@ def get_peak_streamflow(station_id):
     frame.index = pd.to_datetime(frame['peak_dt'].apply(leap_filter))
 
     # load USGS site information
-    result = BeautifulSoup(requests.get(url.rstrip('rdb')).content, 'lxml')
+    result = BeautifulSoup(utils.get_session_response(url.rstrip('rdb')).content, 'lxml')
     info = {'site number': station_id, 'site name': result.find('h2').text}
     meta = result.findAll('div', {'class': 'leftsidetext'})[0]
     for div in meta.findChildren('div', {'align': 'left'}):
