@@ -163,7 +163,7 @@ def get_casgem_data(casgem_id=None,
     driver.quit()
 
     # parse HTML file structure; extract tabular data
-    soup = BeautifulSoup(html_file_content, 'lxml')
+    soup = BeautifulSoup(html_file_content, 'html.parser')
     table = soup.find('table')
 
     # extract (visible) column headers

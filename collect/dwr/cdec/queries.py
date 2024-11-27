@@ -225,7 +225,7 @@ def get_station_metadata(station, as_geojson=False):
     url = 'https://cdec.water.ca.gov/dynamicapp/staMeta?station_id={station}'.format(station=station)
 
     # request info page
-    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(url).content, 'html.parser')
 
     # initialize the result dictionary
     site_info = {'title':  soup.find('h2').text, 
@@ -283,7 +283,7 @@ def get_dam_metadata(station):
         return {}
 
     # request dam info page
-    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(url).content, 'html.parser')
 
     # initialize the result dictionary
     site_info = {'title':  soup.find('h2').text}
@@ -312,7 +312,7 @@ def get_reservoir_metadata(station):
         return {}
 
     # request dam info page
-    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(url).content, 'html.parser')
 
     # initialize the result dictionary
     site_info = {'title':  soup.find('h1').text}

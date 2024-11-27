@@ -374,7 +374,7 @@ class TestCNRFC(unittest.TestCase):
             <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">61.2</td>
             </tr>
             </table>
-        """)), 'lxml')
+        """)), 'html.parser')
         result = cnrfc.cnrfc._parse_blue_table(table_soup)
         self.assertIsInstance(result[0], pd.DataFrame)
         self.assertEqual(result[0]['Probability'].tolist(), ['10%', '25%', '50%(Median)'])
@@ -501,7 +501,7 @@ class TestCNRFC(unittest.TestCase):
         result = cnrfc.cnrfc._get_cnrfc_restricted_content(
             'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_tabular.php?id=FOLC1'
         )
-        sample = BeautifulSoup(result, 'lxml').find('pre').text.splitlines()[:9]
+        sample = BeautifulSoup(result, 'html.parser').find('pre').text.splitlines()[:9]
         self.assertEqual(sample[2], '# Location: American River - Folsom Lake (FOLC1)')
         self.assertTrue(sample[-1].startswith('# Maximum Observed Flow:'))
 

@@ -75,7 +75,7 @@ def get_site_files(site):
         links (list): sorted list of linked files available for site
     """
     url = get_station_url(site, metric='index')
-    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(url).content, 'html.parser')
     links = {a.get('href') for a in soup.find_all('a')}
     return sorted(links)
 

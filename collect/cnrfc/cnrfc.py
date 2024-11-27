@@ -40,7 +40,7 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
     assert int(water_year) >= 2011, "Ensemble Forecast Product 7 not available before 2011"
 
     # retrieve from public CNRFC webpage
-    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml').find('pre').text.replace('#', '')
+    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser').find('pre').text.replace('#', '')
 
     # in-memory file buffer
     with io.StringIO(result) as buf:
@@ -98,7 +98,7 @@ def get_water_year_trend_tabular(cnrfc_id, water_year):
     assert int(water_year) >= 2013, "Ensemble Forecast Product 9 not available before 2013"
 
     # retrieve from public CNRFC webpage
-    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml').find('pre').text.replace('#', '')
+    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser').find('pre').text.replace('#', '')
 
     # in-memory file buffer
     with io.StringIO(result) as buf:
@@ -191,7 +191,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
                      dtype=specified_dtypes)
 
     df.set_index(date_column_header, inplace=True)
-    df.index = pd.to_datetime(df.index)
+    df.index = pd.to_datetime(df.index, format='%m/%d/%Y %I %p')
 
     # add timezone info
     df.index.name = 'PDT/PST'
@@ -322,7 +322,7 @@ def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=Fals
     url = 'https://www.cnrfc.noaa.gov/{1}graphical{2}_tabular.php?id={0}'.format(cnrfc_id, 
                                                                         'restricted/' if cnrfc_id in RESTRICTED else '',
                                                                         'Release' if release else 'RVF')
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
     for td in soup.find_all('td', {'class': 'smallhead'}):
@@ -715,7 +715,7 @@ def get_ensemble_product_2(cnrfc_id):
     utils.get_web_status(url)
 
     # request Ensemble Product 2 page content
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
@@ -763,7 +763,7 @@ def get_ensemble_product_6(cnrfc_id):
     utils.get_web_status(url)
 
     # request Ensemble Product 6 page content
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Monthly Volume Exceedance Values from table
@@ -795,7 +795,7 @@ def get_ensemble_product_10(cnrfc_id):
     utils.get_web_status(url)
 
     # request Ensemble Product 10 page content
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table

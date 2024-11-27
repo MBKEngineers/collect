@@ -147,7 +147,7 @@ def get_peak_streamflow(station_id):
     frame.index = pd.to_datetime(frame['peak_dt'].apply(leap_filter))
 
     # load USGS site information
-    result = BeautifulSoup(requests.get(url.rstrip('rdb')).content, 'lxml')
+    result = BeautifulSoup(requests.get(url.rstrip('rdb')).content, 'html.parser')
     info = {'site number': station_id, 'site name': result.find('h2').text}
     meta = result.findAll('div', {'class': 'leftsidetext'})[0]
     for div in meta.findChildren('div', {'align': 'left'}):

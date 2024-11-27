@@ -42,7 +42,7 @@ def get_b120_data(date_suffix=''):
         url = 'https://cdec.water.ca.gov/b120{}.html'.format(date_suffix)
 
         # parse HTML file structure; AJ forecast table
-        soup = BeautifulSoup(requests.get(url).content, 'lxml')
+        soup = BeautifulSoup(requests.get(url).content, 'html.parser')
         table = soup.find('table', {'class': 'doc-aj-table'})
 
         # read HTML table with April-July Forecast Summary (TAF)
@@ -148,7 +148,7 @@ def get_b120_update_data(date_suffix=''):
         raise errors.B120SourceError('B120 updates in this format not available before Feb. 2018.')
 
     # parse HTML file structure; AJ forecast table
-    soup = BeautifulSoup(requests.get(url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(url).content, 'html.parser')
     tables = soup.find_all('table', {'class': 'doc-aj-table'})
 
     # unused header info
@@ -215,7 +215,7 @@ def get_120_archived_reports(year, month):
     url = f'https://cdec.water.ca.gov/reportapp/javareports?name=B120.{report_date:%Y%m}'
     
     result = requests.get(url).content  
-    result = BeautifulSoup(result, 'lxml').find('pre').text
+    result = BeautifulSoup(result, 'html.parser').find('pre').text
     tables = result.split('Water-Year (WY) Forecast and Monthly Distribution')
 
     # read text table with April-July Forecast Summary (TAF)

@@ -21,8 +21,7 @@ setuptools.setup(
         'numpy==2.1.3'
     ],
     install_requires=[
-        'beautifulsoup4==4.12.2',
-        'lxml==5.3.0',
+        'beautifulsoup4==4.12.3',
         'pandas==2.2.3',
         'pyOpenSSL==23.3.0',
         'python-dateutil==2.9.0',

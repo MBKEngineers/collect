@@ -314,7 +314,7 @@ class TestCDEC(unittest.TestCase):
                     <td>CA Dept of Water Resources/DFM-Hydro-SMN</td>
                 </tr>
             </table>
-        """), 'lxml')
+        """), 'html.parser')
         result = cdec.queries._parse_station_generic_table(table)
         self.assertEqual(result, {'Station ID': 'CFW',
                                   'Elevation': '260 ft',
@@ -348,7 +348,7 @@ class TestCDEC(unittest.TestCase):
                     <td align="center" width="180"> 01/01/2021 to 01/01/2023</td>
                 </tr>
             </table>
-        """), 'lxml')
+        """), 'html.parser')
         result = cdec.queries._parse_station_sensors_table(table)
         self.assertEqual(result, {'20': {'event': {'description': 'FLOW, RIVER DISCHARGE, CFS',
                                                    'sensor': '20',
@@ -368,7 +368,7 @@ class TestCDEC(unittest.TestCase):
                     <td>Example comment about datum info.</td>
                 </tr>
             </table>
-        """), 'lxml')
+        """), 'html.parser')
         result = cdec.queries._parse_station_comments_table(table)
         self.assertEqual(result, {'02/28/2023': 'Example comment about data availability.',
                                   '04/27/2020': 'Example comment about datum info.'})
