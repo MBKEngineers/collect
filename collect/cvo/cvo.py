@@ -712,7 +712,7 @@ def doutdly_data_cleaner(content, report_type, date_structure):
     # drop COA columns with no data
     if 'COA USBR' in df:
         if df['COA USBR']['Account Balance'].dropna().empty:
-            df.drop('COA USBR', axis=1, inplace=True)
+            df.drop('COA USBR', level=0, axis=1, inplace=True)
 
     # return converted dataframe; drop NaN values
     return df.dropna(how='all').reindex()

@@ -334,7 +334,7 @@ class TestCNRFC(unittest.TestCase):
         """
         test the processing of included data table for monthly summary associated with ensemble products like 2, 10, etc
         """
-        table_soup = BeautifulSoup(textwrap.dedent("""/
+        table_soup = BeautifulSoup(io.StringIO(textwrap.dedent("""/
             <table border="0" cellpadding="0" style="standardTable" width="100%">
             <tr bgcolor="#003399">
             <td align="center" class="medBlue-background" colspan="11" valign="middle"><strong>Title</strong></td>
@@ -375,7 +375,7 @@ class TestCNRFC(unittest.TestCase):
             <td align="center" bgcolor="#CCCCCC" class="normalText" width="8%">61.2</td>
             </tr>
             </table>
-        """), 'lxml')
+        """)), 'lxml')
         result = cnrfc.cnrfc._parse_blue_table(table_soup)
         self.assertIsInstance(result[0], pd.DataFrame)
         self.assertEqual(result[0]['Probability'].tolist(), ['10%', '25%', '50%(Median)'])
@@ -386,7 +386,7 @@ class TestCNRFC(unittest.TestCase):
         test application of UTC->PST/PDT and kcfs->cfs or kcfs->acre-feet unit conversions for a sample ensemble
         """
         df = pd.DataFrame(data=[[0.111, 0.222, 0.333]] * 6,
-                          index=pd.date_range('2023-11-01 12:00:00', periods=6, freq='H'))
+                          index=pd.date_range('2023-11-01 12:00:00', periods=6, freq='h'))
 
         # test for conversion of kcfs -> acre-feet, no timezone handling
         result = cnrfc.cnrfc._apply_conversions(df, 'hourly', True, False, False)
@@ -397,7 +397,7 @@ class TestCNRFC(unittest.TestCase):
 
         # reset test frame
         df = pd.DataFrame(data=[[0.111, 0.222, 0.333]] * 6,
-                          index=pd.date_range('2023-11-01 12:00:00', periods=6, freq='H'))
+                          index=pd.date_range('2023-11-01 12:00:00', periods=6, freq='h'))
 
         # test for conversion of timezone and kcfs -> cfs
         result = cnrfc.cnrfc._apply_conversions(df, 'hourly', False, True, True)

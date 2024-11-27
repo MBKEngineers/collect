@@ -165,7 +165,7 @@ def get_daily_data(site, json_compatible=False):
         df.dropna(inplace=True)
 
         # convert index to datetimes
-        df.index = pd.to_datetime(df.index)
+        df.index = pd.to_datetime(df.index, format='%d%b%Y')
         df = df.reindex(pd.date_range(start=df.index[0], end=df.index[-1]))
 
         frames.append(df)
@@ -238,7 +238,7 @@ def get_hourly_data(site, json_compatible=False):
                     'Quality': int})
 
     # convert to date/time index
-    df.index = pd.to_datetime(df['Date']+df['Time'])
+    df.index = pd.to_datetime(df['Date'] + df['Time'])
 
     # remove extra whitespace in data entries
     df.loc[:, 'Time'] = df.loc[:, 'Time'].str.strip()

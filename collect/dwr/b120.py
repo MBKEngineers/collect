@@ -42,7 +42,7 @@ def get_b120_data(date_suffix=''):
         url = 'https://cdec.water.ca.gov/b120{}.html'.format(date_suffix)
 
         # parse HTML file structure; AJ forecast table
-        soup = BeautifulSoup(requests.get(url).content, 'html5lib')
+        soup = BeautifulSoup(requests.get(url).content, 'lxml')
         table = soup.find('table', {'class': 'doc-aj-table'})
 
         # read HTML table with April-July Forecast Summary (TAF)

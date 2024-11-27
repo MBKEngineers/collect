@@ -67,7 +67,8 @@ def get_sites(as_dataframe=True, datatype='stream'):
 
     url = f'https://www.sacflood.org/{measure}?&view_id=1&group_type_id={group_type_id}'
     soup = BeautifulSoup(requests.get(url).text, 'lxml')
-    df = pd.read_html(str(soup.find('table')))[0]
+    with io.StringIO(str(soup.find('table'))) as text:
+        df = pd.read_html(text)[0]
 
     # strip whitespace from columns
     df.columns = [_ustrip(x) for x in df.columns]
