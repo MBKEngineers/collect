@@ -24,7 +24,7 @@ or ```$ source myenv/bin/activate``` (MacOS).
 Use the "editable" flag (-e) flag to make sure changes in your repo are propagated to any use of your virtualenv.
 ```
 $ cd collect
-$ python -m pip install --use-pep517 -e .
+$ python -m pip install -e .
 ```
 
 ### Install Java
