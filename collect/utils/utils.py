@@ -110,6 +110,8 @@ def get_localized_datetime(naive_datetime, timezone_string):
     Returns:
         result (datetime.datetime): a python datetime structure with timezone localization
     """
+    assert naive_datetime.tzinfo is None
+
     try:
         expected_tz = timezone(timezone_string)
         result = expected_tz.localize(naive_datetime)

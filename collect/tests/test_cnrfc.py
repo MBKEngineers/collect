@@ -10,7 +10,6 @@ import os
 import re
 import textwrap
 import unittest
-from zoneinfo import ZoneInfo
 
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -462,7 +461,7 @@ class TestCNRFC(unittest.TestCase):
         )
         self.assertIsInstance(result, dt.datetime)
         result_utc = utils.get_localized_datetime(result, 'UTC')
-        self.assertLess(result_utc, dt.datetime.now().astimezone(ZoneInfo('UTC')))
+        self.assertLess(result_utc, dt.datetime.now(dt.timezone.utc))
 
     def test__get_forecast_csv(self):
         """
