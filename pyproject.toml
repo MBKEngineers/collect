@@ -29,7 +29,6 @@ authors = [
   {name = "Martin Liu", email = "liu@mbkengineers.com"},
   {name = "Gerardo Veliz Carrillo", email = "carrillo@mbkengineers.com"},
   {name = "Catherine Morales-Sandoval", email = "morales-sandoval@mbkengineers.com"},
-  {name = "Jeremy Inducil", email = "inducil@mbkengineers.com"},
 ]
 maintainers = [
   {name = "Carly Narlesky", email = "narlesky@mbkengineers.com"}
