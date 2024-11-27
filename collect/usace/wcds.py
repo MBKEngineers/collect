@@ -59,7 +59,9 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     new_index = pd.Series(pd.to_datetime(df.index.str.replace('T24:', ' ')), index=df.index)
     mask = df.index.str.contains('T24:')
     new_index[mask] += pd.Timedelta(days=1)
-    df.index = new_index.values
+
+    # create datetime index in US/Pacific time to match WCDS
+    df.index = pd.to_datetime(new_index.values, utc=True).tz_convert('US/Pacific')
 
     # Define variable for reservoir metadata
     metadata_dict = get_reservoir_metadata(reservoir, water_year, interval)
@@ -73,7 +75,6 @@ def get_water_year_data(reservoir, water_year, interval='d'):
 
 def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers=True):
     """
-    TODO:  trim this to start and end
     Scrape water year operations data from reservoir page on USACE-SPK's WCDS.
     
     Arguments:
@@ -103,7 +104,8 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
 
     for water_year in range(utils.get_water_year(start_time), utils.get_water_year(end_time) + 1):
         result = get_water_year_data(reservoir, water_year, interval)
-        frames.append(result['data'])
+        truncate_result = result['data'].truncate(before=start_time, after=end_time)
+        frames.append(truncate_result)
         metadata_dict.update({water_year: result['info']['metadata']})
 
     df = pd.concat(frames)
