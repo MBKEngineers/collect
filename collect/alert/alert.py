@@ -10,6 +10,8 @@ import unicodedata
 
 from bs4 import BeautifulSoup, SoupStrainer
 import pandas as pd
+import requests
+
 from collect import utils
 
 
@@ -64,7 +66,7 @@ def get_sites(as_dataframe=True, datatype='stream'):
     group_type_id = {'rain': 14, 'stream': 19, 'temperature': 30}.get(datatype)
 
     url = f'https://www.sacflood.org/{measure}?&view_id=1&group_type_id={group_type_id}'
-    soup = BeautifulSoup(utils.get_session_response(url).text, 'lxml')
+    soup = BeautifulSoup(requests.get(url).text, 'lxml')
     df = pd.read_html(str(soup.find('table')))[0]
 
     # strip whitespace from columns
@@ -87,7 +89,7 @@ def get_sites_from_list(as_dataframe=True, sensor_class=None):
     url = 'https://www.sacflood.org/list/'
     if sensor_class:
         url += '?&sensor_class={}'.format(sensor_class)
-    soup = BeautifulSoup(utils.get_session_response(url).text, 'lxml')
+    soup = BeautifulSoup(requests.get(url).text, 'lxml')
 
     entries = []
     for x in soup.find_all('a', {'class': None, 'target': None}, 
@@ -114,7 +116,7 @@ def get_site_notes(site_id):
     """
     url = f'https://www.sacflood.org/site/?site_id={site_id}'
     strainer = SoupStrainer('div', {'class': 'card-body'})
-    soup = BeautifulSoup(utils.get_session_response(url).text, 'lxml', parse_only=strainer)
+    soup = BeautifulSoup(requests.get(url).text, 'lxml', parse_only=strainer)
     for card in soup.find_all('div', {'class': 'card-body'}):
         if 'Notes' in card.find('h3', {'class': 'card-title'}).text:
             notes_block = card.find('p', {'class': 'list-group-item-text'})
@@ -137,7 +139,7 @@ def get_site_location(site_id):
     """
     url = f'https://www.sacflood.org/site/?site_id={site_id}'
     result = {'site_id': site_id, 'url': url}
-    soup = BeautifulSoup(utils.get_session_response(url).text, 'lxml')
+    soup = BeautifulSoup(requests.get(url).text, 'lxml')
     cards = soup.find_all('div', {'class': 'card-body'})
     for card in cards:
         if 'Map' in card.find('h3', {'class': 'card-title'}).text:
@@ -156,7 +158,7 @@ def get_site_sensors(site_id):
     """
     url = f'https://www.sacflood.org/site/?site_id={site_id}'
     result = {'site_id': site_id, 'url': url, 'sensors': []}
-    soup = BeautifulSoup(utils.get_session_response(url).text, 'lxml')
+    soup = BeautifulSoup(requests.get(url).text, 'lxml')
     cards = soup.find_all('div', {'class': 'card-body'})
     for card in cards:
         if 'Sensors' in card.find('h3', {'class': 'card-title'}).text:
@@ -206,7 +208,7 @@ def get_query_url(site_id, device_id, start, end):
 
 def get_device_series(site_id, device_id, start, end, ascending=True):
     url = get_query_url(site_id, device_id, start, end)
-    response = io.StringIO(utils.get_session_response(url).text)
+    response = io.StringIO(requests.get(url).text)
     df = pd.read_csv(response)
     return df.sort_values(by='Reading', ascending=ascending)
 

@@ -8,8 +8,7 @@ import datetime as dt
 from bs4 import BeautifulSoup
 # import dateutil.parser
 import pandas as pd
-
-from collect import utils
+import requests
 
 
 def get_query_url(station_id, sensor, start_time, end_time, interval):
@@ -72,7 +71,7 @@ def get_data(station_id, sensor, start_time, end_time, interval='instantaneous')
     url = get_query_url(station_id, sensor, start_time, end_time, interval)
 
     # get gage data as json
-    data = utils.get_session_response(url).json()
+    data = requests.get(url).json()
 
     # if no timeseries data is available, return empty payload with only request parameters
     if len(data['value']['timeSeries']) == 0:
@@ -148,7 +147,7 @@ def get_peak_streamflow(station_id):
     frame.index = pd.to_datetime(frame['peak_dt'].apply(leap_filter))
 
     # load USGS site information
-    result = BeautifulSoup(utils.get_session_response(url.rstrip('rdb')).content, 'lxml')
+    result = BeautifulSoup(requests.get(url.rstrip('rdb')).content, 'lxml')
     info = {'site number': station_id, 'site name': result.find('h2').text}
     meta = result.findAll('div', {'class': 'leftsidetext'})[0]
     for div in meta.findChildren('div', {'align': 'left'}):

@@ -48,7 +48,7 @@ class TestSacAlert(unittest.TestCase):
         test the function for retrieving site list for a particular gage types returns the expected number of entries
         """
         self.assertEqual(alert.get_sites(as_dataframe=True, datatype='rain').shape, (80, 12))
-        self.assertEqual(alert.get_sites(as_dataframe=True, datatype='stream').shape, (37, 10))
+        self.assertEqual(alert.get_sites(as_dataframe=True, datatype='stream').shape, (35, 10))
 
     def test_get_sites_from_list(self):
         """

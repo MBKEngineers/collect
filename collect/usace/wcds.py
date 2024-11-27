@@ -8,7 +8,10 @@ import datetime as dt
 import io
 import re
 import textwrap
+
 import pandas as pd
+import requests
+import ssl
 
 from collect import utils
 
@@ -33,7 +36,7 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
 
     # Read url data
-    response = utils.get_session_response(url).content
+    response = requests.get(url, verify=ssl.CERT_NONE).content
     df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values=['-', 'M'])
 
     # Check that user chosen water year is within range with data
@@ -220,7 +223,7 @@ def get_release_report(reservoir):
     url = f'https://www.spk-wc.usace.army.mil/reports/release/rel-{reservoir}'
 
     # request data from url
-    response = utils.get_session_response(url).content
+    response = requests.get(url, verify=ssl.CERT_NONE).content
     raw = response.decode('utf-8')
 
     # check for header matching pattern with pipe delimiters
@@ -279,7 +282,7 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.meta'
     
     # read data from url using requests session with retries
-    response = utils.get_session_response(url)
+    response = requests.get(url, verify=ssl.CERT_NONE)
 
     # complete metadata dictionary
     metadata_dict = response.json()

@@ -9,8 +9,7 @@ import io
 import re
 
 import pandas as pd
-from collect import utils
-
+import requests
 
 try:
     import pdftotext
@@ -128,7 +127,7 @@ def get_raw_text(report, filename=None, preserve_white_space=True):
         raise ValueError(f'ERROR: {report} is not PDF-formatted')
 
     # request report content from URL
-    with io.BytesIO(utils.get_session_response(url).content) as buf:
+    with io.BytesIO(requests.get(url).content) as buf:
 
         # parse PDF and extract as string
         content = pdftotext.PDF(buf, raw=False, physical=True)[0]
@@ -310,7 +309,7 @@ def get_oco_tabular_data(report):
     url = get_report_url(report)
 
     # request report content from URL
-    with io.BytesIO(utils.get_session_response(url).content) as buf:
+    with io.BytesIO(requests.get(url).content) as buf:
 
         # parse PDF and extract as string
         content = list(pdftotext.PDF(buf, raw=False, physical=True))

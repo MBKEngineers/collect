@@ -36,6 +36,7 @@ import re
 
 from bs4 import BeautifulSoup
 import pandas as pd
+import requests
 
 from collect import utils
 
@@ -48,7 +49,7 @@ def get_sites():
         sites (dict): dictionary of site IDs and titles
     """
     url = 'https://river-lake.nidwater.com/hyquick/index.htm'
-    df = pd.read_html(utils.get_session_response(url).content, header=1, index_col=0)[0]
+    df = pd.read_html(requests.get(url).content, header=1, index_col=0)[0]
     sites = df.to_dict()['Name']
     return sites
 
@@ -61,7 +62,7 @@ def get_issue_date():
         issue_date (datetime.datetime): the last update of the NID hyquick page
     """
     url = 'https://river-lake.nidwater.com/hyquick/index.htm'
-    df = pd.read_html(utils.get_session_response(url).content, header=None)[0]
+    df = pd.read_html(requests.get(url).content, header=None)[0]
     return dt.datetime.strptime(df.iloc[0, 1], 'Run on %Y/%m/%d %H:%M:%S')
 
 
@@ -74,7 +75,7 @@ def get_site_files(site):
         links (list): sorted list of linked files available for site
     """
     url = get_station_url(site, metric='index')
-    soup = BeautifulSoup(utils.get_session_response(url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(url).content, 'lxml')
     links = {a.get('href') for a in soup.find_all('a')}
     return sorted(links)
 
@@ -128,7 +129,7 @@ def get_daily_data(site, json_compatible=False):
     """
     metric = get_site_metric(site, interval='daily')
     url = get_station_url(site, metric=metric, interval='daily')
-    response = utils.get_session_response(url).text
+    response = requests.get(url).text
 
     frames = []
     for group in re.split(r'(?=Nevada Irrigation District\s+)', response):
@@ -194,7 +195,7 @@ def get_daily_meta(url=None, content=None):
     """
     if url:
         data = [re.sub(r'\s{2,}|:\s+|:', '|', x.strip()).split('|') 
-                for x in utils.get_session_response(url).text.splitlines()[:10]]
+                for x in requests.get(url).text.splitlines()[:10]]
     elif content:
         data = [re.sub(r'\s{2,}|:\s+|:', '|', x.strip()).split('|') 
                 for x in content.splitlines()]

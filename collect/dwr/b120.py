@@ -2,27 +2,26 @@
 collect.dwr.b120
 ============================================================
 access DWR Bulletin 120 forecast data
+
+TODO - add support for historical reports in format: 
+    https://cdec.water.ca.gov/reportapp/javareports?name=B120.201203
+    https://cdec.water.ca.gov/reportapp/javareports?name=B120.201802
+
+TODO - check updated homepage for bulletin 120 for new links
+    https://cdec.water.ca.gov/snow/bulletin120/index2.html
+    tie validation of dates to https://cdec.water.ca.gov/prev_b120.html and https://cdec.water.ca.gov/prev_b120up.html
 """
 # -*- coding: utf-8 -*-
 import datetime as dt
 import io
 import re
+
 from bs4 import BeautifulSoup
 import pandas as pd
 import requests
 
 from collect.dwr import errors
-from collect.utils import utils
 
-
-# TODO - add support for historical reports in format: 
-# https://cdec.water.ca.gov/reportapp/javareports?name=B120.201203
-# https://cdec.water.ca.gov/reportapp/javareports?name=B120.201802
-
-# TODO - check updated homepage for bulletin 120 for new links
-# https://cdec.water.ca.gov/snow/bulletin120/index2.html
-
-# tie validation of dates to https://cdec.water.ca.gov/prev_b120.html and https://cdec.water.ca.gov/prev_b120up.html
 
 def get_b120_data(date_suffix=''):
     """
@@ -43,7 +42,7 @@ def get_b120_data(date_suffix=''):
         url = 'https://cdec.water.ca.gov/b120{}.html'.format(date_suffix)
 
         # parse HTML file structure; AJ forecast table
-        soup = BeautifulSoup(utils.get_session_response(url).content, 'html5lib')
+        soup = BeautifulSoup(requests.get(url).content, 'html5lib')
         table = soup.find('table', {'class': 'doc-aj-table'})
 
         # read HTML table with April-July Forecast Summary (TAF)
@@ -149,7 +148,7 @@ def get_b120_update_data(date_suffix=''):
         raise errors.B120SourceError('B120 updates in this format not available before Feb. 2018.')
 
     # parse HTML file structure; AJ forecast table
-    soup = BeautifulSoup(utils.get_session_response(url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(url).content, 'lxml')
     tables = soup.find_all('table', {'class': 'doc-aj-table'})
 
     # unused header info
@@ -215,7 +214,7 @@ def get_120_archived_reports(year, month):
 
     url = f'https://cdec.water.ca.gov/reportapp/javareports?name=B120.{report_date:%Y%m}'
     
-    result = utils.get_session_response(url).content  
+    result = requests.get(url).content  
     result = BeautifulSoup(result, 'lxml').find('pre').text
     tables = result.split('Water-Year (WY) Forecast and Monthly Distribution')
 
