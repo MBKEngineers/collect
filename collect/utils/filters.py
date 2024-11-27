@@ -1,5 +1,8 @@
 import numpy as np
-from scipy.signal import argrelextrema
+try:
+    from scipy.signal import argrelextrema
+except:
+    print('Module scipy is required for collect.utils.filters module. Install with `pip install scipy>=1.14.1`.')
 
 
 def filter_peaks(df, column_name, threshold, order=5):

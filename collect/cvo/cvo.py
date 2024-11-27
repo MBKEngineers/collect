@@ -11,10 +11,11 @@ import os
 import dateutil.parser
 import pandas as pd
 import requests
+
 try:
     from tabula import read_pdf
 except:
-    print('Module tabula is required for CVO report collection')
+    print('Module tabula is required for CVO report collection.  Install with `pip install tabula-py==2.4.0`')
 
 
 REPORTS = [
@@ -75,13 +76,16 @@ def get_area(date_structure, report_type):
         if report_date <= dt.date(2010, 12, 1):
             return None
 
-        # provide pdf target area
-        # dates of specific changes to pdf sizing
+        # provide pdf target area that is date-specific
         if (report_date.strftime('%Y-%m') == dt.date.today().strftime('%Y-%m')
                 or (dt.date(2020, 1, 1) <= report_date <= dt.date(2020, 8, 1))
                 or (dt.date(2019, 3, 1) <= report_date <= dt.date(2019, 8, 1))
+                or (dt.date(2022, 1, 1) <= report_date <= dt.date(2022, 4, 1))
                 or (dt.date(2022, 6, 1) <= report_date <= dt.date.today())):
             area = [290.19, 20.76, 750.78, 1300.67]
+
+        elif report_date == dt.date(2022, 5, 1):
+            area =  [290.19, 20.76, 550.78, 1300.67]
 
         elif dt.date(2010, 12, 1) < report_date <= dt.date(2017, 1, 1):
             # Weird date where pdf gets slightly longer
@@ -153,7 +157,7 @@ def get_area(date_structure, report_type):
 
     if report_type == 'shadop':
         # set the default bottom boundary for tabula read_pdf function
-        area = [140, 30, 460, 540]
+        area = [140, 30, 700, 540]
 
         # set the bottom boundary for tabula read_pdf function for February months
         if date_structure.month == 2:
@@ -361,7 +365,8 @@ def get_date_published(url, date_structure, report_type):
             # check that a response is provided
             if len(pages) > 0:
                 if len(pages[0].values) > 0:
-                    date_published = dateutil.parser.parse(pages[0].values.tolist()[-1][-1]).date()
+                    date_text = pages[0].values.tolist()[-1][-1].replace('Run Date:', '')
+                    date_published = dateutil.parser.parse(date_text).date()
 
     # alernate report formats
     elif url.endswith('.prn') or url.endswith('.txt'):
@@ -707,7 +712,7 @@ def doutdly_data_cleaner(content, report_type, date_structure):
     # drop COA columns with no data
     if 'COA USBR' in df:
         if df['COA USBR']['Account Balance'].dropna().empty:
-            df.drop('COA USBR', axis=1, inplace=True)
+            df.drop('COA USBR', level=0, axis=1, inplace=True)
 
     # return converted dataframe; drop NaN values
     return df.dropna(how='all').reindex()
