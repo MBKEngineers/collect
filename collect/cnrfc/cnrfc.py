@@ -172,6 +172,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     # forecast type
     forecast_type = 'Release' if release else 'RVF'
     flow_prefix = 'Release ' if release else ''
+    variable = [f'{flow_prefix}Flow (CFS)', f'{flow_prefix}Stage (Feet)']
 
     # default deterministic URL and index name
     url = 'https://www.cnrfc.noaa.gov/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
@@ -189,7 +190,8 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
         url = 'https://www.cnrfc.noaa.gov/restricted/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
         date_column_header = 'Date/Time (Pacific Time)'
         specified_dtypes = {date_column_header: str, 
-                            f'{flow_prefix}Flow (CFS)': float, 
+                            f'{flow_prefix}Flow (CFS)': float,
+                            'Stage (Feet)': float,
                             'Trend': str}
 
     # get forecast file from csv url
@@ -208,11 +210,13 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     # add timezone info
     df.index.name = 'PDT/PST'
 
-    # Trend value is null for first historical and first forecast entry; select forecast entry
-    first_ordinate = df.where(df['Trend'].isnull()).dropna(subset=[f'{flow_prefix}Flow (CFS)']).last_valid_index()
+    # use whichever variable exists to determine forecast vs historical
+    variable = [x for x in variable if x in df.columns][0]
 
-    # deterministic forecast inflow series
-    df['forecast'] = df.loc[(df.index >= first_ordinate), f'{flow_prefix}Flow (CFS)']
+    # Trend value is null for first historical and first forecast entry; select forecast entry
+    first_ordinate = df.where(df['Trend'].isnull()).dropna(subset=[variable]).last_valid_index()
+
+    df['forecast'] = df.loc[(df.index >= first_ordinate), variable]
 
     # optional limit for start of historical data (2 days before start of forecast)
     if truncate_historical:
@@ -221,8 +225,8 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     else:
         mask = True
 
-    # historical inflow series
-    df['historical'] = df.loc[(df['forecast'].isnull()) & mask][f'{flow_prefix}Flow (CFS)']
+    # historical series
+    df['historical'] = df.loc[(df['forecast'].isnull()) & mask][variable]
 
     # additional issuance, plot-type information
     time_issued, next_issue_time, title, plot_type = get_forecast_meta_deterministic(cnrfc_id)
@@ -234,11 +238,11 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
                                  'first_ordinate': first_ordinate.strftime('%Y-%m-%d %H:%M'),
                                  'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
                                  'next_issue': next_issue_time.strftime('%Y-%m-%d %H:%M'),
-                                 'units': 'cfs',
+                                 # 'units': units,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False, pdt_convert=False, as_pdt=False, cnrfc_id=None):
+def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False, pdt_convert=False, as_pdt=False, cnrfc_id=None, multiindex=False):
     """
     download the deterministic forecasts for an entire watershed, as linked on
     https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
@@ -286,10 +290,9 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
         date_string = stamp.strftime('%Y%m%d%H')
         csvdata = _get_forecast_csv(url)
 
-    # parse forecast data from CSV
+    # Read in as MultiIndex for Stage Data
     df = pd.read_csv(csvdata, 
-                     header=0, 
-                     skiprows=[1,], 
+                     header=[0, 1], 
                      parse_dates=True, 
                      index_col=0,
                      float_precision='high',
@@ -301,6 +304,10 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
 
     # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
     df, units = _apply_conversions(df, 'hourly', acre_feet, pdt_convert, as_pdt)
+
+    # Drop MultiIndex if not multindex (to preserve backwards compatibility)
+    if not multiindex:
+        df.columns = df.columns.droplevel(level=1)
 
     # clean up
     csvdata.close()
@@ -315,6 +322,44 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
                                  'units': units,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
+def get_deterministic_forecast_watershed_stage(watershed, date_string, pdt_convert=False, as_pdt=False, cnrfc_id=None, multiindex=False):
+    """
+    Return deterministic forecast for stage
+    from: https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
+    https://www.cnrfc.noaa.gov/csv/2019040318_american_csv_export.zip
+
+    Arguments:
+        watershed (str):
+        date_string (str):
+        acre_feet (bool): 
+        pdt_convert (bool): 
+        as_pdt (bool): 
+        cnrfc_id (str): 
+        multiindex (bool): return df with MultiIndex (column headers with 2 rows)
+    Returns:
+        (dict): 
+    """
+
+    results = get_deterministic_forecast_watershed(watershed,
+                                                   date_string,
+                                                   acre_feet=False,
+                                                   pdt_convert=pdt_convert,
+                                                   as_pdt=as_pdt,
+                                                   cnrfc_id=cnrfc_id,
+                                                   multiindex=True)
+
+    info = results['info']
+
+    df = results['data'].filter(regex='SSTG', axis=1)
+
+    assert not df.empty, 'no stage deterministic forecast'
+
+    if not multiindex:
+        df.columns = df.columns.droplevel(level=1)
+
+    info.update({'units': 'ft'})
+
+    return {'data': df, 'info': info}
 
 def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=False):
     """
@@ -841,8 +886,10 @@ def esp_trace_analysis_wrapper():
 
 def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
 
-    # convert kcfs/day to cfs/day
-    df = df * 1000.0
+    # convert kcfs/day to cfs/day (unless stage data)
+    filter_columns = [x for x in df.columns if x[1] != 'SSTG']
+    df[filter_columns] = df[filter_columns] * 1000.0
+
     units = 'cfs'
 
     if acre_feet:
