@@ -62,8 +62,11 @@ def get_b120_data(date_suffix=''):
 
         # read HTML table with Water-Year Forecast Summary
         wy_list = []
-        for tr in table.find('tbody').find_all('tr'):
-            wy_list.append([clean_td(td.text) for td in tr.find_all('td')])
+        for tr in table.find('tbody').find_all('tr'):            
+            clean_row = [clean_td(td.text) for td in tr.find_all('td')]
+            if clean_row[0] == 'Download in comma-delimited format':
+                continue
+            wy_list.append(clean_row)
         
         # header info
         headers = table.find('thead').find('tr', {'class': 'header-row2'}).find_all('th')
@@ -135,14 +138,14 @@ def clean_td(text):
 def get_b120_update_data(date_suffix=''):
     """
     Args:
-        date_suffix (str):
+        date_suffix (str): optional 
 
     Returns:
 
     """
 
-    # main B120 page (new DWR format)
-    url = 'https://cdec.water.ca.gov/b120up.html'#.format(date_suffix)
+    # main B120 page (format circa 2020)
+    url = 'https://cdec.water.ca.gov/b120up.html'
 
     if not validate_date_suffix(date_suffix, min_year=2018):
         raise errors.B120SourceError('B120 updates in this format not available before Feb. 2018.')
@@ -159,14 +162,24 @@ def get_b120_update_data(date_suffix=''):
     # read HTML table with April-July Forecast Updates (TAF)
     aj_list = []
     for table in tables:
-        for tr in table.find('tbody').find_all('tr'):
+        watershed = None
+        average = None
+
+        for tr in table.find('tbody').find_all('tr'):        
             cells = tr.find_all('td')
-            if len(cells) == 1:
+
+            clean_row = [clean_td(td.text) for td in cells]
+            if clean_row[0] == 'Download in comma-delimited format':
+                continue                
+
+            if cells[0]['class'][0] == 'col-basin-name':
                 spans = cells[0].find_all('span')
                 watershed = spans[0].text.strip()
                 average = clean_td(spans[1].text.strip().split('= ')[-1])
-            else:
-                aj_list.append([watershed, average] + [clean_td(td.text) for td in cells])
+                continue
+
+            row_formatted = [watershed, average] + clean_row
+            aj_list.append(row_formatted)
 
     # dataframe storing Apr-Jul forecast table
     columns = ['Hydrologic Region', 'Average', 'Percentile']
