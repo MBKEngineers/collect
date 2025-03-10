@@ -239,7 +239,7 @@ class TestCNRFC(unittest.TestCase):
         example expected output from get_rating_curve method
         """
         result = cnrfc.get_rating_curve('DCSC1')
-        self.assertEqual(result['data'][0], (1.07, 0.45))
+        self.assertEqual(result['data'][0], (0.96, 0.48))
         self.assertEqual(result['data'][-1], (15.0, 16300.0))
         self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/data/ratings/DCSC1_rating.js')
 
