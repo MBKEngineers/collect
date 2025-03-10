@@ -60,7 +60,7 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     df.set_index('ISO 8601 Date Time', inplace=True)
     
     # add a day to timesteps where 24T is in the index
-    new_index = pd.Series(pd.to_datetime(df.index.str.replace('T24:', ' '), format='mixed'), index=df.index)
+    new_index = pd.Series(pd.to_datetime(df.index.str.replace('T24:', ' ')), index=df.index)
     mask = df.index.str.contains('T24:')
     new_index[mask] += pd.Timedelta(days=1)
 
@@ -102,7 +102,7 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
         print(f'No data for selected start date. Earliest possible start date selected instead: {earliest_time}')
         start_time = earliest_time
 
-    # assume date/timess are provided in UTC timezone if no timezone is provided
+    # assume date/times are provided in UTC timezone if no timezone is provided
     if start_time.tzinfo is None:
         start_time = start_time.astimezone(dt.timezone.utc)
     if end_time.tzinfo is None:
@@ -193,7 +193,11 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_he
     Returns:
         result (dict): query result dictionary with data and info keys
     """
-    return get_data(reservoir.lower(), start_time, end_time, interval=interval, clean_column_headers=clean_column_headers)
+    return get_data(reservoir.lower(),
+                    start_time,
+                    end_time,
+                    interval=interval,
+                    clean_column_headers=clean_column_headers)
 
 
 def _cleaned_columns_map(columns):
@@ -226,7 +230,7 @@ def get_release_report(reservoir):
     reservoir = reservoir.lower()
 
     # USACE-SPK release report email source data
-    url = f'https://www.spk-wc.usace.army.mil/reports/release/rel-{reservoir}'
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/release.py?project={reservoir}&textonly=true'
 
     # request data from url
     response = requests.get(url, verify=ssl.CERT_NONE).content
