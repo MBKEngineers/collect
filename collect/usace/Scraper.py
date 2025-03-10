@@ -16,7 +16,7 @@ def get_url(datetime_structure):
 def get_content(datetime_structure):
 
 	url = get_url(datetime_structure)
-	response = requests.get(url, verify=False)
+	response = requests.get(url)
 	urllib3.disable_warnings()
 	content = response.text
 
