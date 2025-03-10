@@ -1,10 +1,11 @@
-import pandas as pd 
-import dateutil.parser
-import re
-import io
-import requests
-import urllib3
 import datetime as dt
+import pandas as pd 
+
+import io
+import re
+import requests
+import ssl
+
 
 def get_url(datetime_structure):
 
@@ -13,14 +14,11 @@ def get_url(datetime_structure):
 
 	return f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'	
 
-def get_content(datetime_structure):
+def get_sac_valley_fcr(datetime_structure):
 
 	url = get_url(datetime_structure)
-	response = requests.get(url)
-	urllib3.disable_warnings()
-	content = response.text
-
-	return content
+	content = requests.get(url, verify=ssl.CERT_NONE).text
+	return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 
 #Extract first section of Sacramento Valley data
 def extract_sacvalley(datetime_structure):
@@ -32,8 +30,7 @@ def extract_sacvalley(datetime_structure):
     Returns:
         df (pandas.DataFrame): the USACE station storage and flood control parameters data, specific to Sacramento valley
     """
-	content = get_content(datetime_structure)
-	query  = re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
+	query = get_sac_valley_fcr(datetime_structure)
 	query2 = (query[0].split('-------------- --------- --------- --------- -------- -------------- ---------------\n')[1])
 	query3 = query2.split('Folsom')[0].replace('CFS','')
 	df = pd.read_fwf(io.StringIO(query3), header=None)
@@ -42,7 +39,6 @@ def extract_sacvalley(datetime_structure):
 	df.columns = ["Reservoir", "Gross Pool (acft)", "Top of Conservation (acft)","Actual Res (acft)", r"% of Gross Pool", "Above top of Conservation (acft)","% Encroached", "Flood Control Parameters (Rain in.)","Flood Control Parameters (Snow acft)"]
 	df= df.set_index("Reservoir")
 	return df
-
 
 # Extract second section of Sacramento Valley data 
 def extract_folsom(datetime_structure):
@@ -55,8 +51,7 @@ def extract_folsom(datetime_structure):
     Returns:
         result_cleaned (pandas.DataFrame): the USACE station storage and flood control parameters, specific to Folsom
     """
-	content = get_content(datetime_structure)
-	query4 = re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
+	query4 = get_sac_valley_fcr(datetime_structure)
 	query5 = (query4[0].split('Indian Valley:')[1])
 	query6 = (query5.split('BASIN TOTALS')[0]).replace("-","").replace("(","").replace(")","").replace(";","").replace(",","")
 
@@ -78,39 +73,30 @@ def extract_folsom(datetime_structure):
 	row_index = df2.index == 0
 	df2.loc[row_index, ['Forecasted Date','Ex1.1']] = df2.loc[row_index,'sc'].str.extract(r'([A-Za-z]+):          (-+?\d+)').values
 
-
 	# new_row_index1 = df2.index==4
 	# df2.loc[new_row_index1, ['Forecasted Date']] = df2.loc[new_row_index1,'sc'].str.extract(r'([A-Za-z]+ [A-Za-z]+)').values
 
 	new_row_index2 = df2.index==5
 	df2.loc[new_row_index2, ['Forecasted Date']] = df2.loc[new_row_index2,'sc'].str.extract(r'([A-Za-z]+ [A-Za-z]+)').values
-	# print(df2)
-
 
 	df_post_drop = df2.drop('sc',axis=1)
 	df_post_drop = df_post_drop[["Forecasted Date","Forecasted_Time","Ex1.1",'Top of Conservation (acft)','Actual Res (acft)',r'% of GrossPool','Above Top of Conservation(acft)', 'Percent Encroached']]
-	# print(df_post_drop)
 	
 	#Forecasted section
-	query41 = re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
-	query51 = (query41[0].split('Indian Valley:')[1])
-	query61 = (query51.split('BASIN TOTALS')[0]).replace("-","").replace("(","").replace(")","").replace(";","").replace(",","")
+	query41 = query4
+	query51 = query5
+	query61 = query6
 	dfVol = pd.read_fwf(io.StringIO(query61), names= ["scratch"])
 	dfVol[['Forecasted Volumes****','fv1','fv2','fv3']] = dfVol['scratch'].str.extract(r'(?:\s*(\d+)\s+)?(?:\s*(\d+)\s+)?(\d+)\s+(\d+)$')
 
 	rowindex = dfVol.index == 1
 	dfVol.loc[rowindex,['Reservoir','Gross Pool (acft)']] = dfVol.loc[rowindex,'scratch'].str.extract(r'([a-zA-Z]+):          (\d+)').values
 
-
 	df_post_drop2 = dfVol.drop('scratch',axis=1)
 	df_post_drop2 = df_post_drop2[["Reservoir","Gross Pool (acft)","Forecasted Volumes****","fv1","fv2","fv3"]]
-	print(df_post_drop2)
-
 
 	#concenate dataframe along rows
-
 	result = pd.concat([df_post_drop2,df_post_drop], axis=1)
-	
 
 	result_reordered = result.loc[:,['Reservoir','Gross Pool (acft)','Top of Conservation (acft)','Actual Res (acft)', r'% of GrossPool','Above Top of Conservation(acft)','Percent Encroached','Forecasted Date','Forecasted_Time','Forecasted Volumes****','fv1','fv2','fv3']]
 	result_cleaned = result_reordered.dropna(how='all')
@@ -124,7 +110,6 @@ def extract_folsom(datetime_structure):
 	#Drop the first row
 	result_cleaned = result_cleaned.drop(result_cleaned.index[0])
 	result_cleaned = result_cleaned.set_index("Reservoir")
-	# print(result_cleaned)
 	return result_cleaned
 
 #Extract third section of Sacramento Valley data 
@@ -137,8 +122,7 @@ def extract_basintotals(datetime_structure):
     Returns:
         df_after_dropping (pandas.DataFrame): the USACE station basin total storage data, total flood space encroached and w/US storages included
     """
-	content = get_content(datetime_structure)
-	qy = re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
+	qy = get_sac_valley_fcr(datetime_structure)
 	qy1 = (qy[0].split(' ____________________________________________________________________________________')[1])
 	qy2 = qy1.split(' **  Percent Encroached')[0]
 	df3 = pd.read_fwf(io.StringIO(qy2), names= ["Col0","Actual Res (acft)",r'% of GrossPool',"Above Top of Conservation(acft)","Percent Encroached"]) #read fixed-width format file into pandas Dataframe
@@ -155,14 +139,10 @@ def extract_basintotals(datetime_structure):
 	df_after_dropping = df_after_dropping.set_index("Reservoir")
 	return df_after_dropping
 
-	#Concatenate two tables with similar column names
-
-	#merge two dataframes 
-
 
 if __name__ == '__main__':
 
-	datetime_structure = dt.datetime(2024,12,25)
+	datetime_structure = dt.datetime(2025,2,25)
 	df = extract_sacvalley(datetime_structure)
 	result_cleaned = extract_folsom(datetime_structure)
 	df_after_dropping = extract_basintotals(datetime_structure)
@@ -173,6 +153,5 @@ if __name__ == '__main__':
 
 
 	#Add notes.txt file 
-
 	qylin = re.findall(r'[\S\s]*(?= ---- Sacramento Valley ----)', content)
 	df4 = pd.read_fwf(io.StringIO(qylin)) #read fixed-width format file into pandas Dataframe
