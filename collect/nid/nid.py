@@ -49,7 +49,7 @@ def get_sites():
         sites (dict): dictionary of site IDs and titles
     """
     url = 'https://river-lake.nidwater.com/hyquick/index.htm'
-    df = pd.read_html(requests.get(url).content, header=1, index_col=0)[0]
+    df = pd.read_html(requests.get(url).content, flavor='html5lib', header=1, index_col=0)[0]
     sites = df.to_dict()['Name']
     return sites
 
@@ -62,7 +62,7 @@ def get_issue_date():
         issue_date (datetime.datetime): the last update of the NID hyquick page
     """
     url = 'https://river-lake.nidwater.com/hyquick/index.htm'
-    df = pd.read_html(requests.get(url).content, header=None)[0]
+    df = pd.read_html(requests.get(url).content, flavor='html5lib', header=None)[0]
     return dt.datetime.strptime(df.iloc[0, 1], 'Run on %Y/%m/%d %H:%M:%S')
 
 

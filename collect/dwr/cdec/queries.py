@@ -463,7 +463,7 @@ def get_daily_snowpack_data(region, start, end):
         raise ValueError(f'<region> string must be NORTH, SOUTH, CENTRAL, or STATE.')
 
     # read in snowpack region table as dataframe
-    df = pd.read_html(f'https://cdec.water.ca.gov/dynamicapp/querySWC?reg={region}')[0]
+    df = pd.read_html(f'https://cdec.water.ca.gov/dynamicapp/querySWC?reg={region}', flavor='html5lib')[0]
     df['Date'] = pd.to_datetime(df['Date'])
 
     # sort and index dataframe by ascending date 

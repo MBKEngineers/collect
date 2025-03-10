@@ -18,11 +18,11 @@ setuptools.setup(
     url='https://github.com/MBKEngineers/collect.git',
     packages=setuptools.find_packages(),
     setup_requires=[
-        'numpy==2.1.3'
+        'numpy==1.24.2'
     ],
     install_requires=[
         'beautifulsoup4==4.12.3',
-        'pandas==2.2.3',
+        'pandas==1.5.3',
         'pyOpenSSL==23.3.0',
         'python-dateutil==2.9.0',
         'python-dotenv==0.19.2',
@@ -36,7 +36,7 @@ setuptools.setup(
             'sphinx-readable-theme==1.3.0', 
             'sphinx-rtd-theme==1.0.0'
         ],
-        'filters': 'scipy==1.14.1',
+        'filters': 'scipy==1.10.1',
         'swp': 'pdftotext==2.2.2'
     },
     zip_safe=False,

@@ -566,7 +566,7 @@ def parse_forecast_archive_table(url):
         df (pandas.DataFrame): dataframe containing HTML table summarizing last forecast issuances for product page
     """
     with io.StringIO(utils.get_session_response(url).text) as text:
-        df = pd.read_html(text)[0]
+        df = pd.read_html(text, flavor='html5lib')[0]
 
     # extract the header row and assign as column names
     df.columns = df.iloc[1,:]
