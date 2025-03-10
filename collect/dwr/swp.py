@@ -9,11 +9,12 @@ import io
 import re
 
 import pandas as pd
+import requests
+
 try:
     import pdftotext
 except:
     print('Module pdftotext is required for SWP report collection.  Install with `pip install pdftotext==2.2.2`')
-import requests
 
 
 def get_report_catalog(console=True):
@@ -25,8 +26,22 @@ def get_report_catalog(console=True):
     Returns:
         catalog (dict): nested dictionary of report names and associated URLs
     """
-    oco_url_base = 'https://water.ca.gov/-/media/DWR-Website/Web-Pages/Programs/State-Water-Project/Operations-And-Maintenance/Files/Operations-Control-Office/'
-    cnra_url_base = 'https://data.cnra.ca.gov/dataset/742110dc-0d96-40bc-8e4e-f3594c6c4fe4/resource/45c01d10-4da2-4ebb-8927-367b3bb1e601/download/'
+    oco_url_base = '/'.join(['https://water.ca.gov/-/media',
+                             'DWR-Website',
+                             'Web-Pages',
+                             'Programs',
+                             'State-Water-Project',
+                             'Operations-And-Maintenance',
+                             'Files',
+                             'Operations-Control-Office',
+                             ''])
+    cnra_url_base = '/'.join(['https://data.cnra.ca.gov',
+                              'dataset',
+                              '742110dc-0d96-40bc-8e4e-f3594c6c4fe4',
+                              'resource',
+                              '45c01d10-4da2-4ebb-8927-367b3bb1e601',
+                              'download',
+                              ''])
 
     catalog = {
         'Dispatcher\'s Daily Water Reports': {
@@ -39,15 +54,20 @@ def get_report_catalog(console=True):
             'Sun': f'{cnra_url_base}dispatchers-sunday-water-report.txt',
         },
         'Delta Status and Operations': {
-            'Delta Operations Summary (daily)': f'{oco_url_base}Delta-Status-And-Operations/Delta-Operations-Daily-Summary.pdf',
-            'Water Quality Summary (daily)': f'{oco_url_base}Delta-Status-And-Operations/Delta-Water-Quality-Daily-Summary.pdf',
-            'Hydrologic Conditions Summary (daily)': f'{oco_url_base}Delta-Status-And-Operations/Delta-Hydrologic-Conditions-Daily-Summary.pdf',
-            'Miscellaneous Monitoring Data (daily)': f'{oco_url_base}Delta-Status-And-Operations/Delta-Miscellaneous-Daily-Monitoring-Data.pdf',
+            'Delta Operations Summary (daily)':
+                f'{oco_url_base}Delta-Status-And-Operations/Delta-Operations-Daily-Summary.pdf',
+            'Water Quality Summary (daily)':
+                f'{oco_url_base}Delta-Status-And-Operations/Delta-Water-Quality-Daily-Summary.pdf',
+            'Hydrologic Conditions Summary (daily)':
+                f'{oco_url_base}Delta-Status-And-Operations/Delta-Hydrologic-Conditions-Daily-Summary.pdf',
+            'Miscellaneous Monitoring Data (daily)':
+                f'{oco_url_base}Delta-Status-And-Operations/Delta-Miscellaneous-Daily-Monitoring-Data.pdf',
             'Barker Slough Flows (weekly)': f'{oco_url_base}Delta-Status-And-Operations/Barker-Slough-Weekly-Flows.pdf'
         },
         'Oroville Operations': {
             'Forecasted Storage': f'{oco_url_base}Oroville-Operations/Oroville-Forecasted-Storage.pdf',
-            'Hatchery and Robinson Riffle Daily Average Water Temperature': f'{oco_url_base}Oroville-Operations/Hatchery-and-Robinson-Riffle-Daily-Average-Water-Temperature.pdf',
+            'Hatchery and Robinson Riffle Daily Average Water Temperature':
+                f'{oco_url_base}Oroville-Operations/Hatchery-and-Robinson-Riffle-Daily-Average-Water-Temperature.pdf',
         },
         'Weekly Reservoir Storage Charts': {
             'Oroville': f'{oco_url_base}Project-Wide-Operations/Oroville-Weekly-Reservoir-Storage-Chart.pdf',
@@ -82,10 +102,6 @@ def get_report_url(report):
     Returns:
         url (str): the path to the PDF report
     """
-    url_base = 'https://water.ca.gov/-/media/DWR-Website/Web-Pages/Programs/State-Water-Project/'
-    swp_base = url_base + 'Operations-And-Maintenance/Files/Operations-Control-Office/Delta-Status-And-Operations'
-    url = '/'.join([swp_base, 'Delta-Operations-Daily-Summary.pdf'])
-
     # flatten the catalog
     flat = {k: v for d in get_report_catalog(console=False).values() for k, v in d.items() }
 
@@ -95,20 +111,26 @@ def get_report_url(report):
 
 def get_raw_text(report, filename=None, preserve_white_space=True):
     """
+    extract text data from a PDF report on the SWP website
+
     Arguments:
         filename (str): optional filename (.txt) for raw report export
     Returns:
         content (str): the string contents of the PDF (preserves whitespace)
+    Raises:
+        ValueError: if the specified report does not map to a PDF, raise a ValueError
     """
     # construct URL
     url = get_report_url(report)
 
-    # request report content from URL
-    f = io.BytesIO(requests.get(url).content)
-    f.seek(0)
+    if not url.endswith('.pdf'):
+        raise ValueError(f'ERROR: {report} is not PDF-formatted')
 
-    # parse PDF and extract as string
-    content = pdftotext.PDF(f, raw=False, physical=True)[0]
+    # request report content from URL
+    with io.BytesIO(requests.get(url).content) as buf:
+
+        # parse PDF and extract as string
+        content = pdftotext.PDF(buf, raw=False, physical=True)[0]
 
     # optionally export the raw report as text
     if filename:
@@ -117,7 +139,7 @@ def get_raw_text(report, filename=None, preserve_white_space=True):
             # optionally strip out indentation and excess white space from text
             if not preserve_white_space:
                 content = '\n'.join([str(x).strip() for x in content.splitlines() if bool(x.strip().lstrip('~'))])
-            
+
             # write to file
             f.write(content)
 
@@ -128,7 +150,7 @@ def get_raw_text(report, filename=None, preserve_white_space=True):
 def get_delta_daily_data(export_as='dict'):
     """
     fetch and return SWP OCO's daily delta operations report
-    
+
     Arguments:
         export_as (str): designates which format to use for returned data
     Returns:
@@ -136,8 +158,11 @@ def get_delta_daily_data(export_as='dict'):
     """
     content = get_raw_text('Delta Operations Summary (daily)', 'raw_export.txt')
 
+    with open ('helper.txt', 'w') as f:
+        f.write(content)
+
     # extract current report's date
-    rx = re.compile(r'(?P<date>\d{1,2}/\d{1,2}/\d{4})')   
+    rx = re.compile(r'(?P<date>\d{1,2}/\d{1,2}/\d{4})')
     date = rx.search(content).group('date')
 
     # parse the report date
@@ -159,6 +184,10 @@ def get_delta_daily_data(export_as='dict'):
     def _parse_entry(match):
         value = match.group('value')
 
+        # clean up dash to be parsed as minus sign for numeric entries
+        if re.match(r'^(‐\d+)', value) is not None:
+            value = value.replace('‐', '-')
+
         units_match = re.findall(r'(cfs|TAF|km|%|% \(14-day avg\))$', value)
         units = units_match[0] if bool(units_match) else ''
 
@@ -177,9 +206,9 @@ def get_delta_daily_data(export_as='dict'):
 
     # structured dictionary template organizes the categories of the report
     result = {
-        # 'date': date_reformat, 
+        # 'date': date_reformat,
         'Scheduled Exports for Today': {
-            'Clifton Court Inflow': [], 
+            'Clifton Court Inflow': [],
             'Jones Pumping Plant': []
         },
         'Estimated Delta Hydrology': {
@@ -217,10 +246,14 @@ def get_delta_daily_data(export_as='dict'):
     for x, v in result.items():
         if isinstance(v, dict):
             for k in v.keys():
-                v.update({k: extract[k]})
+
+                # cleaning for n-dash vs m-dash in source content
+                element = extract.get(k, extract.get(k.replace('-', '‐')))
+
+                v.update({k: element})
 
                 # update frame
-                df[x, k, extract[k]['units']] = extract[k]['value']
+                df[x, k, element['units']] = element['value']
 
     df.columns = pd.MultiIndex.from_tuples(df.columns)
 
@@ -231,7 +264,7 @@ def get_delta_daily_data(export_as='dict'):
 def get_barker_slough_data():
     """
     fetch and return SWP OCO's Barker Slough Flows (weekly) report
-    
+
     Arguments:
         report (str): designates which report to retrieve
     Returns:
@@ -240,7 +273,7 @@ def get_barker_slough_data():
     content = get_raw_text('Barker Slough Flows (weekly)')
 
     # report information
-    meta =  {
+    meta = {
         'filename': 'Barker-Slough-Weekly-Flows.pdf',
         'title': content.splitlines()[0],
         'contact': 'OCO_Export_Management@water.ca.gov',
@@ -248,7 +281,7 @@ def get_barker_slough_data():
         'raw': content,
     }
 
-    # strip leading white space, filter out empty rows, and split rows 
+    # strip leading white space, filter out empty rows, and split rows
     # based variable # of whitespace characters (2 or more)
     rows = [re.split(r'\s{2,}', x.lstrip())
             for x in content.splitlines() if bool(x)]
@@ -257,7 +290,7 @@ def get_barker_slough_data():
     df = pd.DataFrame(rows[3:], columns=rows[2])
     df.set_index('Date', drop=True, inplace=True)
     df.index = pd.to_datetime(df.index)
-    
+
     # return result
     return {'info': meta, 'data': df}
 
@@ -269,7 +302,6 @@ def get_oco_tabular_data(report):
 
     Arguments:
         report (str): designates which report to retrieve
-        filename (str): optional filename (.txt) for raw report export
     Returns:
         content (str): the string contents of the PDF (preserves whitespace)
     """
@@ -277,11 +309,10 @@ def get_oco_tabular_data(report):
     url = get_report_url(report)
 
     # request report content from URL
-    f = io.BytesIO(requests.get(url).content)
-    f.seek(0)
+    with io.BytesIO(requests.get(url).content) as buf:
 
-    # parse PDF and extract as string
-    content = list(pdftotext.PDF(f, raw=False, physical=True))
+        # parse PDF and extract as string
+        content = list(pdftotext.PDF(buf, raw=False, physical=True))
 
     # report information
     meta =  {
@@ -301,7 +332,7 @@ def get_oco_tabular_data(report):
         Returns:
             df (pandas.DataFrame): tabular results as dataframe
         """
-        # strip leading white space, filter out empty rows, and split rows 
+        # strip leading white space, filter out empty rows, and split rows
         # based variable # of whitespace characters (2 or more)
         page = page.replace(',', '')
         rows = [re.split(r'\s{2,}', x.lstrip())
@@ -348,7 +379,7 @@ def get_oco_tabular_data(report):
             rows[4] = [''] + rows[4]
             rows[6] = ['Date (30 days)'] + rows[6]
             df.columns = [' '.join(list(x)).strip() for x in zip(*[rows[2], rows[4], rows[6]])]
-        
+
         # page 2 of hydrology report
         elif i == 1:
             rows[2] = [''] + rows[2]

@@ -36,7 +36,7 @@ def get_wsi_data():
     url = 'http://cdec.water.ca.gov/reportapp/javareports?name=wsihist'
 
     # parse HTML file structure; AJ forecast table
-    soup = BeautifulSoup(requests.get(url).content, 'html5lib')
+    soup = BeautifulSoup(requests.get(url).content, 'html.parser')
     table = soup.find('pre').text
 
     # three tables on this page

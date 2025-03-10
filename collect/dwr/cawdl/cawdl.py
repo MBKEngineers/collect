@@ -30,7 +30,7 @@ def get_cawdl_data(site_id): # NEEDS UPDATES
 
     # parse HTML file structure; extract station/well metadata
     well_info = {}
-    soup = BeautifulSoup(requests.get(site_url).content, 'lxml')
+    soup = BeautifulSoup(requests.get(site_url).content, 'html.parser')
     for table in soup.find_all('table')[1:]:
         for tr in table.find_all('tr'):
             cells = tr.find_all('td')

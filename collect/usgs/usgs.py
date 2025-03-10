@@ -4,9 +4,9 @@ collect.usgs.usgs
 USGS National Water Information System (NWIS)
 """
 # -*- coding: utf-8 -*-
-
+import datetime as dt
 from bs4 import BeautifulSoup
-import dateutil.parser
+# import dateutil.parser
 import pandas as pd
 import requests
 
@@ -34,7 +34,7 @@ def get_query_url(station_id, sensor, start_time, end_time, interval):
         format_start = start_time.strftime('%Y-%m-%d')
         format_end = end_time.strftime('%Y-%m-%d')
 
-    # construct query URL
+    # construct query URL    
     url = '&'.join([f'https://waterservices.usgs.gov/nwis/{interval_code}v/?format=json',
                     f'sites={station_id}',
                     f'startDT={format_start}',
@@ -56,7 +56,7 @@ def get_data(station_id, sensor, start_time, end_time, interval='instantaneous')
     80155 Suspnd sedmnt disch(Mean)
 
     Arguments:
-        station_id (int or str): the USGS station code (ex: 11446220)
+        station_id (int or str): the USGS station code (ex: 11418500)
         sensor (str): ex '00060' (discharge)
         start_time (dt.datetime): ex dt.datetime(2016, 10, 1)
         end_time (dt.datetime): ex dt.datetime(2017, 10, 1)
@@ -71,8 +71,19 @@ def get_data(station_id, sensor, start_time, end_time, interval='instantaneous')
     url = get_query_url(station_id, sensor, start_time, end_time, interval)
 
     # get gage data as json
-    data = requests.get(url, verify=False).json()
-    
+    data = requests.get(url).json()
+
+    # if no timeseries data is available, return empty payload with only request parameters
+    if len(data['value']['timeSeries']) == 0:
+        return {
+            'data': None,
+            'info': {
+                'site number': station_id,
+                'sensor': sensor,
+                'interval': interval
+            }
+        }
+
     # process timeseries info
     series = data['value']['timeSeries'][0]['values'][0]['value']
     for entry in series:
@@ -121,17 +132,22 @@ def get_peak_streamflow(station_id):
     url = '?'.join(['https://nwis.waterdata.usgs.gov/nwis/peak', 
                     'site_no={station_id}&agency_cd=USGS&format=rdb']).format(station_id=station_id)
 
+    def leap_filter(x):
+        if x.split('-', 1)[-1] == '03-00':
+            x = x.replace('03-00', '02-29')
+        return dt.datetime.strptime(x, '%Y-%m-%d')
+
     # process annual peak time series from tab-delimited table
     frame = pd.read_csv(url,
                         comment='#', 
-                        parse_dates=True,
+                        parse_dates=False,
                         header=0,
                         delimiter='\t')
     frame.drop(0, axis=0, inplace=True)
-    frame.index = pd.to_datetime(frame['peak_dt'])
+    frame.index = pd.to_datetime(frame['peak_dt'].apply(leap_filter))
 
-    # load USGS site informatiokn
-    result = BeautifulSoup(requests.get(url.rstrip('rdb')).content, 'lxml')
+    # load USGS site information
+    result = BeautifulSoup(requests.get(url.rstrip('rdb')).content, 'html.parser')
     info = {'site number': station_id, 'site name': result.find('h2').text}
     meta = result.findAll('div', {'class': 'leftsidetext'})[0]
     for div in meta.findChildren('div', {'align': 'left'}):

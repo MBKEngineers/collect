@@ -13,29 +13,18 @@ from bs4 import BeautifulSoup
 from dateutil import parser
 from dotenv import load_dotenv
 import pandas as pd
-import pytz
 import requests
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
 from collect.cnrfc.gages import *
-from collect.utils.utils import clean_fixed_width_headers, get_web_status
-
-UTC = pytz.timezone('UTC')
-PACIFIC = pytz.timezone('America/Los_Angeles')
-TODAY = dt.datetime.now().strftime('%Y%m%d')
+from collect.utils import utils
 
 
 # load credentials
 load_dotenv()
 
-# disable warnings in crontab logs
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 def get_seasonal_trend_tabular(cnrfc_id, water_year):
     """
-    CNRFC Ensemble Product 7, includes Apr-Jul Forecast 90%, 75%, 50%, 25%, and 10% Exceedance, NWS Apr-Jul Forecast,  
+    CNRFC Ensemble Product 7, includes Apr-Jul Forecast 90%, 75%, 50%, 25%, and 10% Exceedance, NWS Apr-Jul Forecast,
     Raw Obs Apr-Jul To Date, Raw Avg Apr-Jul To Date, Raw Daily Observation
     adapted from data accessed in py_water_supply_reporter.py
     example url: https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=HLEC1&prodID=7&year=2013
@@ -45,85 +34,26 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
     Returns:
         (dict): data and info
     """
-
     url = get_ensemble_product_url(product_id=7, cnrfc_id=cnrfc_id, data_format='Tabular')
-    url += '&year={0}'.format(water_year)
+    url += f'&year={water_year}'
 
     assert int(water_year) >= 2011, "Ensemble Forecast Product 7 not available before 2011"
-   
+
     # retrieve from public CNRFC webpage
-    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml').find('pre').text.replace('#', '')
+    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser').find('pre').text.replace('#', '')
 
     # in-memory file buffer
     with io.StringIO(result) as buf:
 
         # parse fixed-width text-formatted table
-        df = pd.read_fwf(buf, 
-                         header=[0, 1, 2, 3, 4], 
-                         skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 16], 
+        df = pd.read_fwf(buf,
+                         header=[0, 1, 2, 3, 4],
+                         skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 16],
                          na_values=['<i>Missing</i>', 'Missing'])
 
     # clean columns and fix spelling in source
-    df.columns = clean_fixed_width_headers(df.columns)
-    df.rename({x: x.replace('Foreacst', 'Forecast').replace('Foreacast', 'Forecast') 
-               for x in df.columns}, axis=1, inplace=True)
-
-    # clean missing data rows   
-    df.dropna(subset=['Date (mm/dd/YYYY)'], inplace=True)
-    df.drop(df.last_valid_index(), axis=0, inplace=True)
-
-    # parse dates
-    df.index = pd.to_datetime(df['Date (mm/dd/YYYY)'])
-    df.index.name = 'Date'
-
-    # parse summary from pre-table notes
-    notes = result.splitlines()[:10]
-    summary = {}
-    for line in notes[2:]:
-        if bool(line.strip()):
-            k, v = line.strip().split(': ')
-            summary.update({k: v.strip()})
-    
-    return {'data': df, 'info': {'url': url,
-                                 'type': 'Seasonal Trend Tabular (Apr-Jul)',
-                                 'title': notes[0],
-                                 'summary': summary,
-                                 'units': 'TAF',
-                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
-
-
-def get_water_year_trend_tabular(cnrfc_id, water_year):
-    """
-    CNRFC Ensemble Product 9, which includes WY Forecast 90% Exceedance, 75% Exceedance, 50% Exceedance, 25% Exceedance, 
-    10% Exceedance, Raw WY To Date Observation, Raw WY To Date Average, Raw Daily Observation
-    #example url: https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=FOLC1&prodID=9&year=2022#
-    Arguments:
-        cnrfc_id (str): forecast point (such as FOLC1)
-        water_year (str/int): water year for forecast
-    Returns:
-        (dict): data and info
-    """
-
-    url = get_ensemble_product_url(product_id=9, cnrfc_id=cnrfc_id, data_format='Tabular')
-    url += '&year={0}'.format(water_year)
-
-    assert int(water_year) >= 2013, "Ensemble Forecast Product 9 not available before 2013"
-   
-    # retrieve from public CNRFC webpage
-    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml').find('pre').text.replace('#', '')
-
-    # in-memory file buffer
-    with io.StringIO(result) as buf:
-
-        # parse fixed-width text-formatted table
-        df = pd.read_fwf(buf, 
-                         header=[0, 1, 2, 3], 
-                         skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17], 
-                         na_values=['<i>Missing</i>', 'Missing'])
-
-    # clean columns and fix spelling in source
-    df.columns = clean_fixed_width_headers(df.columns)
-    df.rename({x: x.replace('Foreacst', 'Forecast').replace('Foreacast', 'Forecast') 
+    df.columns = utils.clean_fixed_width_headers(df.columns)
+    df.rename({x: x.replace('Foreacst', 'Forecast').replace('Foreacast', 'Forecast')
                for x in df.columns}, axis=1, inplace=True)
 
     # clean missing data rows
@@ -141,7 +71,65 @@ def get_water_year_trend_tabular(cnrfc_id, water_year):
         if bool(line.strip()):
             k, v = line.strip().split(': ')
             summary.update({k: v.strip()})
-    
+
+    return {'data': df, 'info': {'url': url,
+                                 'type': 'Seasonal Trend Tabular (Apr-Jul)',
+                                 'title': notes[0],
+                                 'summary': summary,
+                                 'units': 'TAF',
+                                 'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
+
+
+def get_water_year_trend_tabular(cnrfc_id, water_year):
+    """
+    CNRFC Ensemble Product 9, which includes WY Forecast 90% Exceedance, 75% Exceedance, 50% Exceedance, 25% Exceedance,
+    10% Exceedance, Raw WY To Date Observation, Raw WY To Date Average, Raw Daily Observation
+    #example url: https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=FOLC1&prodID=9&year=2022#
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+        water_year (str/int): water year for forecast
+    Returns:
+        (dict): data and info
+    """
+
+    url = get_ensemble_product_url(product_id=9, cnrfc_id=cnrfc_id, data_format='Tabular')
+    url += '&year={0}'.format(water_year)
+
+    assert int(water_year) >= 2013, "Ensemble Forecast Product 9 not available before 2013"
+
+    # retrieve from public CNRFC webpage
+    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser').find('pre').text.replace('#', '')
+
+    # in-memory file buffer
+    with io.StringIO(result) as buf:
+
+        # parse fixed-width text-formatted table
+        df = pd.read_fwf(buf,
+                         header=[0, 1, 2, 3],
+                         skiprows=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17],
+                         na_values=['<i>Missing</i>', 'Missing'])
+
+    # clean columns and fix spelling in source
+    df.columns = utils.clean_fixed_width_headers(df.columns)
+    df.rename({x: x.replace('Foreacst', 'Forecast').replace('Foreacast', 'Forecast')
+               for x in df.columns}, axis=1, inplace=True)
+
+    # clean missing data rows
+    df.dropna(subset=['Date (mm/dd/YYYY)'], inplace=True)
+    df.drop(df.last_valid_index(), axis=0, inplace=True)
+
+    # parse dates
+    df.index = pd.to_datetime(df['Date (mm/dd/YYYY)'])
+    df.index.name = 'Date'
+
+    # parse summary from pre-table notes
+    notes = result.splitlines()[:10]
+    summary = {}
+    for line in notes[2:]:
+        if bool(line.strip()):
+            k, v = line.strip().split(': ')
+            summary.update({k: v.strip()})
+
     return {'data': df, 'info': {'url': url,
                                  'type': 'Water Year Trend Tabular',
                                  'title': notes[0],
@@ -159,7 +147,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     convert CSV data to DataFrame, separating historical from forecast inflow series
 
     Note: as of March 2022, deterministic forecasts retrieved with the graphicalRVF or
-          graphicalRelease URLs return CSVs of 3 different formats with headers that 
+          graphicalRelease URLs return CSVs of 3 different formats with headers that
           may also include stage information
 
     Arguments:
@@ -176,9 +164,9 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     # default deterministic URL and index name
     url = 'https://www.cnrfc.noaa.gov/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
     date_column_header = 'Valid Date/Time (Pacific)'
-    specified_dtypes = {date_column_header: str, 
+    specified_dtypes = {date_column_header: str,
                         'Stage (Feet)': float,
-                        f'{flow_prefix}Flow (CFS)': float, 
+                        f'{flow_prefix}Flow (CFS)': float,
                         'Trend': str,
                         'Issuance Date/Time (Pacific)': str,
                         'Threshold Exceedance Status': str,
@@ -188,22 +176,22 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     if cnrfc_id in RESTRICTED:
         url = 'https://www.cnrfc.noaa.gov/restricted/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
         date_column_header = 'Date/Time (Pacific Time)'
-        specified_dtypes = {date_column_header: str, 
-                            f'{flow_prefix}Flow (CFS)': float, 
+        specified_dtypes = {date_column_header: str,
+                            f'{flow_prefix}Flow (CFS)': float,
                             'Trend': str}
 
     # get forecast file from csv url
     csvdata = _get_forecast_csv(url)
 
     # read historical and forecast series from CSV
-    df = pd.read_csv(csvdata, 
-                     header=0, 
+    df = pd.read_csv(csvdata,
+                     header=0,
                      parse_dates=True,
                      float_precision='high',
                      dtype=specified_dtypes)
 
     df.set_index(date_column_header, inplace=True)
-    df.index = pd.to_datetime(df.index)
+    df.index = pd.to_datetime(df.index, format='%m/%d/%Y %I %p')
 
     # add timezone info
     df.index.name = 'PDT/PST'
@@ -230,7 +218,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     return {'data': df, 'info': {'url': url,
                                  'type': f'Deterministic {flow_prefix}Forecast',
                                  'title': title,
-                                 'plot_type': plot_type,                                 
+                                 'plot_type': plot_type,
                                  'first_ordinate': first_ordinate.strftime('%Y-%m-%d %H:%M'),
                                  'issue_time': time_issued.strftime('%Y-%m-%d %H:%M'),
                                  'next_issue': next_issue_time.strftime('%Y-%m-%d %H:%M'),
@@ -265,13 +253,13 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_csv_export.zip'.format(date_string, watershed)
 
     # extract CSV from zip object
-    if get_web_status(url):
+    if utils.get_web_status(url):
         try:
             csvdata = _get_forecast_csv(url)
         except zipfile.BadZipFile:
             print(f'ERROR: forecast for {date_string} has not yet been issued.')
             raise zipfile.BadZipFile
-    
+
     # raise error if user supplied an actual date string but that forecast doesn't exist
     elif _date_string is not None:
         print(f'ERROR: forecast for {date_string} has not yet been issued.')
@@ -280,17 +268,17 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
     # try previous forecast until a valid file is found
     else:
         stamp = dt.datetime.strptime(date_string, '%Y%m%d%H')
-        while not get_web_status(url):            
+        while not utils.get_web_status(url):
             stamp -= dt.timedelta(hours=6)
             url = 'https://www.cnrfc.noaa.gov/csv/{0:%Y%m%d%H}_{1}_csv_export.zip'.format(stamp, watershed)
         date_string = stamp.strftime('%Y%m%d%H')
         csvdata = _get_forecast_csv(url)
 
     # parse forecast data from CSV
-    df = pd.read_csv(csvdata, 
-                     header=0, 
-                     skiprows=[1,], 
-                     parse_dates=True, 
+    df = pd.read_csv(csvdata,
+                     header=0,
+                     skiprows=[1,],
+                     parse_dates=True,
                      index_col=0,
                      float_precision='high',
                      dtype={'GMT': str})
@@ -308,10 +296,10 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
     # forecast issue time
     time_issued = get_watershed_forecast_issue_time('hourly', watershed, date_string, deterministic=True)
 
-    return {'data': df, 'info': {'url': url, 
-                                 'type': 'Deterministic Forecast', 
+    return {'data': df, 'info': {'url': url,
+                                 'type': 'Deterministic Forecast',
                                  'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
-                                 'watershed': watershed, 
+                                 'watershed': watershed,
                                  'units': units,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
@@ -334,7 +322,7 @@ def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=Fals
     url = 'https://www.cnrfc.noaa.gov/{1}graphical{2}_tabular.php?id={0}'.format(cnrfc_id, 
                                                                         'restricted/' if cnrfc_id in RESTRICTED else '',
                                                                         'Release' if release else 'RVF')
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
     for td in soup.find_all('td', {'class': 'smallhead'}):
@@ -444,13 +432,13 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
 
     # extract CSV from zip object
-    if get_web_status(url):
+    if utils.get_web_status(url):
         try:
             csvdata = _get_forecast_csv(url)
         except zipfile.BadZipFile:
             print(f'ERROR: forecast for {date_string} has not yet been issued.')
             raise zipfile.BadZipFile
-    
+
     # raise error if user supplied an actual date string but that forecast doesn't exist
     elif _date_string is not None:
         print(f'ERROR: forecast for {date_string} has not yet been issued.')
@@ -459,17 +447,17 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     # try previous forecast until a valid file is found
     else:
         stamp = dt.datetime.strptime(date_string, '%Y%m%d%H')
-        while not get_web_status(url):            
+        while not utils.get_web_status(url):
             stamp -= dt.timedelta(hours=6)
             url = 'https://www.cnrfc.noaa.gov/csv/{0:%Y%m%d%H}_{1}_hefs_csv_{2}.zip'.format(stamp, watershed, duration)
         date_string = stamp.strftime('%Y%m%d%H')
         csvdata = _get_forecast_csv(url)
 
     # parse forecast data from CSV
-    df = pd.read_csv(csvdata, 
-                     header=0, 
-                     skiprows=[1,], 
-                     parse_dates=True, 
+    df = pd.read_csv(csvdata,
+                     header=0,
+                     skiprows=[1,],
+                     parse_dates=True,
                      index_col=0,
                      float_precision='high',
                      dtype={'GMT': str})
@@ -477,26 +465,26 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     # filter watershed for single forecast point ensemble, if provided
     if cnrfc_id is not None:
         df = df.filter(regex=r'^{0}((\.\d+)?)$'.format(cnrfc_id))
-    
+
     # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
     df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
 
     # get date/time stamp from ensemble download page
     time_issued = get_watershed_forecast_issue_time(duration, watershed, date_string)
-    
+
     return {'data': df, 'info': {'url': url, 
                                  'watershed': watershed, 
                                  'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
-                                 'units': units, 
+                                 'units': units,
                                  'duration': duration,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
 def download_watershed_file(watershed, date_string, forecast_type, duration=None, path=None, return_content=False):
     """
-    download short range ensemble, deterministic forecast, and seasonal outlook for the 
-    watershed as zipped file, unzip, save as csv to path
+    download short range ensemble, deterministic forecast, and seasonal outlook for the watershed as zipped file, unzip,
+    save as csv to path
 
     Arguments:
         watershed (str): the forecast group identifier
@@ -529,7 +517,7 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
     url = 'https://www.cnrfc.noaa.gov/csv/' + url_end
 
     # extract CSV from zip object
-    if get_web_status(url):
+    if utils.get_web_status(url):
         try:
             csvdata = _get_forecast_csv(url)
         except zipfile.BadZipFile:
@@ -567,38 +555,69 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
     return path
 
 
+def parse_forecast_archive_table(url):
+    """
+    get the table of Forecast Group, Filename, Date/Time Last Modified and Size for deterministic and ensemble short
+    and long-range forecasts for watershed groups
+
+    Arguments:
+        url (str): identifies the product page for watershed forecast products
+    Returns:
+        df (pandas.DataFrame): dataframe containing HTML table summarizing last forecast issuances for product page
+    """
+    with io.StringIO(utils.get_session_response(url).text) as text:
+        df = pd.read_html(text, flavor='html5lib')[0]
+
+    # extract the header row and assign as column names
+    df.columns = df.iloc[1,:]
+
+    # drop the invalid headers and filter to relevant columns
+    df = df.drop([0, 1], axis=0).reindex()[['Forecast Group', 'Filename', 'Date/Time Last Modified', 'Size']]
+
+    # limit frame to valid files containing size info
+    return df.loc[df['Size'].str.endswith('K')]
+
+
 def get_watershed_forecast_issue_time(duration, watershed, date_string=None, deterministic=False):
     """
     get "last modified" date/time stamp from CNRFC watershed ensemble product table
+
+    Arguments:
+        duration (str): one of 'daily' or 'hourly'
+        watershed (str): the name of the watershed forecast group
+        date_string (None or str): None for the latest forecast product or the the YYYYMMDDHH-formatted date
+        deterministic (bool): flag for whether the watershed deterministic forecast is specified
+    Returns:
+        (datetime.datetime or None): the specified last modified date for the watershed product
     """
     duration = _validate_duration(duration)
 
-    if duration == 'daily':
-        #" only on the 12"
-        date_string = date_string[:-2] + '12'
-        url = 'https://www.cnrfc.noaa.gov/ensembleProductCSV.php'
-        file_name = '{0}_{1}_hefs_csv_{2}.zip'
-    
-    elif duration == 'hourly':
-        url = 'https://www.cnrfc.noaa.gov/ensembleHourlyProductCSV.php'
-        file_name = '{0}_{1}_hefs_csv_{2}.zip'
-    
-    if deterministic:
-        url = 'https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php'
-        file_name = '{0}_{1}_csv_export.zip'
+    # store original date_string
+    _date_string = date_string
 
     # forecast datestamp prefix
     date_string = _default_date_string(date_string)
-    
-    # request table from ensemble product page and parse HTML
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
-    for td in soup.find_all('td', {'class': 'table-listing-content'}):
-        if file_name.format(date_string, watershed, duration) in td.text:
-            issue_time = parser.parse(td.next_sibling.text).astimezone(PACIFIC)
-            return issue_time
 
-    return None
-    # raise ValueError('No valid issue time for URL.')
+    # do not return a datetime if the provided date_string is for a past forecast issuance (this is not stored on the
+    # CNRFC site)
+    if _date_string is not None and _date_string != _default_date_string(None):
+        return None
+
+    if duration == 'daily':
+        url = 'https://www.cnrfc.noaa.gov/ensembleProductCSV.php'
+    
+    elif duration == 'hourly':
+        url = 'https://www.cnrfc.noaa.gov/ensembleHourlyProductCSV.php'
+    
+    if deterministic:
+        if duration == 'daily':
+            raise ValueError('Long-range (daily) deterministic product does not exist.')
+        url = 'https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php'
+
+    # extract last-modified details and filenames from forecast product zipfile table
+    table = parse_forecast_archive_table(url)
+    return parser.parse(table.loc[table['Forecast Group']==get_watershed_formatted(watershed),
+                                  'Date/Time Last Modified'].values[0])
 
 
 def get_watershed(cnrfc_id):
@@ -626,6 +645,30 @@ def get_watershed(cnrfc_id):
             return key
     else:
         raise ValueError('cnrfc_id not recognized.')
+
+
+def get_watershed_formatted(watershed):
+    """
+    get associated hydrologic region for CNRFC forecast location
+    """
+    return {'klamath': 'Klamath',
+            'NorthCoast': 'North Coast',
+            'RussianNapa': 'Russian/Napa',
+            'UpperSacramento': 'Upper Sacramento',
+            'FeatherYuba': 'Feather/Yuba',
+            'CachePutah': 'Cache/Putah',
+            'american': 'American',
+            'LowerSacramento': 'Lower Sacramento',
+            'CentralCoast': 'Central Coast',
+            'SouthernCalifornia': 'Southern California',
+            'Tulare': 'Tulare',
+            'SanJoaquin': 'San Joaquin',
+            'N_SanJoaquin': 'North San Joaquin',
+            'EastSierra': 'East Sierra',
+            'Humboldt': 'Humboldt',
+            'SalinasPajaro': 'Salinas/Pajaro',
+            'SouthBay': 'South Bay',
+            'SanDiego_Inland': 'San Diego/Inland'}.get(watershed, watershed)
 
 
 def get_ensemble_first_forecast_ordinate(url=None, df=None):
@@ -658,10 +701,8 @@ def get_ensemble_product_1(cnrfc_id):
     raise NotImplementedError
 
     url = get_ensemble_product_url(1, cnrfc_id)
-    get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
-                                   'type': '10-Day Probability Plot',
-                                   'units': 'TAF'}}
+    utils.get_web_status(url)
+    return {'data': None, 'info': {'url': url, 'type': '10-Day Probability Plot', 'units': 'TAF'}}
 
 
 def get_ensemble_product_2(cnrfc_id):
@@ -671,10 +712,10 @@ def get_ensemble_product_2(cnrfc_id):
     (alt text source: https://www.cnrfc.noaa.gov/awipsProducts/RNOWRK10D.php)
     """
     url = get_ensemble_product_url(2, cnrfc_id)
-    get_web_status(url)
+    utils.get_web_status(url)
 
     # request Ensemble Product 2 page content
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
@@ -686,7 +727,7 @@ def get_ensemble_product_2(cnrfc_id):
         title, time_issued = str(td.find('strong')).split('<br/>')
         time_issued = time_issued.rstrip('</strong>').lstrip('Data Updated: ')
 
-    return {'data': df, 'info': {'url': url, 
+    return {'data': df, 'info': {'url': url,
                                  'type': 'Tabular 10-Day Streamflow Volume Accumulation',
                                  'issue_time': time_issued,
                                  'units': 'TAF',
@@ -699,10 +740,8 @@ def get_ensemble_product_3(cnrfc_id):
     raise NotImplementedError
 
     url = get_ensemble_product_url(3, cnrfc_id)
-    get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
-                                   'type': '5-Day Peaks Plot',
-                                   'units': 'TAF'}}
+    utils.get_web_status(url)
+    return {'data': None, 'info': {'url': url, 'type': '5-Day Peaks Plot','units': 'TAF'}}
 
 
 def get_ensemble_product_5(cnrfc_id):
@@ -711,10 +750,8 @@ def get_ensemble_product_5(cnrfc_id):
     raise NotImplementedError
 
     url = get_ensemble_product_url(5, cnrfc_id)
-    get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
-                                   'type': 'Tabular 5-Day Volume Accumulations',
-                                   'units': 'TAF'}}
+    utils.get_web_status(url)
+    return {'data': None, 'info': {'url': url, 'type': 'Tabular 5-Day Volume Accumulations', 'units': 'TAF'}}
 
 
 def get_ensemble_product_6(cnrfc_id):
@@ -723,10 +760,10 @@ def get_ensemble_product_6(cnrfc_id):
     the ensemble product page
     """
     url = get_ensemble_product_url(6, cnrfc_id)
-    get_web_status(url)
+    utils.get_web_status(url)
 
     # request Ensemble Product 6 page content
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Monthly Volume Exceedance Values from table
@@ -739,7 +776,7 @@ def get_ensemble_product_6(cnrfc_id):
         time_issued = time_issued.rstrip('</strong>').lstrip('Data Updated: ')
         title = title.lstrip('<strong>')
 
-    return {'data': df, 'info': {'url': url, 
+    return {'data': df, 'info': {'url': url,
                                  'type': title,
                                  'issue_time': time_issued,
                                  'units': 'TAF',
@@ -755,18 +792,18 @@ def get_ensemble_product_10(cnrfc_id):
     @narlesky TO DO - recreate graphic
     """
     url = get_ensemble_product_url(10, cnrfc_id)
-    get_web_status(url)
+    utils.get_web_status(url)
 
     # request Ensemble Product 10 page content
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'lxml')
+    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
     df, notes = _parse_blue_table(data_table)
     df.set_index('Probability', inplace=True)
 
-    return {'data': df, 'info': {'url': url, 
-                                 'note': '@narlesky TO DO - recreate graphic', 
+    return {'data': df, 'info': {'url': url,
+                                 'note': '@narlesky TO DO - recreate graphic',
                                  'type': 'Water Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation',
                                  'units': 'TAF',
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
@@ -780,8 +817,8 @@ def get_ensemble_product_11(cnrfc_id):
     raise NotImplementedError
 
     url = get_ensemble_product_url(11, cnrfc_id)
-    get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
+    utils.get_web_status(url)
+    return {'data': None, 'info': {'url': url,
                                    'type': 'Multi-Year Accumulated Volume Plot & Tabular Monthly Volume Accumulation',
                                    'units': 'TAF'}}
 
@@ -792,8 +829,8 @@ def get_ensemble_product_12(cnrfc_id):
     raise NotImplementedError
 
     url = get_ensemble_product_url(12, cnrfc_id)
-    get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
+    utils.get_web_status(url)
+    return {'data': None, 'info': {'url': url,
                                    'type': 'Historical Flows (Water Year & Seasonal (Apr-Jul)',
                                    'units': 'TAF'}}
 
@@ -804,10 +841,8 @@ def get_ensemble_product_13(cnrfc_id):
     raise NotImplementedError
 
     url = get_ensemble_product_url(13, cnrfc_id)
-    get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
-                                   'type': 'Water Resources Verification',
-                                   'units': 'TAF'}}
+    utils.get_web_status(url)
+    return {'data': None, 'info': {'url': url, 'type': 'Water Resources Verification', 'units': 'TAF'}}
 
 
 def get_data_report_part_8():
@@ -817,8 +852,8 @@ def get_data_report_part_8():
     raise NotImplementedError
 
     url = 'https://www.wrh.noaa.gov/cnrfc/rsa_getprod.php?prod=RNORR8RSA&wfo=cnrfc&version=0'
-    get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
+    utils.get_web_status(url)
+    return {'data': None, 'info': {'url': url,
                                    'type': 'Hydrology-meteorology Data Report Part 8',
                                    'units': 'TAF'}}
 
@@ -827,16 +862,96 @@ def get_monthly_reservoir_storage_summary():
     raise NotImplementedError
 
     url = 'https://www.cnrfc.noaa.gov/awipsProducts/RNORR6RSA.php'
-    get_web_status(url)
-    return {'data': None, 'info': {'url': url, 
+    utils.get_web_status(url)
+    return {'data': None, 'info': {'url': url,
                                    'type': 'CNRFC Monthly Reservoir Storage Summary',
                                    'units': 'TAF'}}
 
 
-def esp_trace_analysis_wrapper():
+def get_esp_trace_analysis_url(cnrfc_id,
+                               interval='day',
+                               value_type='mean',
+                               plot_type='traces',
+                               table_type='forecastInfo',
+                               product_type='table',
+                               date_string=None,
+                               start_date_string=None,
+                               end_date_string=None):
     """
+    https://www.cnrfc.noaa.gov/esp_trace_analysis.php describes the menu of options for building an ensemble forecast
+    product from the following options
+        1. Select an HEFS Trace Location
+        2. Select an Accumulation Type
+        3. Select an Interval
+        4. Select a Distribution Type
+        5. Select a Starting Date
+        6. Select an Ending Date
+        7. Select a Plot Option and Generate
+        8. Select a Table Option and Generate
+    The base url for the user interface to do so is at https://www.cnrfc.noaa.gov/ensembleProduct.php
+
+    Arguments:
+        cnrfc_id (str): HEFS trace location
+        interval (str): horizon for the product
+        value_type (str): accumulation type to apply to the traces
+        plot_type (str): plot option
+        table_type (str): table option
+        product_type (str): product format option
+        date_string (str): optional forecast date as a string in format YYYYMMDD; defaults to most recent forecast date
+        start_date_string (str): optional analysis start date formatted as YYYYMMDD
+        end_date_string (None, str): optional analysis end date formatted as YYYYMMDD
+    Returns:
+        url (str): the string url for the product
+    Raises:
+        ValueError
     """
-    url = 'https://www.cnrfc.noaa.gov/esp_trace_analysis.php'
+    url = 'https://www.cnrfc.noaa.gov/ensembleProduct.php?'
+
+    # url query parameters
+    query_args = [f'id={cnrfc_id}',
+                  'prodID=8', # for "build your own"
+                  f'interval={interval}',
+                  f'valueType={value_type}',
+                  f'plotType={plot_type}',
+                  f'tableType={table_type}',
+                  f'productType={product_type}']
+
+    if any([x is not None for x in [date_string, start_date_string, end_date_string]]):
+        query_args.append('dateSelection=custom')
+
+    if date_string is not None:
+        if len(date_string) != 8:
+            raise ValueError(f'invalid `date_string`: {date_string}')
+        query_args.append(f'date={date_string}')
+
+    if start_date_string is not None:
+        if len(start_date_string) != 8:
+            raise ValueError(f'invalid `start_date_string`: {start_date_string}')
+        query_args.append(f'endDate={start_date_string}')
+
+    if end_date_string is not None:
+        if len(end_date_string) != 8:
+            raise ValueError(f'invalid `end_date_string`: {end_date_string}')
+        query_args.append(f'endDate={end_date_string}')
+
+    if interval not in ['day', 'week', 'month', 'period']:
+        raise ValueError(f'invalid `interval`: {interval}')
+
+    if value_type not in ['mean', 'min', 'max', 'sum']:
+        raise ValueError(f'invalid `value_type`: {value_type}')
+
+    if plot_type not in ['traces', 'probability', 'expectedValue', 'exceedance']:
+        raise ValueError(f'invalid `plot_type`: {plot_type}')
+
+    if table_type not in ['forecastInfo', 'quantiles']:
+        raise ValueError(f'invalid `table_type`: {table_type}')
+
+    if product_type not in ['table', 'plot']:
+        raise ValueError(f'invalid `product_type`: {product_type}')
+
+    # construct the URL
+    url += '&'.join(query_args)
+    return url
 
 
 def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
@@ -855,9 +970,9 @@ def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
     if pdt_convert:
         df.index = df.index.tz_localize('UTC').tz_convert('America/Los_Angeles')
         df.index.name = 'America/Los_Angeles'
-    
+
     elif as_pdt:
-        df.index = [PACIFIC.localize(x) for x in df.index]
+        df.index = [utils.get_localized_datetime(x, 'America/Los_Angeles') for x in df.index]
         df.index.name = 'America/Los_Angeles'
 
     return df, units
@@ -868,7 +983,7 @@ def _get_cnrfc_restricted_content(url):
     request page from CNRFC restricted site
     """
     basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
-    content = requests.get(url, auth=basic_auth).content
+    content = utils.get_session_response(url, auth=basic_auth).content
     return content
 
 
@@ -892,12 +1007,7 @@ def _get_forecast_csv(url):
     basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
 
     # initialize requests session with retries
-    session = requests.Session()
-    retries = Retry(total=5,
-                    backoff_factor=0.1,
-                    status_forcelist=[500, 502, 503, 504])
-    session.mount('https://', HTTPAdapter(max_retries=retries))
-    content = session.get(url, auth=basic_auth, verify=False).content
+    content = utils.get_session_response(url, auth=basic_auth).content
 
     # handle zipfiles
     if '.zip' in filename:
@@ -927,7 +1037,7 @@ def get_forecast_csvdata(url):
 def get_rating_curve(cnrfc_id):
     """
     returns paired flow and stage data parsed from the text of CNRFC rating curve JavaScript files
-    
+
     Arguments:
         cnrfc_id (str): forecast point (such as FOLC1)
     Returns:
@@ -935,7 +1045,7 @@ def get_rating_curve(cnrfc_id):
     """
     # retrieve data from URL
     url = f'https://www.cnrfc.noaa.gov/data/ratings/{cnrfc_id}_rating.js'
-    response = requests.get(url)
+    response = utils.get_session_response(url)
 
     # check if data exists
     if response.status_code == 200:
@@ -956,13 +1066,10 @@ def get_rating_curve(cnrfc_id):
         data = list(zip(stage_data, flow_data))
 
     else:
-        print(f'Error accessing rating curve URL for: {cnrfc_id}')
+        print(f'ERROR: Error accessing rating curve URL for: {cnrfc_id}')
         data = None
 
-    return {'data': data, 
-            'info': {'url': url, 
-                     'cnrfc_id': cnrfc_id}
-            }
+    return {'data': data, 'info': {'url': url, 'cnrfc_id': cnrfc_id}}
 
 
 def _default_date_string(date_string):
@@ -970,7 +1077,7 @@ def _default_date_string(date_string):
     supply expected latest forecast datestamp or use defined date_string argument
     """
     if date_string is None:
-        now = dt.datetime.now().astimezone(UTC)
+        now = utils.get_localized_datetime(dt.datetime.now(), 'UTC')
         date_string = now.strftime('%Y%m%d{0:02.0f}'.format(6 * math.floor(now.hour/6)))
     
     # hour validation
@@ -1021,23 +1128,3 @@ def _parse_blue_table(table_soup):
     # format as dataframe
     df = pd.DataFrame(rows, columns=columns).replace({'--': float('nan')})
     return df, notes
-
-
-if __name__ == '__main__':
-
-    # Folsom           | FOLC1
-    # New Bullards Bar | NBBC1
-    # Oroville         | ORDC1
-    # Pine Flat        | PNFC1
-    # Shasta           | SHDC1
-
-    # print(get_ensemble_product_1('FOLC1'))
-    # print(get_deterministic_forecast('SHDC1', truncate_historical=False)['data'].head())
-    # print(get_ensemble_forecast('SHDC1', 'h')['data'].head())
-    # print(get_deterministic_forecast_watershed('UpperSacramento', None)['data'].head())
-    # print(get_ensemble_forecast_watershed('UpperSacramento', 'hourly', None)['data'].head())
-    # print(get_seasonal_trend_tabular('SHDC1', 2018)['data'].head())
-
-
-    # print(get_ensemble_product_2('ORDC1'))
-    get_ensemble_product_6('ORDC1')

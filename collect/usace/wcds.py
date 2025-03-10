@@ -7,8 +7,12 @@ USACE Water Control Data System (WCDS)
 import datetime as dt
 import io
 import re
+import textwrap
+
 import pandas as pd
 import requests
+import ssl
+
 from collect import utils
 
 
@@ -32,7 +36,7 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
 
     # Read url data
-    response = requests.get(url, verify=False).content
+    response = requests.get(url, verify=ssl.CERT_NONE).content
     df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values=['-', 'M'])
 
     # Check that user chosen water year is within range with data
@@ -54,8 +58,8 @@ def get_water_year_data(reservoir, water_year, interval='d'):
 
     # Convert to date time object
     df.set_index('ISO 8601 Date Time', inplace=True)
-    
-    # add a day to timesteps where 24T is in the index
+
+    # add a day to timesteps where 24T is in the index (TODO: when numpy <1.26 include format='mixed')
     new_index = pd.Series(pd.to_datetime(df.index.str.replace('T24:', ' ')), index=df.index)
     mask = df.index.str.contains('T24:')
     new_index[mask] += pd.Timedelta(days=1)
@@ -98,6 +102,12 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
         print(f'No data for selected start date. Earliest possible start date selected instead: {earliest_time}')
         start_time = earliest_time
 
+    # assume date/times are provided in UTC timezone if no timezone is provided
+    if start_time.tzinfo is None:
+        start_time = start_time.astimezone(dt.timezone.utc)
+    if end_time.tzinfo is None:
+        end_time = end_time.astimezone(dt.timezone.utc)
+
     # Make new dataframe
     frames = []
     metadata_dict = {}
@@ -131,42 +141,43 @@ def get_wcds_reservoirs():
     Returns:
         (pandas.DataFrame): dataframe containing table of WCDS reservoirs
     """
-    csv_data = StringIO("""Region|River Basin|Agency|Project|WCDS_ID|Hourly Data|Daily Data
-                            Sacramento Valley|Sacramento River|USBR|Shasta Dam & Lake Shasta|SHA|False|True
-                            Sacramento Valley|Stony Creek|COE|Black Butte Dam & Lake|BLB|True|True
-                            Sacramento Valley|Feather River|DWR|Oroville Dam & LakeOroville|ORO|False|True
-                            Sacramento Valley|Yuba River|YCWA|New Bullards Bar Dam & Lake|BUL|False|True
-                            Sacramento Valley|Yuba River|COE|Englebright Lake|ENG|True|True
-                            Sacramento Valley|N. F. Cache Creek|YCFCWCA|Indian Valley Dam & Reservoir|INV|False|True
-                            Sacramento Valley|American River|USBR|Folsom Dam & Lake|FOL|True|True
-                            Sacramento Valley|American River|USBR|Folsom Dam & Lake|FOLQ|True|False
-                            San Joaquin Valley|Mokelumne River|EBMUD|Camanche Dam & Reservoir|CMN|False|True
-                            San Joaquin Valley|Calaveras River|COE|New Hogan Dam & Lake|NHG|True|True
-                            San Joaquin Valley|Littlejohn Creek|COE|Farmington Dam & Reservoir|FRM|True|True
-                            San Joaquin Valley|Stanislaus River|USBR|New Melones Dam & Lake|NML|False|True
-                            San Joaquin Valley|Stanislaus River|USBR|Tulloch Reservoir|TUL|False|True
-                            San Joaquin Valley|Tuolumne River|TID|Don Pedro Dam & Lake|DNP|False|True
-                            San Joaquin Valley|Merced River|MID|New Exchequer Dam, Lake McClure|EXC|False|True
-                            San Joaquin Valley|Los Banos Creek|DWR|Los Banos Detention Reservoir|LBN|False|True
-                            San Joaquin Valley|Burns Creek|COE|Burns Dam & Reservoir|BUR|True|True
-                            San Joaquin Valley|Bear Creek|COE|Bear Dam & Reservoir|BAR|True|True
-                            San Joaquin Valley|Owens Creek|COE|Owens Dam & Reservoir|OWN|True|True
-                            San Joaquin Valley|Mariposa Creek|COE|Mariposa Dam & Reservoir|MAR|True|True
-                            San Joaquin Valley|Chowchilla River|COE|Buchanan Dam, H.V. Eastman Lake|BUC|True|True
-                            San Joaquin Valley|Fresno River|COE|Hidden Dam, Hensley Lake|HID|True|True
-                            San Joaquin Valley|San Joaquin River|USBR|Friant Dam, Millerton Lake|MIL|False|True
-                            San Joaquin Valley|Big Dry Creek|FMFCD|Big Dry Creek Dam & Reservoir|BDC|False|True
-                            Tulare Lake Basin|Kings River|COE|Pine Flat Dam & Lake|PNF|True|True
-                            Tulare Lake Basin|Kaweah River|COE|Terminus Dam, Lake Kaweah|TRM|True|True
-                            Tulare Lake Basin|Tule River|COE|Success Dam & Lake|SCC|True|True
-                            Tulare Lake Basin|Kern River|COE|Isabella Dam & Lake Isabella|ISB|True|True
-                            North Coast Area|Russian River|COE|Coyote Valley Dam, Lake Mendocino|COY|True|True
-                            North Coast Area|Russian River|COE|Warm Springs Dam, Lake Sonoma|WRS|True|True
-                            North Coast Area|Alameda Creek|DWR|Del Valle Dam & Reservoir|DLV|False|True
-                            Truckee River Basin|Martis Creek|COE|Martis Creek Dam & Lake|MRT|True|True
-                            Truckee River Basin|Prosser Creek|USBR|Prosser Creek Dam & Reservoir|PRS|False|True
-                            Truckee River Basin|LittleTruckee River|USBR|Stampede Dam & Reservoir|STP|False|True
-                            Truckee River Basin|LittleTruckee River|USBR|Boca Dam & Reservoir|BOC|False|True""")
+    csv_data = io.StringIO(textwrap.dedent("""\
+        Region|River Basin|Agency|Project|WCDS_ID|Hourly Data|Daily Data
+        Sacramento Valley|Sacramento River|USBR|Shasta Dam & Lake Shasta|SHA|False|True
+        Sacramento Valley|Stony Creek|COE|Black Butte Dam & Lake|BLB|True|True
+        Sacramento Valley|Feather River|DWR|Oroville Dam & LakeOroville|ORO|False|True
+        Sacramento Valley|Yuba River|YCWA|New Bullards Bar Dam & Lake|BUL|False|True
+        Sacramento Valley|Yuba River|COE|Englebright Lake|ENG|True|True
+        Sacramento Valley|N. F. Cache Creek|YCFCWCA|Indian Valley Dam & Reservoir|INV|False|True
+        Sacramento Valley|American River|USBR|Folsom Dam & Lake|FOL|True|True
+        Sacramento Valley|American River|USBR|Folsom Dam & Lake|FOLQ|True|False
+        San Joaquin Valley|Mokelumne River|EBMUD|Camanche Dam & Reservoir|CMN|False|True
+        San Joaquin Valley|Calaveras River|COE|New Hogan Dam & Lake|NHG|True|True
+        San Joaquin Valley|Littlejohn Creek|COE|Farmington Dam & Reservoir|FRM|True|True
+        San Joaquin Valley|Stanislaus River|USBR|New Melones Dam & Lake|NML|False|True
+        San Joaquin Valley|Stanislaus River|USBR|Tulloch Reservoir|TUL|False|True
+        San Joaquin Valley|Tuolumne River|TID|Don Pedro Dam & Lake|DNP|False|True
+        San Joaquin Valley|Merced River|MID|New Exchequer Dam, Lake McClure|EXC|False|True
+        San Joaquin Valley|Los Banos Creek|DWR|Los Banos Detention Reservoir|LBN|False|True
+        San Joaquin Valley|Burns Creek|COE|Burns Dam & Reservoir|BUR|True|True
+        San Joaquin Valley|Bear Creek|COE|Bear Dam & Reservoir|BAR|True|True
+        San Joaquin Valley|Owens Creek|COE|Owens Dam & Reservoir|OWN|True|True
+        San Joaquin Valley|Mariposa Creek|COE|Mariposa Dam & Reservoir|MAR|True|True
+        San Joaquin Valley|Chowchilla River|COE|Buchanan Dam, H.V. Eastman Lake|BUC|True|True
+        San Joaquin Valley|Fresno River|COE|Hidden Dam, Hensley Lake|HID|True|True
+        San Joaquin Valley|San Joaquin River|USBR|Friant Dam, Millerton Lake|MIL|False|True
+        San Joaquin Valley|Big Dry Creek|FMFCD|Big Dry Creek Dam & Reservoir|BDC|False|True
+        Tulare Lake Basin|Kings River|COE|Pine Flat Dam & Lake|PNF|True|True
+        Tulare Lake Basin|Kaweah River|COE|Terminus Dam, Lake Kaweah|TRM|True|True
+        Tulare Lake Basin|Tule River|COE|Success Dam & Lake|SCC|True|True
+        Tulare Lake Basin|Kern River|COE|Isabella Dam & Lake Isabella|ISB|True|True
+        North Coast Area|Russian River|COE|Coyote Valley Dam, Lake Mendocino|COY|True|True
+        North Coast Area|Russian River|COE|Warm Springs Dam, Lake Sonoma|WRS|True|True
+        North Coast Area|Alameda Creek|DWR|Del Valle Dam & Reservoir|DLV|False|True
+        Truckee River Basin|Martis Creek|COE|Martis Creek Dam & Lake|MRT|True|True
+        Truckee River Basin|Prosser Creek|USBR|Prosser Creek Dam & Reservoir|PRS|False|True
+        Truckee River Basin|LittleTruckee River|USBR|Stampede Dam & Reservoir|STP|False|True
+        Truckee River Basin|LittleTruckee River|USBR|Boca Dam & Reservoir|BOC|False|True"""))
     return pd.read_csv(csv_data, header=0, delimiter='|', index_col='WCDS_ID')
 
 
@@ -182,7 +193,11 @@ def get_wcds_data(reservoir, start_time, end_time, interval='d', clean_column_he
     Returns:
         result (dict): query result dictionary with data and info keys
     """
-    return get_data(reservoir.lower(), start_time, end_time, interval=interval, clean_column_headers=clean_column_headers)
+    return get_data(reservoir.lower(),
+                    start_time,
+                    end_time,
+                    interval=interval,
+                    clean_column_headers=clean_column_headers)
 
 
 def _cleaned_columns_map(columns):
@@ -215,10 +230,10 @@ def get_release_report(reservoir):
     reservoir = reservoir.lower()
 
     # USACE-SPK release report email source data
-    url = f'https://www.spk-wc.usace.army.mil/reports/release/rel-{reservoir}'
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/release.py?project={reservoir}&textonly=true'
 
     # request data from url
-    response = utils.get_session_response(url).content
+    response = requests.get(url, verify=ssl.CERT_NONE).content
     raw = response.decode('utf-8')
 
     # check for header matching pattern with pipe delimiters
@@ -257,6 +272,7 @@ def get_release_report(reservoir):
     # default without dataframe parsing
     return {'data': raw, 'info': info}
 
+
 def get_reservoir_metadata(reservoir, water_year, interval='d'):
     """
     Retrieves website metadata from USACE-SPK's WCDS.
@@ -275,24 +291,24 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     # USACE-SPK Folsom page
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.meta'
     
-    # read url data
-    response = requests.get(url, verify=False)
+    # read data from url using requests session with retries
+    response = requests.get(url, verify=ssl.CERT_NONE)
 
     # complete metadata dictionary
     metadata_dict = response.json()
-
-    result =   {'data headers': metadata_dict['allheaders'],
-                'gross pool (stor)': metadata_dict['ymarkers']['Gross Pool']['value'],
-                'generated': metadata_dict['generated'],
-                'datum': None
-                }
+    result = {
+        'data headers': metadata_dict['allheaders'],
+        'gross pool (stor)': metadata_dict['ymarkers']['Gross Pool']['value'],
+        'generated': metadata_dict['generated'],
+        'datum': None
+    }
 
     # check for changing elevation key
     if 'Gross Pool(elev NGVD29)' in metadata_dict['ymarkers']:
-        result.update({ 'gross pool (elev)': metadata_dict['ymarkers']['Gross Pool(elev NGVD29)']['value']})
-        result.update({'datum': 'NGVD29'})
+        result.update({'gross pool (elev)': metadata_dict['ymarkers']['Gross Pool(elev NGVD29)']['value'],
+                       'datum': 'NGVD29'})
     else:
-        result.update({ 'gross pool (elev)': metadata_dict['ymarkers']['Gross Pool']['value']})
+        result.update({'gross pool (elev)': metadata_dict['ymarkers']['Gross Pool(elev)']['value']})
     
     # returns relevant subset as dictionary
     return result
