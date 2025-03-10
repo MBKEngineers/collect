@@ -16,7 +16,7 @@ setuptools.setup(
     url='https://github.com/MBKEngineers/collect.git',
     packages=setuptools.find_packages(),
     setup_requires=[
-        'numpy==1.24.2'
+        'numpy==1.26.2'
     ],
     install_requires=[
         'beautifulsoup4==4.12.3',

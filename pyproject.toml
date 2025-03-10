@@ -9,7 +9,7 @@ description = "Contains various web-scraping utilities used at MBK Engineers"
 readme = "README.md"
 requires-python = ">= 3.11"
 dependencies = [
-  "numpy==1.24.2",
+  "numpy==1.26.2",
   "beautifulsoup4==4.12.3",
   "pandas==1.5.3",
   "pyOpenSSL==23.3.0",
