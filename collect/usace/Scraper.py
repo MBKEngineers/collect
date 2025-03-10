@@ -7,18 +7,23 @@ import urllib3
 import datetime as dt
 
 def get_url(datetime_structure):
-	now = dt.datetime.now()
-	days = (now-datetime_structure).days
-	print(days, type(days))
-	return f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'	
-url = get_url(dt.datetime(2024,12,25))
 
-response = requests.get(url, verify=False)
-urllib3.disable_warnings()
-content = response.text
+	now = dt.datetime.now(tz=datetime_structure.tzinfo)
+	days = (now-datetime_structure).days
+
+	return f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'	
+
+def get_content(datetime_structure):
+
+	url = get_url(datetime_structure)
+	response = requests.get(url, verify=False)
+	urllib3.disable_warnings()
+	content = response.text
+
+	return content
 
 #Extract first section of Sacramento Valley data
-def extract_sacvalley(content):
+def extract_sacvalley(datetime_structure):
 	"""
     get the full FCR report page from url and store the data into a pandas dataframe
 
@@ -27,6 +32,7 @@ def extract_sacvalley(content):
     Returns:
         df (pandas.DataFrame): the USACE station storage and flood control parameters data, specific to Sacramento valley
     """
+	content = get_content(datetime_structure)
 	query  = re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 	query2 = (query[0].split('-------------- --------- --------- --------- -------- -------------- ---------------\n')[1])
 	query3 = query2.split('Folsom')[0].replace('CFS','')
@@ -39,7 +45,7 @@ def extract_sacvalley(content):
 
 
 # Extract second section of Sacramento Valley data 
-def extract_folsom(content):
+def extract_folsom(datetime_structure):
 	"""
     get the full FCR report page from url and store the data into a pandas dataframe
 
@@ -49,7 +55,7 @@ def extract_folsom(content):
     Returns:
         result_cleaned (pandas.DataFrame): the USACE station storage and flood control parameters, specific to Folsom
     """
-
+	content = get_content(datetime_structure)
 	query4 = re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 	query5 = (query4[0].split('Indian Valley:')[1])
 	query6 = (query5.split('BASIN TOTALS')[0]).replace("-","").replace("(","").replace(")","").replace(";","").replace(",","")
@@ -122,7 +128,7 @@ def extract_folsom(content):
 	return result_cleaned
 
 #Extract third section of Sacramento Valley data 
-def extract_basintotals(content):
+def extract_basintotals(datetime_structure):
 	"""
     get the full FCR report page from url and store the data into a pandas dataframe
 
@@ -131,6 +137,7 @@ def extract_basintotals(content):
     Returns:
         df_after_dropping (pandas.DataFrame): the USACE station basin total storage data, total flood space encroached and w/US storages included
     """
+	content = get_content(datetime_structure)
 	qy = re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 	qy1 = (qy[0].split(' ____________________________________________________________________________________')[1])
 	qy2 = qy1.split(' **  Percent Encroached')[0]
@@ -151,18 +158,21 @@ def extract_basintotals(content):
 	#Concatenate two tables with similar column names
 
 	#merge two dataframes 
-df = extract_sacvalley(content)
-result_cleaned = extract_folsom(content)
-df_after_dropping = extract_basintotals(content)
-
-merge_df = pd.concat([df,result_cleaned],axis =0)
-merge_df2 = pd.concat([merge_df,df_after_dropping],axis=0)
-print(merge_df2)
-# merge_df2.to_excel("result.xlsx")
 
 
-#Add notes.txt file 
+if __name__ == '__main__':
 
-qylin = re.findall(r'[\S\s]*(?= ---- Sacramento Valley ----)', content)
-df4 = pd.read_fwf(io.StringIO(qylin)) #read fixed-width format file into pandas Dataframe
-print(df4)
+	datetime_structure = dt.datetime(2024,12,25)
+	df = extract_sacvalley(datetime_structure)
+	result_cleaned = extract_folsom(datetime_structure)
+	df_after_dropping = extract_basintotals(datetime_structure)
+
+	merge_df = pd.concat([df,result_cleaned],axis =0)
+	merge_df2 = pd.concat([merge_df,df_after_dropping],axis=0)
+	# merge_df2.to_excel("result.xlsx")
+
+
+	#Add notes.txt file 
+
+	qylin = re.findall(r'[\S\s]*(?= ---- Sacramento Valley ----)', content)
+	df4 = pd.read_fwf(io.StringIO(qylin)) #read fixed-width format file into pandas Dataframe
