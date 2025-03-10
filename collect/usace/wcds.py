@@ -59,8 +59,8 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     # Convert to date time object
     df.set_index('ISO 8601 Date Time', inplace=True)
 
-    # add a day to timesteps where 24T is in the index (TODO: when pandas upgraded to >2.0, drop format parameter)
-    new_index = pd.Series(pd.to_datetime(df.index.str.replace('T24:', ' '), format='mixed'), index=df.index)
+    # add a day to timesteps where 24T is in the index (TODO: when numpy <1.26 include format='mixed')
+    new_index = pd.Series(pd.to_datetime(df.index.str.replace('T24:', ' ')), index=df.index)
     mask = df.index.str.contains('T24:')
     new_index[mask] += pd.Timedelta(days=1)
 

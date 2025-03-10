@@ -20,6 +20,7 @@ setuptools.setup(
     ],
     install_requires=[
         'beautifulsoup4==4.12.3',
+        'html5lib==1.1',
         'pandas==1.5.3',
         'pyOpenSSL==23.3.0',
         'python-dateutil==2.9.0',
