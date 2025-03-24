@@ -312,3 +312,124 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     
     # returns relevant subset as dictionary
     return result
+
+def get_sac_valley_fcr(datetime_structure):
+
+    now = dt.datetime.now(tz=datetime_structure.tzinfo)
+    days = (now-datetime_structure).days
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true' 
+    content = requests.get(url, verify=ssl.CERT_NONE).text
+    return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
+
+#Extract first section of Sacramento Valley data
+def extract_sacvalley_fcr_data(datetime_structure):
+    """
+    get the full FCR report page from url and store the data into a pandas dataframe
+
+    Arguments:
+        content (str): the full FCR report page
+    Returns:
+        df (pandas.DataFrame): the USACE station storage and flood control parameters data, specific to Sacramento valley
+    """
+    query = get_sac_valley_fcr(datetime_structure)
+    query2 = (query[0].split('-------------- --------- --------- --------- -------- -------------- ---------------\n')[1])
+    # split at end of reservoir list
+    query3 = query2.split('Forecasted Volumes')[0].replace('CFS','')
+
+    df = pd.read_fwf(io.StringIO(query3), header=None)
+    df[5] = df[5].str.replace('(','')
+    df[6] = df[6].str.replace(')','')
+    df.columns = ["Reservoir", "Gross Pool (acft)", "Top of Conservation (acft)","Actual Res (acft)", r"% of Gross Pool", "Above top of Conservation (acft)","% Encroached", "Flood Control Parameters (Rain in.)","Flood Control Parameters (Snow acft)"]
+    df= df.set_index("Reservoir")
+    return df
+
+# Extract second section of Sacramento Valley data 
+def extract_folsom_fcr_data(datetime_structure):
+    """
+    get the full FCR report page from url and store the data into a pandas dataframe
+
+    Arguments:
+        content (str): the full FCR report page
+    
+    Returns:
+        result_cleaned (pandas.DataFrame): the USACE station storage and flood control parameters, specific to Folsom
+    """
+    query4 = get_sac_valley_fcr(datetime_structure)
+    query5 = (query4[0].split('Forecasted Volumes****')[1])
+    query6 = (query5.split('BASIN TOTALS')[0]).replace("-","").replace("(","").replace(")","").replace(";","").replace(",","")
+
+    # Use regex to extract columns (adjust based on structure)
+    pattern = r'(\d{2}[A-Z]{3}\d{4})?\s*(\d{2})?\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\.\d+)?\s+(\d+\.\d+)?'
+
+    # Extract matches into a DataFrame
+    df = pd.DataFrame(re.findall(pattern, query6))
+
+    df.columns = ['Forecasted Date',
+                  'Blank',
+                  'Forecasted_Time','Top of Conservation (acft)','Actual Res (acft)',r'% of GrossPool','Above Top of Conservation(acft)',
+                  'Percent Encroached',
+                  '1-Day Forecasted Volume',
+                  '2-Day Forecasted Volume',
+                  '3-Day Forecasted Volume',
+                  '5-Day Forecasted Volume',
+                  'Blank',
+                  'Blank']
+
+    df.index = df.apply(lambda x: f"{x['Forecasted Date']} {x['Forecasted_Time']}z", axis=1) 
+    df = df.drop(columns=['Blank', 'Forecasted Date', 'Forecasted_Time'])
+
+    return df
+
+#Extract third section of Sacramento Valley data 
+def extract_basintotals(datetime_structure):
+    """
+    get the full FCR report page from url and store the data into a pandas dataframe
+
+    Arguments:
+        content (str): the full FCR report page
+    Returns:
+        df_after_dropping (pandas.DataFrame): the USACE station basin total storage data, total flood space encroached and w/US storages included
+    """
+    qy = get_sac_valley_fcr(datetime_structure)
+    qy1 = (qy[0].split(' ____________________________________________________________________________________')[1])
+    qy2 = qy1.split(' **  Percent Encroached')[0]
+    df3 = pd.read_fwf(io.StringIO(qy2), names= ["Col0","Actual Res (acft)",r'% of GrossPool',"Above Top of Conservation(acft)","Percent Encroached"]) #read fixed-width format file into pandas Dataframe
+    df3["Above Top of Conservation(acft)"] = df3["Above Top of Conservation(acft)"].str.replace("(", "")
+    df3["Percent Encroached"] = df3["Percent Encroached"].str.replace(")", "") 
+    df3[['Reservoir','Gross Pool (acft)','Top of Conservation (acft)']] = df3["Col0"].str.extract(r'([a-zA-Z]+ [a-zA-Z]+)  (\d+,\d+,\d+) (\d+,\d+,\d+)')
+    df3.loc[1,'Reservoir'] = df3.loc[1,'Col0'] 
+    rowindexer = df3.index == 2
+    df3.loc[rowindexer,['Reservoir','Gross Pool (acft)']] = df3.loc[rowindexer,'Col0'].str.extract(r'([a-zA-Z]+[a-zA-Z]+ [a-zA-Z]+) (\d+,\d+,\d+)').values
+    print(df3.loc[rowindexer,'Col0'].str.extract(r'([a-zA-Z]+[a-zA-Z]+ [a-zA-Z]+) (\d+,\d+,\d+)').values)
+
+    df_after_dropping = df3.drop('Col0',axis=1)
+    df_after_dropping = df_after_dropping[["Reservoir", "Gross Pool (acft)","Top of Conservation (acft)","Actual Res (acft)",r'% of GrossPool',"Above Top of Conservation(acft)","Percent Encroached"]]
+    df_after_dropping = df_after_dropping.set_index("Reservoir")
+    return df_after_dropping
+
+def get_fcr_metadata(datetime_structure):
+
+    df_after_dropping = extract_basintotals(datetime_structure)
+    print(df_after_dropping)
+
+    now = dt.datetime.now(tz=datetime_structure.tzinfo)
+    days = (now-datetime_structure).days
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true' 
+
+    #Add notes.txt file
+    print(url)
+    content = requests.get(url, verify=ssl.CERT_NONE).text
+    qylin = re.findall(r'[\S\s]*(?= ---- Sacramento Valley ----)', content)
+    df4 = pd.read_fwf(io.StringIO(qylin)) #read fixed-width format file into pandas Dataframe
+    print(df4)
+
+
+if __name__ == '__main__':
+
+    datetime_structure = dt.datetime(2025,2,25)
+    # df = extract_sacvalley_fcr_data(datetime_structure)
+    # print(df)
+    # df = extract_folsom_fcr_data(datetime_structure)
+    # print(df)
+
+    get_fcr_metadata(datetime_structure)

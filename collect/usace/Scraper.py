@@ -5,6 +5,7 @@ import io
 import re
 import requests
 import ssl
+from collect import utils
 
 
 def get_url(datetime_structure):
@@ -17,6 +18,7 @@ def get_url(datetime_structure):
 def get_sac_valley_fcr(datetime_structure):
 
 	url = get_url(datetime_structure)
+	print(url)
 	content = requests.get(url, verify=ssl.CERT_NONE).text
 	return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 
@@ -149,7 +151,7 @@ if __name__ == '__main__':
 
 	merge_df = pd.concat([df,result_cleaned],axis =0)
 	merge_df2 = pd.concat([merge_df,df_after_dropping],axis=0)
-	# merge_df2.to_excel("result.xlsx")
+	merge_df2.to_excel("result.xlsx")
 
 
 	#Add notes.txt file 
