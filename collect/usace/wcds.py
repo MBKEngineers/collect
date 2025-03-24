@@ -313,12 +313,20 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     # returns relevant subset as dictionary
     return result
 
-def get_sac_valley_fcr(datetime_structure):
+def read_fcr(datetime_structure):
+    """
+    read the text in the Sacraamento Valley section of the USACE SPK FCR report
 
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        (list of strings): list of strings from the FCR report
+    """
     now = dt.datetime.now(tz=datetime_structure.tzinfo)
     days = (now-datetime_structure).days
     url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'
     content = requests.get(url, verify=ssl.CERT_NONE).text
+    # get the list of text between Sacramento Valley and San Joaquin Valley
     return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 
 def extract_sac_valley_fcr_data(datetime_structure):
@@ -330,7 +338,7 @@ def extract_sac_valley_fcr_data(datetime_structure):
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data, specific to Sacramento Valley
     """
-    query = get_sac_valley_fcr(datetime_structure)[0]
+    query = read_fcr(datetime_structure)[0]
     # split at end of reservoir list
     query2 = query.split('-------------- --------- --------- --------- -------- -------------- ---------------\n')[1].split('Forecasted Volumes')[0].replace('CFS','')
 
@@ -362,7 +370,7 @@ def extract_folsom_fcr_data(datetime_structure):
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes, specific to Folsom
     """
-    query = get_sac_valley_fcr(datetime_structure)[0]
+    query = read_fcr(datetime_structure)[0]
     split_query = query.split('Forecasted Volumes****')[1].split('BASIN TOTALS')[0]
     for symbol in ['-', '(', ')', ';', ',']:
         split_query = split_query.replace(symbol, '')
@@ -402,7 +410,7 @@ def extract_basin_totals(datetime_structure):
     Returns:
         df (pandas.DataFrame): the USACE SPK total Sacramento Valley basin FCR values
     """
-    qy = get_sac_valley_fcr(datetime_structure)[0]
+    qy = read_fcr(datetime_structure)[0]
     qy2 = qy.split(' ____________________________________________________________________________________')[1].split(' **  Percent Encroached')[0]
     
     # read fixed-width format file into pandas Dataframe
@@ -433,7 +441,14 @@ def extract_basin_totals(datetime_structure):
     return df.astype(float)
 
 def get_fcr_data(datetime_structure):
+    """
+    get all of the FCR date for Sacramento Valley basin
 
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        (dict): dictionary containing each dataframe for all FCR, Folsom specific metrics, and basin totals
+    """
     sac_df = extract_sac_valley_fcr_data(datetime_structure)
     folsom_df = extract_folsom_fcr_data(datetime_structure)
     totals_df = extract_basin_totals(datetime_structure)
@@ -453,3 +468,4 @@ if __name__ == '__main__':
         df = get_fcr_data(date)
         print(date)
         print(df)
+        exit()
