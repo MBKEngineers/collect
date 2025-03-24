@@ -317,7 +317,8 @@ def get_sac_valley_fcr(datetime_structure):
 
     now = dt.datetime.now(tz=datetime_structure.tzinfo)
     days = (now-datetime_structure).days
-    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true' 
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'
+    print(url)
     content = requests.get(url, verify=ssl.CERT_NONE).text
     return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 
@@ -335,8 +336,9 @@ def extract_sac_valley_fcr_data(datetime_structure):
     query2 = query.split('-------------- --------- --------- --------- -------- -------------- ---------------\n')[1].split('Forecasted Volumes')[0].replace('CFS','')
 
     df = pd.read_fwf(io.StringIO(query2), header=None)
-    df[5] = df[5].str.replace('(', '')
-    df[6] = df[6].str.replace(')', '')
+    df = df.replace(',', '', regex=True).replace('-', '', regex=True).replace('', None, regex=True).replace('NR', None, regex=True)
+    df[5] = df[5].str.replace('(', '', regex=True)
+    df[6] = df[6].str.replace(')', '', regex=True)
 
     df.columns = ['Reservoir',
                   'Gross Pool (acft)',
@@ -349,7 +351,8 @@ def extract_sac_valley_fcr_data(datetime_structure):
                   'Flood Control Parameters (Snow acft)']
 
     df = df.set_index("Reservoir")
-    return df
+
+    return df.astype(float)
 
 def extract_folsom_fcr_data(datetime_structure):
     """
@@ -361,13 +364,9 @@ def extract_folsom_fcr_data(datetime_structure):
         df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes, specific to Folsom
     """
     query = get_sac_valley_fcr(datetime_structure)[0]
-    split_query = query.split('Forecasted Volumes****')[1].split('BASIN TOTALS')[0
-        ].replace('-', ''
-        ).replace('(', ''
-        ).replace(')', ''
-        ).replace(';', ''
-        ).replace(',', ''
-        )
+    split_query = query.split('Forecasted Volumes****')[1].split('BASIN TOTALS')[0]
+    for symbol in ['-', '(', ')', ';', ',']:
+        split_query = split_query.replace(symbol, '')
 
     # Use regex to extract columns (adjust based on structure)
     pattern = r'(\d{2}[A-Z]{3}\d{4})?\s*(\d{2})?\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\.\d+)?\s+(\d+\.\d+)?'
@@ -393,7 +392,7 @@ def extract_folsom_fcr_data(datetime_structure):
     df.index = df.apply(lambda x: f"{x['Forecasted Date']} {x['Forecasted_Time']}z", axis=1) 
     df = df.drop(columns=['Blank', 'Forecasted Date', 'Forecasted_Time'])
 
-    return df
+    return df.astype(float)
 
 def extract_basin_totals(datetime_structure):
     """
@@ -402,7 +401,7 @@ def extract_basin_totals(datetime_structure):
     Arguments:
         datetime_structure (datetime): datetime object
     Returns:
-        df2 (pandas.DataFrame): the USACE SPK total Sacramento Valley basin FCR values
+        df (pandas.DataFrame): the USACE SPK total Sacramento Valley basin FCR values
     """
     qy = get_sac_valley_fcr(datetime_structure)[0]
     qy2 = qy.split(' ____________________________________________________________________________________')[1].split(' **  Percent Encroached')[0]
@@ -410,28 +409,29 @@ def extract_basin_totals(datetime_structure):
     # read fixed-width format file into pandas Dataframe
     df = pd.read_fwf(io.StringIO(qy2),
                      names=['Col0', 'Actual Res (acft)', r'% of GrossPool', 'Above Top of Conservation(acft)', 'Percent Encroached'])
-    
-    df['Above Top of Conservation(acft)'] = df['Above Top of Conservation(acft)'].str.replace("(", "")
-    df['Percent Encroached'] = df['Percent Encroached'].str.replace(")", "") 
+
+    df['Above Top of Conservation (acft)'] = df['Above Top of Conservation(acft)'].str.replace("(", "", regex=True)
+    df['Percent Encroached'] = df['Percent Encroached'].str.replace(")", "", regex=True) 
     df[['Metric', 'Gross Pool (acft)', 'Top of Conservation (acft)']] = df['Col0'].str.extract(r'([a-zA-Z]+ [a-zA-Z]+)  (\d+,\d+,\d+) (\d+,\d+,\d+)')
 
     df.loc[1, 'Metric'] = df.loc[1, 'Col0'] 
     rowindexer = df.index == 2
-    df.loc[rowindexer, ['Metric', 'Gross Pool (acft)']] = df.loc[rowindexer,'Col0'].str.extract(r'([a-zA-Z]+[a-zA-Z]+ [a-zA-Z]+) (\d+,\d+,\d+)').values
+    df.loc[rowindexer, ['Metric', 'Gross Pool (acft)']] = df.loc[rowindexer,'Col0'].str.extract(r'(w/[a-zA-Z]+[a-zA-Z]+ [a-zA-Z]+) (\d+,\d+,\d+)').values
 
-    df2 = df.drop('Col0', axis=1)
-    df2 = df2[[
+    df = df.drop('Col0', axis=1)
+    df = df[[
         'Metric',
         'Gross Pool (acft)',
         'Top of Conservation (acft)',
         'Actual Res (acft)',
         r'% of GrossPool',
-        'Above Top of Conservation(acft)',
+        'Above Top of Conservation (acft)',
         'Percent Encroached'
     ]]
-    df2 = df2.set_index('Metric')
+    df = df.set_index('Metric')
+    df = df.replace(',', '', regex=True)
 
-    return df2
+    return df.astype(float)
 
 def get_fcr_data(datetime_structure):
 
@@ -447,8 +447,10 @@ def get_fcr_data(datetime_structure):
 if __name__ == '__main__':
 
     datetime_structure = dt.datetime(2025,2,25)
-    # df = extract_sacvalley_fcr_data(datetime_structure)
-    # df = extract_folsom_fcr_data(datetime_structure)
-
-    df = get_fcr_data(datetime_structure)
-    print(df)
+    for date in pd.date_range(datetime_structure, dt.datetime.now() - dt.timedelta(days=1)):
+        # df = extract_sac_valley_fcr_data(date)
+        # df = extract_folsom_fcr_data(date)
+        # df = extract_basin_totals(date)
+        df = get_fcr_data(date)
+        print(date)
+        print(df)
