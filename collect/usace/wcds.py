@@ -456,16 +456,3 @@ def get_fcr_data(datetime_structure):
     return {'fcr': sac_df,
             'folsom': folsom_df,
             'totals': totals_df}
-
-
-if __name__ == '__main__':
-
-    datetime_structure = dt.datetime(2025,2,25)
-    for date in pd.date_range(datetime_structure, dt.datetime.now() - dt.timedelta(days=1)):
-        # df = extract_sac_valley_fcr_data(date)
-        # df = extract_folsom_fcr_data(date)
-        # df = extract_basin_totals(date)
-        df = get_fcr_data(date)
-        print(date)
-        print(df)
-        exit()
