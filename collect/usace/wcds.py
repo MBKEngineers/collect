@@ -9,6 +9,7 @@ import io
 import re
 import textwrap
 
+import numpy as np
 import pandas as pd
 import requests
 import ssl
@@ -338,14 +339,33 @@ def extract_sac_valley_fcr_data(datetime_structure):
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data, specific to Sacramento Valley
     """
-    query = read_fcr(datetime_structure)[0]
-    # split at end of reservoir list
-    query2 = query.split('-------------- --------- --------- --------- -------- -------------- ---------------\n')[1].split('Forecasted Volumes')[0].replace('CFS','')
+    if datetime_structure < dt.datetime(2014, 2, 5):
+        raise NotImplementedError('Sac Valley table unavailable before 2/5/2014')
 
-    df = pd.read_fwf(io.StringIO(query2), header=None)
-    df = df.replace(',', '', regex=True).replace('-', '', regex=True).replace('', None, regex=True).replace('NR', None, regex=True)
-    df[5] = df[5].str.replace('(', '', regex=True)
-    df[6] = df[6].str.replace(')', '', regex=True)
+    query = read_fcr(datetime_structure)[0]
+    table_query = re.findall(r' Shasta:[\S\s]*(?=Folsom:)', query)[0].replace('CFS', '')
+
+    # get the Folsom row and the Top of Conservation belonging to it
+    fol_row = re.findall(r'Folsom:\s*\S+', query)[0]
+
+    # read both tables as fixed width files
+    df = pd.read_fwf(io.StringIO(table_query), header=None)
+    fol_row = pd.read_fwf(io.StringIO(fol_row), header=None)
+
+    # Combine other resevoirs with Folsom row
+    df = pd.concat((df, fol_row), axis=0)
+
+    # remove characters from text
+    df = (df
+         ).replace(',', '', regex=True
+         ).replace('-', '', regex=True
+         ).replace('', None, regex=True
+         ).replace('NR', None, regex=True
+         )
+
+    df[0] = df[0].str.replace(':', '')
+    df = df.replace(r'\(', '', regex=True)
+    df = df.replace(r'\)', '', regex=True)
 
     df.columns = ['Reservoir',
                   'Gross Pool (acft)',
@@ -359,7 +379,7 @@ def extract_sac_valley_fcr_data(datetime_structure):
 
     df = df.set_index("Reservoir")
 
-    return df.astype(float)
+    return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
 
 def extract_folsom_fcr_data(datetime_structure):
     """
@@ -370,20 +390,19 @@ def extract_folsom_fcr_data(datetime_structure):
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes, specific to Folsom
     """
+    if datetime_structure < dt.datetime(2019, 7, 2):
+        raise NotImplementedError('Folsom forecasted volumes table unavailable before 7/2/2019')
+
     query = read_fcr(datetime_structure)[0]
-    split_query = query.split('Forecasted Volumes****')[1].split('BASIN TOTALS')[0]
-    for symbol in ['-', '(', ')', ';', ',']:
+    table_query = re.findall(r'(?=Forecasted Volumes)[\S\s]*(?=BASIN TOTALS)', query)[0].replace('CFS', '')
+
+    split_query = table_query.split('Forecasted Volumes****')[1]
+    for symbol in ['-', '(', ')', ';', ',', '_']:
         split_query = split_query.replace(symbol, '')
 
-    # Use regex to extract columns (adjust based on structure)
-    pattern = r'(\d{2}[A-Z]{3}\d{4})?\s*(\d{2})?\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+\.\d+)?\s+(\d+\.\d+)?'
-
-    # Extract matches into a DataFrame
-    df = pd.DataFrame(re.findall(pattern, split_query))
+    df = pd.read_fwf(io.StringIO(split_query), header=None)
 
     df.columns = ['Forecasted Date',
-                  'Blank',
-                  'Forecasted_Time',
                   'Top of Conservation (acft)',
                   'Actual Res (acft)',
                   r'% of GrossPool',
@@ -392,14 +411,13 @@ def extract_folsom_fcr_data(datetime_structure):
                   '1-Day Forecasted Volume',
                   '2-Day Forecasted Volume',
                   '3-Day Forecasted Volume',
-                  '5-Day Forecasted Volume',
-                  'Blank',
-                  'Blank']
+                  '5-Day Forecasted Volume'
+                  ]
 
-    df.index = df.apply(lambda x: f"{x['Forecasted Date']} {x['Forecasted_Time']}z", axis=1) 
-    df = df.drop(columns=['Blank', 'Forecasted Date', 'Forecasted_Time'])
+    df.index = df['Forecasted Date']
+    df = df.drop(columns=['Forecasted Date'])
 
-    return df.astype(float)
+    return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
 
 def extract_basin_totals(datetime_structure):
     """
@@ -409,36 +427,54 @@ def extract_basin_totals(datetime_structure):
         datetime_structure (datetime): datetime object
     Returns:
         df (pandas.DataFrame): the USACE SPK total Sacramento Valley basin FCR values
+        OR
+        table_query (str): raw text for basin totals
     """
-    qy = read_fcr(datetime_structure)[0]
-    qy2 = qy.split(' ____________________________________________________________________________________')[1].split(' **  Percent Encroached')[0]
-    
-    # read fixed-width format file into pandas Dataframe
-    df = pd.read_fwf(io.StringIO(qy2),
-                     names=['Col0', 'Actual Res (acft)', r'% of GrossPool', 'Above Top of Conservation(acft)', 'Percent Encroached'])
+    query = read_fcr(datetime_structure)[0]
+    table_query = re.findall(r' BASIN TOTALS[\S\s]*(?=Percent Encroached)', query)[0].replace('CFS', '')
 
-    df['Above Top of Conservation (acft)'] = df['Above Top of Conservation(acft)'].str.replace("(", "", regex=True)
-    df['Percent Encroached'] = df['Percent Encroached'].str.replace(")", "", regex=True) 
-    df[['Metric', 'Gross Pool (acft)', 'Top of Conservation (acft)']] = df['Col0'].str.extract(r'([a-zA-Z]+ [a-zA-Z]+)  (\d+,\d+,\d+) (\d+,\d+,\d+)')
+    try:
+        # read fixed-width format file into pandas Dataframe
+        df = pd.read_fwf(io.StringIO(table_query),
+                         names=[
+                            'Col0',
+                            'Actual Res (acft)', r'% of GrossPool',
+                            'Above Top of Conservation(acft)',
+                            'Percent Encroached'
+                            ]
+                        )
 
-    df.loc[1, 'Metric'] = df.loc[1, 'Col0'] 
-    rowindexer = df.index == 2
-    df.loc[rowindexer, ['Metric', 'Gross Pool (acft)']] = df.loc[rowindexer,'Col0'].str.extract(r'(w/[a-zA-Z]+[a-zA-Z]+ [a-zA-Z]+) (\d+,\d+,\d+)').values
+        df['Above Top of Conservation (acft)'] = df['Above Top of Conservation(acft)'].str.replace('(', '', regex=True)
+        df['Percent Encroached'] = df['Percent Encroached'].str.replace(')', '', regex=True) 
 
-    df = df.drop('Col0', axis=1)
-    df = df[[
-        'Metric',
-        'Gross Pool (acft)',
-        'Top of Conservation (acft)',
-        'Actual Res (acft)',
-        r'% of GrossPool',
-        'Above Top of Conservation (acft)',
-        'Percent Encroached'
-    ]]
-    df = df.set_index('Metric')
-    df = df.replace(',', '', regex=True)
+        # remove commas from values in dataframe
+        df = df.replace(',', '', regex=True)
+        
+        df[['Metric', 'Gross Pool (acft)', 'Top of Conservation (acft)']
+            ] = df['Col0'].str.extract(r'([a-zA-Z\s]+)  (\d+) (\d+)')
+        df.loc[1, 'Metric'] = df.loc[1, 'Col0'] 
 
-    return df.astype(float)
+        rowindexer = df.index == 2
+        df.loc[rowindexer, ['Metric', 'Gross Pool (acft)']
+            ] = df.loc[rowindexer,'Col0'].str.extract(r'(w/[a-zA-Z\s]+) (\d+)').values
+
+        df = df.drop('Col0', axis=1)
+        df = df[[
+            'Metric',
+            'Gross Pool (acft)',
+            'Top of Conservation (acft)',
+            'Actual Res (acft)',
+            r'% of GrossPool',
+            'Above Top of Conservation (acft)',
+            'Percent Encroached'
+        ]]
+        df = df.set_index('Metric')
+        df = df.replace(',', '', regex=True)
+
+        return df.dropna(how='all').astype(float).replace(np.nan, None)
+
+    except:
+        return table_query
 
 def get_fcr_data(datetime_structure):
     """
