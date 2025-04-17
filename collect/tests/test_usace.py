@@ -61,8 +61,8 @@ class TestUSACE(unittest.TestCase):
 
     def test_extract_sac_valley_fcr_data(self):
         result = wcds.extract_sac_valley_fcr_data(dt.datetime(2025, 1, 1))
-        self.assertEqual(float(result.loc['Oroville:', 'Flood Control Parameters (Rain in.)']), 10.89)
-        self.assertEqual(float(result.loc['Folsom:', 'Gross Pool (acft)']), 966823)
+        self.assertEqual(float(result.loc['Oroville', 'Flood Control Parameters (Rain in.)']), 10.89)
+        self.assertEqual(float(result.loc['Folsom', 'Gross Pool (acft)']), 966823)
 
     def test_extract_folsom_fcr_data(self):
         result = wcds.extract_folsom_fcr_data(dt.datetime(2025, 1, 1))
@@ -76,8 +76,8 @@ class TestUSACE(unittest.TestCase):
     def test_get_fcr_data(self):
 
         result = wcds.get_fcr_data(dt.datetime(2023, 1, 13))
-        self.assertEqual(float(result['fcr'].loc['Oroville:', 'Flood Control Parameters (Rain in.)']), 13.06)
-        self.assertEqual(float(result['fcr'].loc['Folsom:', 'Gross Pool (acft)']), 966823)
+        self.assertEqual(float(result['fcr'].loc['Oroville', 'Flood Control Parameters (Rain in.)']), 13.06)
+        self.assertEqual(float(result['fcr'].loc['Folsom', 'Gross Pool (acft)']), 966823)
         self.assertEqual(float(result['folsom'].loc['14JAN2023 24z', '2-Day Forecasted Volume']), 123031)
         self.assertEqual(float(result['totals'].loc['BASIN TOTALS', 'Above Top of Conservation (acft)']), -1947118)
 

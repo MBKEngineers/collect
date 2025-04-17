@@ -394,15 +394,20 @@ def extract_folsom_fcr_data(datetime_structure):
         raise NotImplementedError('Folsom forecasted volumes table unavailable before 7/2/2019')
 
     query = read_fcr(datetime_structure)[0]
-    table_query = re.findall(r'(?=Forecasted Volumes)[\S\s]*(?=BASIN TOTALS)', query)[0].replace('CFS', '')
+    table_query = re.findall(r'(?=Forecasted Volumes)[\S\s]*(?=BASIN TOTALS)', query)[0]
 
     split_query = table_query.split('Forecasted Volumes****')[1]
-    for symbol in ['-', '(', ')', ';', ',', '_']:
+    for symbol in ['-', '(', ')', ';', ',']:
         split_query = split_query.replace(symbol, '')
+
+    # remove No Forecast rows if in table
+    if 'No Forecast' in split_query:
+        split_query = split_query.split('No Forecast')[0]
 
     df = pd.read_fwf(io.StringIO(split_query), header=None)
 
     df.columns = ['Forecasted Date',
+                  'Forecasted Time',
                   'Top of Conservation (acft)',
                   'Actual Res (acft)',
                   r'% of GrossPool',
@@ -414,7 +419,7 @@ def extract_folsom_fcr_data(datetime_structure):
                   '5-Day Forecasted Volume'
                   ]
 
-    df.index = df['Forecasted Date']
+    df.index = df.apply(lambda x: f"{x['Forecasted Date']} {x['Forecasted Time']}z", axis=1) 
     df = df.drop(columns=['Forecasted Date'])
 
     return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
@@ -492,3 +497,8 @@ def get_fcr_data(datetime_structure):
     return {'fcr': sac_df,
             'folsom': folsom_df,
             'totals': totals_df}
+
+if __name__ == '__main__':
+        
+    result = extract_folsom_fcr_data(dt.datetime(2025, 1, 1))
+    result = extract_folsom_fcr_data(dt.datetime(2023, 1, 13))
