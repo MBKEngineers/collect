@@ -314,6 +314,7 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     # returns relevant subset as dictionary
     return result
 
+
 def read_fcr(datetime_structure):
     """
     read the text in the Sacraamento Valley section of the USACE SPK FCR report
@@ -330,6 +331,7 @@ def read_fcr(datetime_structure):
     # get the list of text between Sacramento Valley and San Joaquin Valley
     return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 
+
 def extract_sac_valley_fcr_data(datetime_structure):
     """
     get the Sacramento Valley Storages and Flood Control Parameters from the FCR report
@@ -337,7 +339,8 @@ def extract_sac_valley_fcr_data(datetime_structure):
     Arguments:
         datetime_structure (datetime): datetime object
     Returns:
-        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data, specific to Sacramento Valley
+        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
+            specific to Sacramento Valley
     """
     if datetime_structure < dt.datetime(2014, 2, 5):
         raise NotImplementedError('Sac Valley table unavailable before 2/5/2014')
@@ -381,14 +384,17 @@ def extract_sac_valley_fcr_data(datetime_structure):
 
     return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
 
+
 def extract_folsom_fcr_data(datetime_structure):
     """
-    get the Folsom Storages, Flood Control Parameters, and Forecasted Volumes from the Sacramento Valley section of the FCR report
+    get the Folsom Storages, Flood Control Parameters, and Forecasted Volumes from the Sacramento Valley
+    section of the FCR report
 
     Arguments:
         datetime_structure (datetime): datetime object
     Returns:
-        df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes, specific to Folsom
+        df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes,
+            specific to Folsom
     """
     if datetime_structure < dt.datetime(2019, 7, 2):
         raise NotImplementedError('Folsom forecasted volumes table unavailable before 7/2/2019')
@@ -423,6 +429,7 @@ def extract_folsom_fcr_data(datetime_structure):
     df = df.drop(columns=['Forecasted Date'])
 
     return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
+
 
 def extract_basin_totals(datetime_structure):
     """
@@ -461,7 +468,7 @@ def extract_basin_totals(datetime_structure):
 
         rowindexer = df.index == 2
         df.loc[rowindexer, ['Metric', 'Gross Pool (acft)']
-            ] = df.loc[rowindexer,'Col0'].str.extract(r'(w/[a-zA-Z\s]+) (\d+)').values
+            ] = df.loc[rowindexer, 'Col0'].str.extract(r'(w/[a-zA-Z\s]+) (\d+)').values
 
         df = df.drop('Col0', axis=1)
         df = df[[
@@ -481,6 +488,7 @@ def extract_basin_totals(datetime_structure):
     except:
         return table_query
 
+
 def get_fcr_data(datetime_structure):
     """
     get all of the FCR date for Sacramento Valley basin
@@ -497,8 +505,3 @@ def get_fcr_data(datetime_structure):
     return {'fcr': sac_df,
             'folsom': folsom_df,
             'totals': totals_df}
-
-if __name__ == '__main__':
-        
-    result = extract_folsom_fcr_data(dt.datetime(2025, 1, 1))
-    result = extract_folsom_fcr_data(dt.datetime(2023, 1, 13))
