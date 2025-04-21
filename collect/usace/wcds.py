@@ -11,10 +11,12 @@ import textwrap
 
 import pandas as pd
 import requests
-import ssl
+# import ssl
 
 from collect import utils
 
+VERIFY = '/path/to/DigiCert Global Root G2.pem'
+# VERIFY = ssl.CERT_NONE
 
 def get_water_year_data(reservoir, water_year, interval='d'):
     """
@@ -36,7 +38,7 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
 
     # Read url data
-    response = requests.get(url, verify=ssl.CERT_NONE).content
+    response = requests.get(url, verify=VERIFY).content
     df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values=['-', 'M'])
 
     # Check that user chosen water year is within range with data
@@ -233,7 +235,7 @@ def get_release_report(reservoir):
     url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/release.py?project={reservoir}&textonly=true'
 
     # request data from url
-    response = requests.get(url, verify=ssl.CERT_NONE).content
+    response = requests.get(url, verify=VERIFY).content
     raw = response.decode('utf-8')
 
     # check for header matching pattern with pipe delimiters
@@ -292,7 +294,7 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.meta'
     
     # read data from url using requests session with retries
-    response = requests.get(url, verify=ssl.CERT_NONE)
+    response = requests.get(url, verify=VERIFY)
 
     # complete metadata dictionary
     metadata_dict = response.json()
