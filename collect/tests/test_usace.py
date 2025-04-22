@@ -59,6 +59,13 @@ class TestUSACE(unittest.TestCase):
         self.assertEqual(int(result['gross pool (elev)']), 713)
         self.assertTrue('Precip @ Dam (in; elev 712 ft)' in result['data headers'])
 
+    def test_extract_basin_totals(self):
+        result = wcds.extract_basin_totals(dt.datetime(2025, 1, 1))
+        self.assertEqual(float(result.loc['BASIN TOTALS', 'Percent Encroached']), 5.0)
+        # returns string of unformatted data
+        result = wcds.extract_basin_totals(dt.datetime(2015, 1, 1))
+        self.assertTrue(isinstance(result, str))
+
     def test_extract_sac_valley_fcr_data(self):
         result = wcds.extract_sac_valley_fcr_data(dt.datetime(2025, 1, 1))
         self.assertEqual(float(result.loc['Oroville', 'Flood Control Parameters (Rain in.)']), 10.89)
@@ -74,7 +81,6 @@ class TestUSACE(unittest.TestCase):
         self.assertEqual(float(result.loc['03FEB2025 18z', '5-Day Forecasted Volume']), 228664)
 
     def test_get_fcr_data(self):
-
         result = wcds.get_fcr_data(dt.datetime(2023, 1, 13))
         self.assertEqual(float(result['fcr'].loc['Oroville', 'Flood Control Parameters (Rain in.)']), 13.06)
         self.assertEqual(float(result['fcr'].loc['Folsom', 'Gross Pool (acft)']), 966823)

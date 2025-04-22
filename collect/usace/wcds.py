@@ -502,9 +502,8 @@ def extract_basin_totals(datetime_structure):
 
         return df.dropna(how='all').astype(float).replace(np.nan, None)
 
-    except:
+    except (KeyError, ValueError, AttributeError):
         return table_query
-
 
 def get_fcr_data(datetime_structure):
     """
