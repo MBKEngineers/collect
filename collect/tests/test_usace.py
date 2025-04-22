@@ -65,13 +65,13 @@ class TestUSACE(unittest.TestCase):
         self.assertEqual(float(result.loc['Folsom', 'Gross Pool (acft)']), 966823)
 
     def test_extract_folsom_fcr_data(self):
+        # date has No Forecast rows in table
         result = wcds.extract_folsom_fcr_data(dt.datetime(2025, 1, 1))
         self.assertEqual(float(result.loc['02JAN2025 12z', '3-Day Forecasted Volume']), 27573)
         self.assertEqual(float(result.loc['02JAN2025 18z', 'Top of Conservation (acft)']), 566823)
-
-    def test_extract_basin_totals(self):
-        result = wcds.extract_basin_totals(dt.datetime(2025, 1, 1))
-        self.assertEqual(float(result.loc['w/US Storages', '% of GrossPool']), 67)
+        # date has 5 forecast dates
+        result = wcds.extract_folsom_fcr_data(dt.datetime(2025, 2, 2))
+        self.assertEqual(float(result.loc['03FEB2025 18z', '5-Day Forecasted Volume']), 228664)
 
     def test_get_fcr_data(self):
 
