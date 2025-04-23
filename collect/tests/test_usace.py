@@ -59,6 +59,33 @@ class TestUSACE(unittest.TestCase):
         self.assertEqual(int(result['gross pool (elev)']), 713)
         self.assertTrue('Precip @ Dam (in; elev 712 ft)' in result['data headers'])
 
+    def test_extract_basin_totals(self):
+        result = wcds.extract_basin_totals(dt.datetime(2025, 1, 1))
+        self.assertEqual(float(result.loc['BASIN TOTALS', 'Percent Encroached']), 5.0)
+        # returns string of unformatted data
+        result = wcds.extract_basin_totals(dt.datetime(2015, 1, 1))
+        self.assertTrue(isinstance(result, str))
+
+    def test_extract_sac_valley_fcr_data(self):
+        result = wcds.extract_sac_valley_fcr_data(dt.datetime(2025, 1, 1))
+        self.assertEqual(float(result.loc['Oroville', 'Flood Control Parameters (Rain in.)']), 10.89)
+        self.assertEqual(float(result.loc['Folsom', 'Gross Pool (acft)']), 966823)
+
+    def test_extract_folsom_fcr_data(self):
+        # date has No Forecast rows in table
+        result = wcds.extract_folsom_fcr_data(dt.datetime(2025, 1, 1))
+        self.assertEqual(float(result.loc['02JAN2025 12z', '3-Day Forecasted Volume']), 27573)
+        self.assertEqual(float(result.loc['02JAN2025 18z', 'Top of Conservation (acft)']), 566823)
+        # date has 5 forecast dates
+        result = wcds.extract_folsom_fcr_data(dt.datetime(2025, 2, 2))
+        self.assertEqual(float(result.loc['03FEB2025 18z', '5-Day Forecasted Volume']), 228664)
+
+    def test_get_fcr_data(self):
+        result = wcds.get_fcr_data(dt.datetime(2023, 1, 13))
+        self.assertEqual(float(result['fcr'].loc['Oroville', 'Flood Control Parameters (Rain in.)']), 13.06)
+        self.assertEqual(float(result['fcr'].loc['Folsom', 'Gross Pool (acft)']), 966823)
+        self.assertEqual(float(result['folsom'].loc['14JAN2023 24z', '2-Day Forecasted Volume']), 123031)
+        self.assertEqual(float(result['totals'].loc['BASIN TOTALS', 'Above Top of Conservation (acft)']), -1947118)
 
 if __name__ == '__main__':
     unittest.main()

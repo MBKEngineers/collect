@@ -9,6 +9,7 @@ import io
 import re
 import textwrap
 
+import numpy as np
 import pandas as pd
 import requests
 import ssl
@@ -312,3 +313,208 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     
     # returns relevant subset as dictionary
     return result
+
+
+def extract_fcr_text(datetime_structure):
+    """
+    read the text in the Sacramento Valley section of the USACE SPK FCR report
+
+    Arguments:
+        datetime_structure (datetime.datetime): datetime object
+    Returns:
+        (list): list of text from the FCR report
+    """
+    now = dt.datetime.now(tz=datetime_structure.tzinfo)
+    days = (now-datetime_structure).days
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'
+    content = requests.get(url, verify=ssl.CERT_NONE).text
+    # get the list of text between Sacramento Valley and San Joaquin Valley
+    return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
+
+
+def extract_sac_valley_fcr_data(datetime_structure):
+    """
+    get the Sacramento Valley Storages and Flood Control Parameters from the FCR report
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
+            specific to Sacramento Valley
+    """
+    last_date = dt.datetime(2014, 2, 5)
+    if datetime_structure < last_date:
+        print(f'WARNING: Sac Valley table unavailable before {last_date:%Y-%m-%d}')
+        return None
+
+    query = extract_fcr_text(datetime_structure)[0]
+    table_query = re.findall(r' Shasta:[\S\s]*(?=Folsom:)', query)[0].replace('CFS', '')
+
+    # add a space before values in parentheses so they are read as a separate column
+    table_query = table_query.replace('(', '( ')
+
+    # get the Folsom row and the Top of Conservation belonging to it
+    fol_row = re.findall(r'Folsom:\s*\S+', query)[0]
+
+    # read both tables as fixed width files
+    df = pd.read_fwf(io.StringIO(table_query), header=None)
+    fol_row = pd.read_fwf(io.StringIO(fol_row), header=None)
+
+    # Combine other resevoirs with Folsom row
+    df = pd.concat((df, fol_row), axis=0)
+
+    # remove characters from text
+    df = (df
+         ).replace(',', '', regex=True
+         ).replace('-', '', regex=True
+         ).replace('', None, regex=True
+         ).replace('NR', None, regex=True
+         ).replace(r'\(', '', regex=True
+         ).replace(r'\)', '', regex=True
+         )
+
+    df[0] = df[0].str.replace(':', '')
+
+    if len(df.columns) != 9:
+        print(f'WARNING: FCR data format not supported')
+        return None
+
+    df.columns = ['Reservoir',
+                  'Gross Pool (acft)',
+                  'Top of Conservation (acft)',
+                  'Actual Res (acft)',
+                  r'% of Gross Pool',
+                  'Above top of Conservation (acft)',
+                  r'% Encroached',
+                  'Flood Control Parameters (Rain in.)',
+                  'Flood Control Parameters (Snow acft)']
+
+    df = df.set_index('Reservoir')
+
+    return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
+
+
+def extract_folsom_fcr_data(datetime_structure):
+    """
+    get the Folsom Storages, Flood Control Parameters, and Forecasted Volumes from the Sacramento Valley
+    section of the FCR report
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes,
+            specific to Folsom
+    """
+    last_date = dt.datetime(2019, 7, 2)
+    if datetime_structure < last_date:
+        print(f'WARNING: Folsom forecasted volumes table unavailable before {last_date:%Y-%m-%d}')
+        return None
+
+    query = extract_fcr_text(datetime_structure)[0]
+    table_query = re.findall(r'(?=Forecasted Volumes)[\S\s]*(?=BASIN TOTALS)', query)[0].split('Forecasted Volumes****')[1]
+    for symbol in ['-', '(', ')', ';', ',']:
+        table_query = table_query.replace(symbol, '')
+
+    # remove No Forecast rows or blank rows if in table
+    table_query = table_query.split('No Forecast')[0].split('______')[0]
+
+    df = pd.read_fwf(io.StringIO(table_query), header=None)
+
+    if len(df.columns) != 11:
+        print(f'WARNING: Folsom data format not supported')
+        return None
+
+    df.columns = ['Forecasted Date',
+                  'Forecasted Time',
+                  'Top of Conservation (acft)',
+                  'Actual Res (acft)',
+                  r'% of GrossPool',
+                  'Above Top of Conservation(acft)',
+                  'Percent Encroached',
+                  '1-Day Forecasted Volume',
+                  '2-Day Forecasted Volume',
+                  '3-Day Forecasted Volume',
+                  '5-Day Forecasted Volume'
+                  ]
+
+    df.index = df.apply(lambda x: f"{x['Forecasted Date']} {x['Forecasted Time']}z", axis=1) 
+    df = df.drop(columns=['Forecasted Date', 'Forecasted Time'])
+
+    return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
+
+
+def extract_basin_totals(datetime_structure):
+    """
+    get the Sacramento Valley basin FCR totals
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        df (pandas.DataFrame): the USACE SPK total Sacramento Valley basin FCR values
+        OR
+        table_query (str): raw text for basin totals
+    """
+    query = extract_fcr_text(datetime_structure)[0]
+
+    # try reading data in one of two formats
+    try:
+        table_query = re.findall(r' BASIN TOTALS[\S\s]*(?=Percent Encroached)', query)[0].replace('CFS', '')
+    except IndexError:
+        table_query = re.findall(r' BASIN TOTALS[\S\s]*(?=Folsom \(COE\) Diagram not used in Calculations)', query)[0].replace('CFS', '')
+
+    try:
+        # read fixed-width format file into pandas Dataframe
+        df = pd.read_fwf(io.StringIO(table_query),
+                         names=[
+                            'Col0',
+                            'Actual Res (acft)', r'% of GrossPool',
+                            'Above Top of Conservation(acft)',
+                            'Percent Encroached'
+                            ]
+                        )
+
+        df['Above Top of Conservation (acft)'] = df['Above Top of Conservation(acft)'].str.replace('(', '', regex=True)
+        df['Percent Encroached'] = df['Percent Encroached'].str.replace(')', '', regex=True) 
+
+        # remove commas from values in dataframe
+        df = df.replace(',', '', regex=True)
+        
+        df[['Metric', 'Gross Pool (acft)', 'Top of Conservation (acft)']
+            ] = df['Col0'].str.extract(r'([a-zA-Z\s]+)  (\d+) (\d+)')
+        df.loc[1, 'Metric'] = df.loc[1, 'Col0'] 
+
+        rowindexer = df.index == 2
+        df.loc[rowindexer, ['Metric', 'Gross Pool (acft)']
+            ] = df.loc[rowindexer, 'Col0'].str.extract(r'(w/[a-zA-Z\s]+) (\d+)').values
+
+        df = df.drop('Col0', axis=1)
+        df = df[[
+            'Metric',
+            'Gross Pool (acft)',
+            'Top of Conservation (acft)',
+            'Actual Res (acft)',
+            r'% of GrossPool',
+            'Above Top of Conservation (acft)',
+            'Percent Encroached'
+        ]]
+        df = df.set_index('Metric')
+        df = df.replace(',', '', regex=True)
+
+        return df.dropna(how='all').astype(float).replace(np.nan, None)
+
+    except (KeyError, ValueError, AttributeError):
+        return table_query
+
+def get_fcr_data(datetime_structure):
+    """
+    get all of the FCR date for Sacramento Valley basin
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        (dict): dictionary containing each dataframe for all FCR, Folsom specific metrics, and basin totals
+    """
+    return {'date': f'{datetime_structure:%Y-%m-%d}',
+            'fcr': extract_sac_valley_fcr_data(datetime_structure),
+            'folsom': extract_folsom_fcr_data(datetime_structure),
+            'totals': extract_basin_totals(datetime_structure)}
