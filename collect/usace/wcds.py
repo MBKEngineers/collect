@@ -324,9 +324,21 @@ def extract_fcr_text(datetime_structure):
     Returns:
         (list): list of text from the FCR report
     """
-    now = dt.datetime.now(tz=datetime_structure.tzinfo)
-    days = (now-datetime_structure).days
-    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'
+    assert datetime_structure.tzinfo is not None, '`datetime_structure` must be timezone aware'
+
+    # data on WCDS is in Pacific
+    datetime_structure_pacific = datetime_structure.astimezone(utils.tz_function('US/Pacific'))
+
+    # get today's date in pacific time for 0000 Pacific
+    today_pacific = dt.datetime.now(tz=datetime_structure_pacific.tzinfo).replace(hour=0)
+
+    # compute the days between today and the datetime
+    days = (today_pacific - datetime_structure_pacific).days
+
+    if days <= 0:
+        raise NotImplementedError(f'Date unavailable: {datetime_structure_pacific:%Y-%m-%d}')
+
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days+1}&report=FCR&textonly=true'
     content = requests.get(url, verify=ssl.CERT_NONE).text
     # get the list of text between Sacramento Valley and San Joaquin Valley
     return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
@@ -342,12 +354,17 @@ def extract_sac_valley_fcr_data(datetime_structure):
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Sacramento Valley
     """
-    last_date = dt.datetime(2014, 2, 5)
-    if datetime_structure < last_date:
+    last_date = dt.datetime(2014, 2, 5, 12, tzinfo=utils.tz_function('UTC'))
+    if datetime_structure.astimezone(dt.timezone.utc) < last_date:
         print(f'WARNING: Sac Valley table unavailable before {last_date:%Y-%m-%d}')
         return None
 
-    query = extract_fcr_text(datetime_structure)[0]
+    query = extract_fcr_text(datetime_structure)
+    if len(query) > 0:
+        query = query[0]
+    else:
+        return None
+
     table_query = re.findall(r' Shasta:[\S\s]*(?=Folsom:)', query)[0].replace('CFS', '')
 
     # add a space before values in parentheses so they are read as a separate column
@@ -405,8 +422,8 @@ def extract_folsom_fcr_data(datetime_structure):
         df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes,
             specific to Folsom
     """
-    last_date = dt.datetime(2019, 7, 2)
-    if datetime_structure < last_date:
+    last_date = dt.datetime(2019, 7, 1, 0, tzinfo=utils.tz_function('US/Pacific'))
+    if datetime_structure <= last_date:
         print(f'WARNING: Folsom forecasted volumes table unavailable before {last_date:%Y-%m-%d}')
         return None
 
