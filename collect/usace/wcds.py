@@ -339,7 +339,7 @@ def extract_fcr_text(datetime_structure):
         raise NotImplementedError(f'Date unavailable: {datetime_structure_pacific:%Y-%m-%d}')
 
     url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days+1}&report=FCR&textonly=true'
-    content = requests.get(url, verify=ssl.CERT_NONE).text
+    content = utils.get_session_response(url, verify=ssl.CERT_NONE).text
     # get the list of text between Sacramento Valley and San Joaquin Valley
     return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 
