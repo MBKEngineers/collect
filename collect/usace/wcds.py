@@ -355,7 +355,7 @@ def extract_sac_valley_fcr_data(datetime_structure):
             specific to Sacramento Valley
     """
     last_date = dt.datetime(2014, 2, 5, 12, tzinfo=utils.tz_function('UTC'))
-    if datetime_structure.astimezone(dt.timezone.utc) < last_date:
+    if datetime_structure.astimezone(utils.tz_function('UTC')) < last_date:
         print(f'WARNING: Sac Valley table unavailable before {last_date:%Y-%m-%d}')
         return None
 
