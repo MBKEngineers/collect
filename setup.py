@@ -24,7 +24,7 @@ setuptools.setup(
         'pandas==1.5.3',
         'pyOpenSSL==23.3.0',
         'python-dateutil==2.9.0',
-        'python-dotenv==0.19.2',
+        'python-dotenv==1.0.0',
         'requests==2.32.3',
         'selenium==4.15.2',
         'tabula-py==2.10.0'
