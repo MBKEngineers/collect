@@ -8,12 +8,15 @@ from io import StringIO
 import os
 from bs4 import BeautifulSoup
 import pandas as pd
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+try:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.keys import Keys
+    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support import expected_conditions as EC
+except:
+    pass
 
 
 def get_casgem_data(casgem_id=None,
@@ -25,30 +28,22 @@ def get_casgem_data(casgem_id=None,
     Download well timeseries data from CASGEM database; return as dataframe
 
     search term                 | type  |  example
-    ----------------------------------------------------------------------
+    --------------------------- | ----- | ----------------------
         casgem_id               |  str  |  '34318'
         state_well_number       |  str  |  '19N02W36H001M'
         local_well_designation  |  str  |  '19N02W36H001M'
         master_site_code        |  str  |  '394564N1220246W001'
 
     Args:
-        casgem_id (str): desc
-        state_well_number (None): desc
-        local_well_designation (None): desc
-        master_site_code (None): desc
-        write_to_html_file (bool): desc
+        casgem_id (str): 
+        state_well_number (None): 
+        local_well_designation (None): 
+        master_site_code (None): 
+        write_to_html_file (bool): 
     
     Returns:
         dict
     """
-    # if os.name == 'posix':
-    #     chromedriver = '/usr/local/bin/chromedriver'
-    # elif os.name == 'windows':
-    #     # update Chromedriver to 2.36 (latest on Win32)
-    #     chromedriver = 'C:/Python27/Scripts/chromedriver'
-    # os.environ['webdriver.chrome.driver'] = chromedriver
-    # chrome_options = Options()
-    # chrome_options.add_argument('--dns-prefetch-disable')
     driver = webdriver.Chrome()
 
     # fetch log in url

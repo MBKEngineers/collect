@@ -1,17 +1,15 @@
 """
 collect.utils.utils
 ============================================================
-The utilities module of MBK Engineers' collect project
+assorted utilities to support collect library modules
 """
 # -*- coding: utf-8 -*-
 import urllib3
-# disable warnings in crontab logs
+# disable warnings in logs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 import urllib3.contrib.pyopenssl
 urllib3.contrib.pyopenssl.inject_into_urllib3()
-
-# import ssl
 
 import requests
 from requests.packages.urllib3.util.retry import Retry
