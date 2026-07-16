@@ -146,16 +146,16 @@ def get_casgem_data(casgem_id=None,
     if write_to_html_file:
         try:
             # Python 2.7
-            with open('{}_casgem_data.html'.format(casgem_id), 'wb') as html_file:
+            with open(f'{casgem_id}_casgem_data.html', 'wb') as html_file:
                 html_file.write(table_element.get_attribute('outerHTML'))
 
-            html_file_content = open('{}_casgem_data.html'.format(casgem_id), 'rb')
+            html_file_content = open(f'{casgem_id}_casgem_data.html', 'rb')
         except TypeError:
             # Python 3
-            with open('{}_casgem_data.html'.format(casgem_id), 'w') as html_file:
+            with open(f'{casgem_id}_casgem_data.html', 'w') as html_file:
                 html_file.write(table_element.get_attribute('outerHTML'))
 
-            html_file_content = open('{}_casgem_data.html'.format(casgem_id), 'r')
+            html_file_content = open(f'{casgem_id}_casgem_data.html', 'r')
 
     wait = WebDriverWait(driver, 100)
 

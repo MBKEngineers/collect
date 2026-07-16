@@ -39,7 +39,7 @@ def get_b120_data(date_suffix=''):
     if validate_date_suffix(date_suffix, min_year=2017):
 
         # main B120 page (new DWR format)
-        url = 'https://cdec.water.ca.gov/b120{}.html'.format(date_suffix)
+        url = f'https://cdec.water.ca.gov/b120{date_suffix}.html'
 
         # parse HTML file structure; AJ forecast table
         soup = BeautifulSoup(requests.get(url).content, 'html.parser')
@@ -184,7 +184,7 @@ def get_b120_update_data(date_suffix=''):
     # dataframe storing Apr-Jul forecast table
     columns = ['Hydrologic Region', 'Average', 'Percentile']
     for date in forecast_dates:
-        columns += ['{} AJ Vol'.format(date), '{} % Avg'.format(date)]
+        columns += [f'{date} AJ Vol', f'{date} % Avg']
 
     df = pd.DataFrame(aj_list, columns=columns)
 

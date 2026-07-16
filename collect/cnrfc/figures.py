@@ -21,7 +21,7 @@ def plot_ensemble_product_6(filename):
                                   stacked=True, 
                                   color=['r', 'gold', 'lime', 'cyan', 'b'], 
                                   width=0.9)
-    title_text = '\n'.join(['Monthly Volume Exceedance Values on the {}'.format(response['info']['title']),
+    title_text = '\n'.join([f'Monthly Volume Exceedance Values on the {response["info"]["title"]}',
                             'Latitude: {} Longitude: {}',
                             'Forecast for the period {} - {}',
                             'This is a conditional simulation based on the current conditions as of {}',

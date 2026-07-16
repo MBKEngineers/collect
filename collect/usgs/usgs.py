@@ -129,8 +129,7 @@ def get_peak_streamflow(station_id):
     """
 
     # construct query url
-    url = '?'.join(['https://nwis.waterdata.usgs.gov/nwis/peak', 
-                    'site_no={station_id}&agency_cd=USGS&format=rdb']).format(station_id=station_id)
+    url = f'https://nwis.waterdata.usgs.gov/nwis/peak?site_no={station_id}&agency_cd=USGS&format=rdb'
 
     def leap_filter(x):
         if x.split('-', 1)[-1] == '03-00':

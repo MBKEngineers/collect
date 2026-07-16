@@ -133,20 +133,20 @@ def b120_update_scraper(year, month):
     YYYY April-July Unimpaired Runoff    (1,000 Acre-feet)
     """
     month = str(month).rjust(2, '0')
-    url = 'http://cdec.water.ca.gov/cgi-progs/iodir/B120UP.{0}{1}'.format(year, month)
+    url = f'http://cdec.water.ca.gov/cgi-progs/iodir/B120UP.{year}{month}'
     result = requests.get(url).text
 
-    update_header = result[result.find('<h2>B120UP.{0}{1}'.format(year, month)):result.find('</h2>') + 5]
+    update_header = result[result.find(f'<h2>B120UP.{year}{month}'):result.find('</h2>') + 5]
     last_update = datetime.datetime.strptime(
         update_header,
-        '<h2>B120UP.{0}{1} (%m/%d/%y %H%M)</h2>'.format(year, month)
+        f'<h2>B120UP.{year}{month} (%m/%d/%y %H%M)</h2>'
     )
 
     m = datetime.datetime.strptime(month, '%m').strftime('%b')
 
-    header = result[result.find('(1,000 Acre-feet)')+17:result.find('-' * 80)].strip().replace('{0} '.format(m), '{0}_'.format(m))
+    header = result[result.find('(1,000 Acre-feet)')+17:result.find('-' * 80)].strip().replace(f'{m} ', f'{m}_')
 
-    forecast_update_headers = ['{0}_{1}'.format(header.split()[i-1], x)  
+    forecast_update_headers = [f'{header.split()[i-1]}_{x}'
         if 'Avg' in x else x
         for i, x in enumerate(header.split())]
 

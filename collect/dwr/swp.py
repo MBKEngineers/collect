@@ -172,7 +172,7 @@ def get_delta_daily_data(export_as='dict'):
     meta =  {
         'date': date_reformat,
         'filename': 'Delta-Operations-Daily-Summary.pdf',
-        'title': 'EXECUTIVE OPERATIONS SUMMARY ON {}'.format(date),
+        'title': f'EXECUTIVE OPERATIONS SUMMARY ON {date}',
         'contact': 'OCO_Export_Management@water.ca.gov',
         'retrieved': dt.datetime.now().strftime('%Y-%m-%d'),
         'raw': content,

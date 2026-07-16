@@ -21,8 +21,8 @@ def get_cawdl_data(site_id): # NEEDS UPDATES
         dictionary: dictionary of 'data' and 'info' with dataframe of timeseries and station metadata
     """
     cawdl_url = 'http://wdl.water.ca.gov/waterdatalibrary/groundwater/hydrographs/'
-    table_url = cawdl_url + 'report_xcl_brr.cfm?CFGRIDKEY={0}&amp;type=xcl'.format(site_id)
-    site_url = cawdl_url + 'brr_hydro.cfm?CFGRIDKEY={0}'.format(site_id)
+    table_url = cawdl_url + f'report_xcl_brr.cfm?CFGRIDKEY={site_id}&amp;type=xcl'
+    site_url = cawdl_url + f'brr_hydro.cfm?CFGRIDKEY={site_id}'
 
     # read historical ground water timeseries from "recent groundwater level data" tab
     df = pandas.read_csv(table_url, header=2, skiprows=[1], parse_dates=[0], index_col=0)
@@ -63,8 +63,8 @@ def get_cawdl_surface_water_data(site_id, water_year, variable, interval=None):
     if not interval and variable in ('CONDUCTIVITY', 'WATER_TEMPERATURE'):
         interval = 'POINT'
 
-    table_url = cawdl_url + 'docs/{0}/{1}/{2}_{3}_DATA.CSV'.format(site_id, water_year, variable, interval)
-    site_url = cawdl_url + 'index.cfm?site={0}'.format(site_id) # HAVE TO CHANGE AND ADD TO SITE INFO
+    table_url = cawdl_url + f'docs/{site_id}/{water_year}/{variable}_{interval}_DATA.CSV'
+    site_url = cawdl_url + f'index.cfm?site={site_id}' # HAVE TO CHANGE AND ADD TO SITE INFO
 
     # read historical ground water timeseries from "recent groundwater level data" tab
     df = pandas.read_csv(table_url, header=[0, 1, 2], parse_dates=[0], index_col=0)
@@ -107,7 +107,7 @@ def get_cawdl_surface_water_site_report(site_id):
         dictionary: 'info' key with text from CAWDL site report
     """
     cawdl_url = 'https://wdlstorageaccount.blob.core.windows.net/continuousdata/'
-    report_url = cawdl_url + 'docs/{0}/POR/Site_Report.txt'.format(site_id)
+    report_url = cawdl_url + f'docs/{site_id}/POR/Site_Report.txt'
 
     # parse HTML file structure; extract station/well metadata
     site_info = {}

@@ -89,7 +89,7 @@ def get_sites_from_list(as_dataframe=True, sensor_class=None):
     """
     url = 'https://www.sacflood.org/list/'
     if sensor_class:
-        url += '?&sensor_class={}'.format(sensor_class)
+        url += f'?&sensor_class={sensor_class}'
     soup = BeautifulSoup(requests.get(url).text, 'html.parser')
 
     entries = []
