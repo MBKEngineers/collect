@@ -3,7 +3,6 @@ collect.tests.test_cvo
 ============================================================
 initial test suite for collect.cvo data access and utility functions; note: these tests require internet connection
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import io
 import os

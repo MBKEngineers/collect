@@ -29,7 +29,6 @@ Available Sites (generate with `nid.get_sites()`)
     Sawmill Lake Near Graniteville, Ca (SWML)
     Wilson Creek near Sierra City (WLSN)
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import io
 import re

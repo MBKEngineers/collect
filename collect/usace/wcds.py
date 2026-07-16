@@ -3,7 +3,6 @@ collect.usace.wcds
 ============================================================
 USACE Water Control Data System (WCDS)
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import io
 import re

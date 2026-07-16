@@ -3,7 +3,6 @@ collect.cnrfc.cnrfc
 ============================================================
 access CNRFC forecasts
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import io
 import math
@@ -93,7 +92,7 @@ def get_water_year_trend_tabular(cnrfc_id, water_year):
     """
 
     url = get_ensemble_product_url(product_id=9, cnrfc_id=cnrfc_id, data_format='Tabular')
-    url += '&year={0}'.format(water_year)
+    url += f'&year={water_year}'
 
     assert int(water_year) >= 2013, "Ensemble Forecast Product 9 not available before 2013"
 
@@ -162,7 +161,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     flow_prefix = 'Release ' if release else ''
 
     # default deterministic URL and index name
-    url = 'https://www.cnrfc.noaa.gov/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
+    url = f'https://www.cnrfc.noaa.gov/graphical{forecast_type}_csv.php?id={cnrfc_id}'
     date_column_header = 'Valid Date/Time (Pacific)'
     specified_dtypes = {date_column_header: str,
                         'Stage (Feet)': float,
@@ -174,7 +173,7 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
 
     # use restricted site url for certain forecast locations
     if cnrfc_id in RESTRICTED:
-        url = 'https://www.cnrfc.noaa.gov/restricted/graphical{0}_csv.php?id={1}'.format(forecast_type, cnrfc_id)
+        url = f'https://www.cnrfc.noaa.gov/restricted/graphical{forecast_type}_csv.php?id={cnrfc_id}'
         date_column_header = 'Date/Time (Pacific Time)'
         specified_dtypes = {date_column_header: str,
                             f'{flow_prefix}Flow (CFS)': float,
@@ -250,7 +249,7 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
     date_string = _default_date_string(date_string)
 
     # data source
-    url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_csv_export.zip'.format(date_string, watershed)
+    url = f'https://www.cnrfc.noaa.gov/csv/{date_string}_{watershed}_csv_export.zip'
 
     # extract CSV from zip object
     if utils.get_web_status(url):
@@ -270,7 +269,7 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
         stamp = dt.datetime.strptime(date_string, '%Y%m%d%H')
         while not utils.get_web_status(url):
             stamp -= dt.timedelta(hours=6)
-            url = 'https://www.cnrfc.noaa.gov/csv/{0:%Y%m%d%H}_{1}_csv_export.zip'.format(stamp, watershed)
+            url = f'https://www.cnrfc.noaa.gov/csv/{stamp:%Y%m%d%H}_{watershed}_csv_export.zip'
         date_string = stamp.strftime('%Y%m%d%H')
         csvdata = _get_forecast_csv(url)
 
@@ -284,7 +283,7 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
 
     # filter watershed for single forecast point ensemble, if provided
     if cnrfc_id is not None:
-        df = df.filter(regex=r'^{0}((\.\d+)?)$'.format(cnrfc_id))
+        df = df.filter(regex=rf'^{cnrfc_id}((\.\d+)?)$')
 
     # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
     df, units = _apply_conversions(df, 'hourly', acre_feet, pdt_convert, as_pdt)
@@ -318,9 +317,9 @@ def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=Fals
     issue_time, next_issue_time, plot_type = None, None, None
 
     # request page with CNRFC credentials and parse HTML content
-    url = 'https://www.cnrfc.noaa.gov/{1}graphical{2}_tabular.php?id={0}'.format(cnrfc_id, 
-                                                                        'restricted/' if cnrfc_id in RESTRICTED else '',
-                                                                        'Release' if release else 'RVF')
+    pre_graphical = 'restricted/' if cnrfc_id in RESTRICTED else ''
+    post_graphical = 'Release' if release else 'RVF'
+    url = f'https://www.cnrfc.noaa.gov/{pre_graphical}graphical{post_graphical}_tabular.php?id={cnrfc_id}'
     soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
@@ -334,7 +333,7 @@ def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=Fals
 
     if first_ordinate:
         data = soup.find('pre').text.split('\n')
-        forecast_start = parser.parse(data[data.index(u'# FORECAST')+4].strip()[:25])
+        forecast_start = parser.parse(data[data.index('# FORECAST')+4].strip()[:25])
         return issue_time, next_issue_time, title, plot_type, forecast_start
     
     return issue_time, next_issue_time, title, plot_type
@@ -371,7 +370,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     time_issued = get_watershed_forecast_issue_time(duration, get_watershed(cnrfc_id), date_string)
 
     # forecast data url
-    url = 'https://www.cnrfc.noaa.gov/csv/{0}_hefs_csv_{1}.csv'.format(cnrfc_id, duration)
+    url = f'https://www.cnrfc.noaa.gov/csv/{cnrfc_id}_hefs_csv_{duration}.csv'
    
     # read forecast ensemble series from CSV
     csvdata = _get_forecast_csv(url)
@@ -391,7 +390,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
 
     return {'data': df, 'info': {'url': url, 
                                  'watershed': get_watershed(cnrfc_id), 
-                                 'type': '{0} Ensemble Forecast'.format(duration.title()),
+                                 'type': f'{duration.title()} Ensemble Forecast',
                                  'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
                                  'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
                                  'units': units, 
@@ -428,7 +427,7 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
     date_string = _default_date_string(date_string)
 
     # data source
-    url = 'https://www.cnrfc.noaa.gov/csv/{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
+    url = f'https://www.cnrfc.noaa.gov/csv/{date_string}_{watershed}_hefs_csv_{duration}.zip'
 
     # extract CSV from zip object
     if utils.get_web_status(url):
@@ -448,7 +447,7 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
         stamp = dt.datetime.strptime(date_string, '%Y%m%d%H')
         while not utils.get_web_status(url):
             stamp -= dt.timedelta(hours=6)
-            url = 'https://www.cnrfc.noaa.gov/csv/{0:%Y%m%d%H}_{1}_hefs_csv_{2}.zip'.format(stamp, watershed, duration)
+            url = f'https://www.cnrfc.noaa.gov/csv/{stamp:%Y%m%d%H}_{watershed}_hefs_csv_{duration}.zip'
         date_string = stamp.strftime('%Y%m%d%H')
         csvdata = _get_forecast_csv(url)
 
@@ -462,7 +461,7 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
 
     # filter watershed for single forecast point ensemble, if provided
     if cnrfc_id is not None:
-        df = df.filter(regex=r'^{0}((\.\d+)?)$'.format(cnrfc_id))
+        df = df.filter(regex=rf'^{cnrfc_id}((\.\d+)?)$')
 
     # convert kcfs to cfs; optional timezone conversions and optional conversion to acre-feet
     df, units = _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt)
@@ -506,13 +505,13 @@ def download_watershed_file(watershed, date_string, forecast_type, duration=None
     url_end = ''
 
     if forecast_type == 'deterministic':
-        url_end = '{0}_{1}_csv_export.zip'.format(date_string, watershed)
+        url_end = f'{date_string}_{watershed}_csv_export.zip'
     elif forecast_type == 'ensemble':
         duration = _validate_duration(duration)
-        url_end = '{0}_{1}_hefs_csv_{2}.zip'.format(date_string, watershed, duration)
+        url_end = f'{date_string}_{watershed}_hefs_csv_{duration}.zip'
 
     # the CNRFC resource path to zipped watershed file
-    url = 'https://www.cnrfc.noaa.gov/csv/' + url_end
+    url = f'https://www.cnrfc.noaa.gov/csv/{url_end}'
 
     # extract CSV from zip object
     if utils.get_web_status(url):
@@ -690,7 +689,7 @@ def get_ensemble_product_url(product_id, cnrfc_id, data_format=''):
     """
     return the URL for the product display
     """
-    return 'https://www.cnrfc.noaa.gov/ensembleProduct{2}.php?id={1}&prodID={0}'.format(product_id, cnrfc_id, data_format)
+    return f'https://www.cnrfc.noaa.gov/ensembleProduct{data_format}.php?id={cnrfc_id}&prodID={product_id}'
 
 
 def get_ensemble_product_1(cnrfc_id):
@@ -723,7 +722,7 @@ def get_ensemble_product_2(cnrfc_id):
     # parse title and date updated from table
     for td in data_table.find_all('td', {'class': 'medBlue-background'}):
         title, time_issued = str(td.find('strong')).split('<br/>')
-        time_issued = time_issued.rstrip('</strong>').lstrip('Data Updated: ')
+        time_issued = time_issued.removesuffix('</strong>').removeprefix('Data Updated: ')
 
     return {'data': df, 'info': {'url': url,
                                  'type': 'Tabular 10-Day Streamflow Volume Accumulation',
@@ -771,8 +770,8 @@ def get_ensemble_product_6(cnrfc_id):
     # parse title and date updated from table
     for td in data_table.find_all('td', {'class': 'medBlue-background'}):
         title, time_issued = str(td.find('strong')).split('<br/>')
-        time_issued = time_issued.rstrip('</strong>').lstrip('Data Updated: ')
-        title = title.lstrip('<strong>')
+        time_issued = time_issued.removesuffix('</strong>').removeprefix('Data Updated: ')
+        title = title.removeprefix('<strong>')
 
     return {'data': df, 'info': {'url': url,
                                  'type': title,
@@ -1076,7 +1075,7 @@ def _default_date_string(date_string):
     """
     if date_string is None:
         now = utils.get_localized_datetime(dt.datetime.now(), 'UTC')
-        date_string = now.strftime('%Y%m%d{0:02.0f}'.format(6 * math.floor(now.hour/6)))
+        date_string = now.strftime(f'%Y%m%d{6 * math.floor(now.hour/6):02.0f}')
     
     # hour validation
     if date_string[-2:] not in ['00', '06', '12', '18']:

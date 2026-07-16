@@ -3,7 +3,6 @@ collect.tests.test_utils
 ============================================================
 initial test suite for collect.utils utility functions; note: these tests require internet connection
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import unittest
 import pandas as pd

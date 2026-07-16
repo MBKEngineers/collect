@@ -3,7 +3,6 @@ collect.dwr.swp
 ======================================================================
 access select DWR delta conditions PDFs and State Water Project files
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import io
 import re
@@ -82,10 +81,10 @@ def get_report_catalog(console=True):
         for k, v in catalog.items():
             print('\n')
             print(k)
-            print('='*80)
+            print('=' * 80)
             for kk, vv in v.items():
-                print('\t'+kk)
-                print('\t\t'+vv.split('/')[-1])
+                print(f'\t{kk}')
+                print(f'\t\t{vv.split("/")[-1]}')
 
     return catalog
 
@@ -172,7 +171,7 @@ def get_delta_daily_data(export_as='dict'):
     meta =  {
         'date': date_reformat,
         'filename': 'Delta-Operations-Daily-Summary.pdf',
-        'title': 'EXECUTIVE OPERATIONS SUMMARY ON {}'.format(date),
+        'title': f'EXECUTIVE OPERATIONS SUMMARY ON {date}',
         'contact': 'OCO_Export_Management@water.ca.gov',
         'retrieved': dt.datetime.now().strftime('%Y-%m-%d'),
         'raw': content,
@@ -192,7 +191,7 @@ def get_delta_daily_data(export_as='dict'):
         units = units_match[0] if bool(units_match) else ''
 
         if bool(units):
-            value = value.rstrip(units).strip().replace(',', '')
+            value = value.removesuffix(units).strip().replace(',', '')
 
         if match.group('operator') == '=':
             if bool(units):

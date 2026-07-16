@@ -3,7 +3,6 @@ collect.cnrfc.figures
 ============================================================
 plot CNRFC forecasts
 """
-# -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 from collect.cnrfc import cnrfc
 
@@ -21,10 +20,10 @@ def plot_ensemble_product_6(filename):
                                   stacked=True, 
                                   color=['r', 'gold', 'lime', 'cyan', 'b'], 
                                   width=0.9)
-    title_text = '\n'.join(['Monthly Volume Exceedance Values on the {}'.format(response['info']['title']),
-                            'Latitude: {} Longitude: {}',
-                            'Forecast for the period {} - {}',
-                            'This is a conditional simulation based on the current conditions as of {}',
+    info = response['info']
+    title_text = '\n'.join([f'Monthly Volume Exceedance Values on the {info["type"]}',
+                            f'Forecast for the period {df.columns[0]} - {df.columns[-1]}',
+                            f'This is a conditional simulation based on the current conditions as of {info["issue_time"]}',
                             '(src=D)'])
     plt.title(title_text)
     plt.savefig(filename)

@@ -3,7 +3,6 @@ collect.tests.test_usgs
 ============================================================
 initial test suite for collect.usgs data access and utility functions; note: these tests require internet connection
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import unittest
 from collect import usgs

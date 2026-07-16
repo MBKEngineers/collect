@@ -3,7 +3,6 @@ collect.cnrfc.utilities
 ============================================================
 
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import math
 import pandas as pd

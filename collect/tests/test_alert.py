@@ -3,7 +3,6 @@ collect.tests.test_alert
 ============================================================
 initial test suite for collect.alert data access and utility functions; note: these tests require internet connection
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import unittest
 from collect import alert
