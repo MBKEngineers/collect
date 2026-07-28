@@ -14,7 +14,7 @@ import requests
 
 try:
     from tabula import read_pdf
-except:
+except ImportError:
     print('Module tabula is required for CVO report collection.  Install with `pip install tabula-py==2.4.0`')
 
 
@@ -556,7 +556,7 @@ def get_report(date_structure, report_type):
                            skiprows=10,
                            names=get_report_columns(report_type, date_structure),
                            index_col=False,
-                           delim_whitespace=True,
+                           sep=r'\s+',
                            engine='python')
         df = doutdly_data_cleaner(df, report_type, date_structure)
 

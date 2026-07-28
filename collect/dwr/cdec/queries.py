@@ -131,10 +131,12 @@ def get_raw_station_csv(station, start, end, sensors=[], duration='', filename=N
         'DURATION': str,
         'SENSOR_NUMBER': int,
         'SENSOR_TYPE': str,
-        'DATE TIME': str,
+        # 'DATE TIME' is the index (index_col=4) and is parsed by parse_dates; casting it to str
+        # here makes pandas>=2.3 stringify the parsed datetimes as nanosecond-epoch integers
         'OBS DATE': str,
         'DATA_FLAG': str,
         'UNITS': str,
+        'RATING_FLAG': str
     }
 
     # fetch data from CDEC

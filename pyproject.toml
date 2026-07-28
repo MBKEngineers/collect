@@ -2,17 +2,20 @@
 requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+include = ["collect*"]
+
 [project]
-version = "0.0.2"
+version = "0.0.3"
 name = "collect"
 description = "Contains various web-scraping utilities used at MBK Engineers"
 readme = "README.md"
 requires-python = ">= 3.11"
 dependencies = [
-  "numpy==1.26.2",
+  "numpy>=2.2.6",
+  "pandas>=2.2.3,<3",
   "beautifulsoup4==4.12.3",
   "html5lib==1.1",
-  "pandas==1.5.3",
   "pyOpenSSL==23.3.0",
   "python-dateutil==2.9.0",
   "python-dotenv==1.0.0",
@@ -38,6 +41,8 @@ keywords = [""]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
@@ -47,7 +52,7 @@ swp = [
   "pdftotext==2.2.2"
 ]
 filters = [
-  "scipy==1.10.4"
+  "scipy>=1.14.1"
 ]
 docs = [
     "Sphinx==4.3.0",

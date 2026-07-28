@@ -266,7 +266,7 @@ def parse_qualifiers(series):
     return {x: y for x, y in map(lambda x: x.split(' - '), entries)}
 
 
-def serialize(df, day_format='%Y-%-m-%-d'):
+def serialize(df, day_format='%Y-%m-%d'):
     """
     Arguments:
         df (pandas.DataFrame): a pandas dataframe with date/time index
