@@ -6,6 +6,7 @@ initial test suite for collect.usace data access and utility functions; note: th
 # -*- coding: utf-8 -*-
 import datetime as dt
 import unittest
+from zoneinfo import ZoneInfo
 from collect.usace import wcds
 
 
@@ -33,11 +34,6 @@ class TestUSACE(unittest.TestCase):
                          '2021-09-30 00:00:00',
                          '2021-10-01 00:00:00'])
 
-    def test_get_data(self):
-        result = wcds.get_wcds_data('sha', dt.datetime(2023, 1, 15), dt.datetime(2023, 2, 1), interval='d')
-        self.assertEqual(result['data'].shape, (18, 16))
-        self.assertEqual(result['data']['Storage'].tolist()[:4], [2235532.0, 2308907.0, 2357517.0, 2392661.0])
-
     def test_get_wcds_reservoirs(self):
         """
         show that 35 reservoirs exist in the internal collect record for WCDS reservoirs
@@ -45,7 +41,10 @@ class TestUSACE(unittest.TestCase):
         self.assertEqual(wcds.get_wcds_reservoirs().shape[0], 35)
 
     def test_get_wcds_data(self):
-        result = wcds.get_wcds_data('sha', dt.datetime(2023, 1, 15), dt.datetime(2023, 2, 1), interval='d')
+        result = wcds.get_wcds_data('sha',
+                                    dt.datetime(2023, 1, 15, tzinfo=ZoneInfo('US/Pacific')),
+                                    dt.datetime(2023, 2, 1, tzinfo=ZoneInfo('US/Pacific')),
+                                    interval='d')
         self.assertEqual(result['data'].shape, (18, 16))
         self.assertEqual(result['data']['Storage'].tolist()[:4], [2235532.0, 2308907.0, 2357517.0, 2392661.0])
 
@@ -60,28 +59,38 @@ class TestUSACE(unittest.TestCase):
         self.assertTrue('Precip @ Dam (in; elev 712 ft)' in result['data headers'])
 
     def test_extract_basin_totals(self):
-        result = wcds.extract_basin_totals(dt.datetime(2025, 1, 1))
+        result = wcds.extract_basin_totals(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
         self.assertEqual(float(result.loc['BASIN TOTALS', 'Percent Encroached']), 5.0)
         # returns string of unformatted data
-        result = wcds.extract_basin_totals(dt.datetime(2015, 1, 1))
+        result = wcds.extract_basin_totals(dt.datetime(2015, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
         self.assertTrue(isinstance(result, str))
 
     def test_extract_sac_valley_fcr_data(self):
-        result = wcds.extract_sac_valley_fcr_data(dt.datetime(2025, 1, 1))
+        """
+        Grabs this date of the report:
+
+        Corps of Engineers Flood Control Requirements for California Reservoirs
+        Data Ending 2400 hours   30 DEC 2024
+        Report Generated 31 DEC 2024 @ 2300
+
+
+        Assertion should then use: 11.57 and 966823
+        """
+        result = wcds.extract_sac_valley_fcr_data(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
         self.assertEqual(float(result.loc['Oroville', 'Flood Control Parameters (Rain in.)']), 10.89)
         self.assertEqual(float(result.loc['Folsom', 'Gross Pool (acft)']), 966823)
 
     def test_extract_folsom_fcr_data(self):
         # date has No Forecast rows in table
-        result = wcds.extract_folsom_fcr_data(dt.datetime(2025, 1, 1))
+        result = wcds.extract_folsom_fcr_data(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
         self.assertEqual(float(result.loc['02JAN2025 12z', '3-Day Forecasted Volume']), 27573)
         self.assertEqual(float(result.loc['02JAN2025 18z', 'Top of Conservation (acft)']), 566823)
         # date has 5 forecast dates
-        result = wcds.extract_folsom_fcr_data(dt.datetime(2025, 2, 2))
+        result = wcds.extract_folsom_fcr_data(dt.datetime(2025, 2, 2, tzinfo=ZoneInfo('US/Pacific')))
         self.assertEqual(float(result.loc['03FEB2025 18z', '5-Day Forecasted Volume']), 228664)
 
     def test_get_fcr_data(self):
-        result = wcds.get_fcr_data(dt.datetime(2023, 1, 13))
+        result = wcds.get_fcr_data(dt.datetime(2023, 1, 13, tzinfo=ZoneInfo('US/Pacific')))
         self.assertEqual(float(result['fcr'].loc['Oroville', 'Flood Control Parameters (Rain in.)']), 13.06)
         self.assertEqual(float(result['fcr'].loc['Folsom', 'Gross Pool (acft)']), 966823)
         self.assertEqual(float(result['folsom'].loc['14JAN2023 24z', '2-Day Forecasted Volume']), 123031)

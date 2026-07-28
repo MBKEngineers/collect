@@ -1,7 +1,7 @@
 import numpy as np
 try:
     from scipy.signal import argrelextrema
-except:
+except ImportError:
     print('Module scipy is required for collect.utils.filters module. Install with `pip install scipy>=1.14.1`.')
 
 

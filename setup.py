@@ -4,7 +4,7 @@ import setuptools
 
 setuptools.setup(
     name='collect',
-    version='0.0.2',
+    version='0.0.3',
     author='MBK Engineers',
     author_email='narlesky@mbkengineers.com',
     classifiers=(
@@ -16,12 +16,12 @@ setuptools.setup(
     url='https://github.com/MBKEngineers/collect.git',
     packages=setuptools.find_packages(),
     setup_requires=[
-        'numpy==1.26.2'
+        'numpy==2.2.6',
     ],
     install_requires=[
         'beautifulsoup4==4.12.3',
         'html5lib==1.1',
-        'pandas==1.5.3',
+        'pandas==2.2.2',
         'pyOpenSSL==23.3.0',
         'python-dateutil==2.9.0',
         'python-dotenv==1.0.0',

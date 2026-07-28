@@ -52,9 +52,9 @@ class TestSacAlert(unittest.TestCase):
 
     def test_get_sites_from_list(self):
         """
-        test the expected number of sites registered on the Sac Alert websites
+        test the expected number of sites registered on the Sac Alert websites; 140 sites as of 2026-07-28
         """
-        self.assertEqual(alert.get_sites_from_list(as_dataframe=True, sensor_class=None).shape, (127, 4))
+        self.assertEqual(alert.get_sites_from_list(as_dataframe=True, sensor_class=None).shape, (140, 4))
 
     def test_ustrip(self):
         self.assertEqual(alert.alert._ustrip('\u00A0'), '')

@@ -1114,10 +1114,13 @@ def _parse_blue_table(table_soup):
         if len(data_cells) > 1:
             row = []
             for td in data_cells:
+                text = td.text.strip()
                 try:
-                    row.append(float(td.text.strip()))
+                    row.append(float(text))
                 except ValueError:
-                    row.append(td.text.strip())
+                    # '--' is CNRFC's missing-data marker; convert at parse time so
+                    # numeric columns are inferred as float rather than object
+                    row.append(float('nan') if text == '--' else text)
             rows.append(row)
         else:
             try:
@@ -1126,5 +1129,5 @@ def _parse_blue_table(table_soup):
                 pass
 
     # format as dataframe
-    df = pd.DataFrame(rows, columns=columns).replace({'--': float('nan')})
+    df = pd.DataFrame(rows, columns=columns)
     return df, notes

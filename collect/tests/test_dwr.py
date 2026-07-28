@@ -468,7 +468,7 @@ try:
             self.assertEqual(result['data'].shape, (30, 46))
             self.assertEqual(result['data'].index.name, 'Date (30 days)')
 
-except:
+except ImportError:
     print('Module pdftotext is required for collect.dwr.swp testing.  Install with `pip install pdftotext==2.2.2`')
 
 

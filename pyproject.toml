@@ -3,16 +3,16 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-version = "0.0.2"
+version = "0.0.3"
 name = "collect"
 description = "Contains various web-scraping utilities used at MBK Engineers"
 readme = "README.md"
 requires-python = ">= 3.11"
 dependencies = [
-  "numpy==1.26.2",
+  "numpy==2.2.6",
+  "pandas==2.2.2",
   "beautifulsoup4==4.12.3",
   "html5lib==1.1",
-  "pandas==1.5.3",
   "pyOpenSSL==23.3.0",
   "python-dateutil==2.9.0",
   "python-dotenv==1.0.0",

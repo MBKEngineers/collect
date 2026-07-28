@@ -14,7 +14,7 @@ import requests
 
 try:
     from tabula import read_pdf
-except:
+except ImportError:
     print('Module tabula is required for CVO report collection.  Install with `pip install tabula-py==2.4.0`')
 
 

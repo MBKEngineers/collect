@@ -11,11 +11,6 @@ import re
 import pandas as pd
 import requests
 
-try:
-    import pdftotext
-except:
-    print('Module pdftotext is required for SWP report collection.  Install with `pip install pdftotext==2.2.2`')
-
 
 def get_report_catalog(console=True):
     """
@@ -120,6 +115,11 @@ def get_raw_text(report, filename=None, preserve_white_space=True):
     Raises:
         ValueError: if the specified report does not map to a PDF, raise a ValueError
     """
+    try:
+        import pdftotext
+    except ImportError:
+        print('Module pdftotext is required for SWP report collection.  Install with `pip install pdftotext==2.2.2`')
+
     # construct URL
     url = get_report_url(report)
 
@@ -305,6 +305,11 @@ def get_oco_tabular_data(report):
     Returns:
         content (str): the string contents of the PDF (preserves whitespace)
     """
+    try:
+        import pdftotext
+    except ImportError:
+        print('Module pdftotext is required for SWP report collection.  Install with `pip install pdftotext==2.2.2`')
+
     # construct URL
     url = get_report_url(report)
 
