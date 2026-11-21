@@ -7,6 +7,7 @@ import datetime as dt
 import io
 import re
 import textwrap
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -24,7 +25,6 @@ def get_water_year_data(reservoir, water_year, interval='d'):
         reservoir (str): three-letter reservoir code; i.e. 'fol'
         water_year (int): the water year
         interval (str): data interval; i.e. 'd' 
-
     Returns:
         result (dict): query result dictionary with 'data' and 'info' keys
     """
@@ -252,7 +252,9 @@ def get_release_report(reservoir):
         df.columns = column_headers
 
         # create a date/time index
-        df.index = df.loc[:, 'Description'].apply(lambda x: dt.datetime.strptime(re.findall(r'Change for\s+(\d{1,2}\w{3}\d{4} @ \d{4}).*', x)[0], '%d%b%Y @ %H%M'))
+        df.index = (df.loc[:, 'Description']
+                      .apply(lambda x: dt.datetime.strptime(
+                            re.findall(r'Change for\s+(\d{1,2}\w{3}\d{4} @ \d{4}).*', x)[0], '%d%b%Y @ %H%M')))
         df.index.name = 'Date/Time'
 
         # extract the email comment footer
@@ -318,226 +320,771 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     return result
 
 
-def extract_fcr_text(datetime_structure):
+# the first FCR report with ANY valid values for the expected tables (data ending 2400 hours 27 AUG 2012); many
+# values are placeholders
+_FCR_START = dt.datetime(2012, 8, 27, 0, tzinfo=utils.tz_function('US/Pacific'))
+
+# the first report with valid values for most of each basin section's tables, by section; a section not listed
+# starts at _FCR_START
+_FCR_SECTION_START = {
+    'Sacramento Valley': dt.datetime(2014, 2, 5, 0, tzinfo=utils.tz_function('US/Pacific')),
+    'San Joaquin Valley': dt.datetime(2014, 5, 27, 0, tzinfo=utils.tz_function('US/Pacific')),
+    'Tulare Lake Basin': dt.datetime(2013, 8, 19, 0, tzinfo=utils.tz_function('US/Pacific')),
+    'Truckee River Basin': dt.datetime(2014, 5, 27, 0, tzinfo=utils.tz_function('US/Pacific')),
+    'Russian River Basin': dt.datetime(2014, 1, 13, 0, tzinfo=utils.tz_function('US/Pacific')),
+    'So. San Francisco Bay Basin': dt.datetime(2014, 5, 27, 0, tzinfo=utils.tz_function('US/Pacific')),
+}
+
+
+# the first report with the Folsom forecast volumes table in the Sacramento Valley section
+_FCR_FOLSOM_START = dt.datetime(2019, 7, 1, 0, tzinfo=utils.tz_function('US/Pacific'))
+
+
+# the basin sections of the FCR report, in report order
+FCR_BASINS = ('Sacramento Valley',
+              'San Joaquin Valley',
+              'Tulare Lake Basin',
+              'Truckee River Basin',
+              'Russian River Basin',
+              'So. San Francisco Bay Basin')
+
+
+# section heading patterns for basins whose heading is misspelled in some reports, e.g. "---- Truckee Rivee Basin ----"
+# (report data ending 23 APR 2017); other basins' headings match their name exactly
+_FCR_SECTION_HEADINGS = {'Truckee River Basin': r'Truckee Rive\w Basin'}
+
+
+# the basin sections of the FCR report that report no basin totals, so missing totals are expected and not warned about
+_FCR_BASINS_WITHOUT_TOTALS = ('So. San Francisco Bay Basin',)
+
+
+def _check_fcr_basin(basin):
     """
-    read the text in the Sacramento Valley section of the USACE SPK FCR report
+    raise ValueError if `basin` is not an FCR report basin section name
 
     Arguments:
-        datetime_structure (datetime.datetime): datetime object
+        basin (str): the basin section name, one of FCR_BASINS, e.g. 'Sacramento Valley'
+    """
+    if basin not in FCR_BASINS:
+        raise ValueError(f'basin must be one of {", ".join(map(repr, FCR_BASINS))}; got {basin!r}')
+
+
+def _check_fcr_available(datetime_structure, table, start=_FCR_START):
+    """
+    whether FCR report tables are parsed for the requested date; prints a warning if not
+
+    Arguments:
+        datetime_structure (datetime.datetime): timezone-aware datetime object
+        table (str): the table name for the warning, e.g. 'Sac Valley'
+        start (datetime.datetime): the first supported report date; defaults to 27 AUG 2012, US/Pacific
     Returns:
-        (list): list of text from the FCR report
+        (bool): False if the requested date is before the first supported report
+    """
+    assert datetime_structure.tzinfo is not None, '`datetime_structure` must be timezone aware'
+
+    if datetime_structure < start:
+        print(f'WARNING: {table} table unavailable before {start:%Y-%m-%d}')
+        return False
+    return True
+
+
+def _count_fcr_days_ago(datetime_structure):
+    """
+    the number of whole calendar days (Pacific) between today and the requested FCR report date
+
+    Arguments:
+        datetime_structure (datetime.datetime): timezone-aware datetime object
+    Returns:
+        days (int): days before today; at least 1
+    Raises:
+        ValueError: if the requested date is today or later, as the report is not yet available
     """
     assert datetime_structure.tzinfo is not None, '`datetime_structure` must be timezone aware'
 
     # data on WCDS is in Pacific
     datetime_structure_pacific = datetime_structure.astimezone(utils.tz_function('US/Pacific'))
 
-    # get today's date in pacific time for 0000 Pacific
-    today_pacific = dt.datetime.now(tz=datetime_structure_pacific.tzinfo).replace(hour=0)
+    # get today's date in pacific time
+    today_pacific = dt.datetime.now(tz=datetime_structure_pacific.tzinfo).date()
 
-    # compute the days between today and the datetime
-    days = (today_pacific - datetime_structure_pacific).days
+    # compute the whole calendar days between today and the requested date
+    days = (today_pacific - datetime_structure_pacific.date()).days
 
-    if days <= 0:
-        raise NotImplementedError(f'Date unavailable: {datetime_structure_pacific:%Y-%m-%d}')
+    # the most recent available report is for yesterday's data
+    if days < 1:
+        raise ValueError(f'FCR report unavailable for {datetime_structure_pacific:%Y-%m-%d}; '
+                         'latest available date is yesterday (Pacific)')
 
-    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days+1}&report=FCR&textonly=true'
+    return days
+
+
+def _get_fcr_report(datetime_structure, report=None):
+    """
+    get the full text of the USACE SPK FCR report for the requested date
+
+    if the report has already been fetched (e.g. by `get_fcr_data`, which fetches it once for all tables) and is passed
+    as `report`, it is returned as a passthrough: no request is made and the date is not checked against the report;
+    otherwise the report is fetched from WCDS
+
+    Arguments:
+        datetime_structure (datetime.datetime): timezone-aware datetime object
+        report (str, optional): the already-fetched report text for the requested date
+    Returns:
+        (str): the report text
+    Raises:
+        ValueError: if the report is fetched and the requested date is today or later, as the report is not yet
+            available, or if the fetched report's data ending date is not the requested date (Pacific)
+    """
+    if report is not None:
+        return report
+
+    days = _count_fcr_days_ago(datetime_structure)
+
+    # midnight.py `days=N` returns the report with data ending on (today - N - 1), so offset by one
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days - 1}&report=FCR&textonly=true'
     content = utils.get_session_response(url).text
-    # get the list of text between Sacramento Valley and San Joaquin Valley
-    return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
+
+    # the offset is relative to WCDS's current day, so confirm the report returned is for the requested date; e.g.
+    # yesterday's report is not published until later in the day
+    requested = datetime_structure.astimezone(utils.tz_function('US/Pacific')).date()
+    report_date = _get_fcr_report_date(content)
+    if report_date != requested:
+        returned = 'no data ending date' if report_date is None else f'data ending {report_date:%Y-%m-%d}'
+        raise ValueError(f'FCR report unavailable for {requested:%Y-%m-%d}; WCDS returned a report with {returned}, '
+                         'the report may not be published yet')
+    return content
 
 
-def extract_sac_valley_fcr_data(datetime_structure):
+def _get_fcr_report_date(content):
+    """
+    the data ending date of the FCR report text, from the "Data Ending 2400 hours DD MON YYYY" header
+
+    Arguments:
+        content (str): the FCR report text
+    Returns:
+        (datetime.date or None): the data ending date, or None if the header is not found
+    """
+    match = re.search(r'Data Ending 2400 hours\s+(\d{1,2} [A-Za-z]{3} \d{4})', content)
+    return None if match is None else dt.datetime.strptime(match.group(1), '%d %b %Y').date()
+
+
+def _get_fcr_report_generated(content):
+    """
+    when the FCR report text was generated, from the "Report Generated DD MON YYYY @ HHMM" header; a report for a date
+    is regenerated during the following days, so this identifies which version of the report was retrieved
+
+    Arguments:
+        content (str): the FCR report text
+    Returns:
+        (datetime.datetime or None): the generated time in US/Pacific, or None if the header is not found
+    """
+    match = re.search(r'Report Generated\s+(\d{1,2} [A-Za-z]{3} \d{4}) @ (\d{4})', content)
+    if match is None:
+        return None
+    generated = dt.datetime.strptime(f'{match.group(1)} {match.group(2)}', '%d %b %Y %H%M')
+    return utils.get_localized_datetime(generated, 'US/Pacific')
+
+
+def _get_fcr_section(content, basin):
+    """
+    the text of one basin section of the FCR report text, from its heading to the next section heading or the end of the
+    report
+
+    Arguments:
+        content (str): the FCR report text
+        basin (str): the basin section name, one of FCR_BASINS, e.g. 'Sacramento Valley'
+    Returns:
+        (str or None): the section text, or None if the section is not in the report
+    """
+    # section headings are centered names between dashes; the space before the closing dashes is not
+    # always present (e.g. "---- Russian River Basin----")
+    heading = _FCR_SECTION_HEADINGS.get(basin, re.escape(basin))
+    match = re.search(rf'^\s*---- {heading} ?----\s*$([\S\s]*?)(?=^\s*---- [^\n]*?----\s*$|\Z)',
+                      content.replace('\r', ''), re.MULTILINE)
+    return None if match is None else match.group(0)
+
+
+def _has_fcr_percent_encroached_label(content):
+    """
+    whether the FCR report labels the parenthesized values after the above top of conservation storage as percent
+    encroached, with the "( **)" column header or the "**  Percent Encroached" footnote; earlier reports (e.g. 2014)
+    show parenthesized values there without either label, and their meaning is unknown
+
+    the label is checked for the whole report rather than each section, as the Truckee River Basin header omits "( **)"
+    in reports that otherwise label the column
+
+    Arguments:
+        content (str): the FCR report text
+    Returns:
+        (bool): True if the report labels percent encroached
+    """
+    return bool(re.search(r'\(\s*\*\*\s*\)|^\s*\*\*\s+Percent Encroached', content, re.MULTILINE))
+
+
+def extract_sac_valley_fcr_data(datetime_structure, nr_value=None, report=None):
     """
     get the Sacramento Valley Storages and Flood Control Parameters from the FCR report
 
+    deprecated: use `extract_basin_fcr_table(datetime_structure, 'Sacramento Valley')`, which returns the same table
+
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the string 'NR');
+            defaults to None, the same as blank and not-applicable (----, N/A) entries, so values convert to float; pass
+            'NR' to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
-        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
-            specific to Sacramento Valley
+        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data, specific to Sacramento
+            Valley
     """
-    last_date = dt.datetime(2014, 2, 5, 12, tzinfo=utils.tz_function('UTC'))
-    if datetime_structure.astimezone(utils.tz_function('UTC')) < last_date:
-        print(f'WARNING: Sac Valley table unavailable before {last_date:%Y-%m-%d}')
+    warnings.warn("extract_sac_valley_fcr_data is deprecated; use "
+                  "extract_basin_fcr_table(datetime_structure, 'Sacramento Valley')",
+                  DeprecationWarning, stacklevel=2)
+    return extract_basin_fcr_table(datetime_structure, basin='Sacramento Valley', nr_value=nr_value, report=report)
+
+
+def extract_folsom_fcr_data(datetime_structure, nr_value=None, report=None):
+    """
+    get the Folsom Storages, Flood Control Parameters, and Forecasted Volumes from the Sacramento Valley section of the
+    FCR report
+
+    deprecated: use `get_fcr_data(datetime_structure)['Sacramento Valley']['folsom']`, which returns the same table
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the string 'NR');
+            defaults to None, the same as blank and not-applicable (----) entries, so values convert to float; pass 'NR'
+            to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
+    Returns:
+        df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecast volumes, specific
+            to Folsom
+    """
+    warnings.warn("extract_folsom_fcr_data is deprecated; use "
+                  "get_fcr_data(datetime_structure)['Sacramento Valley']['folsom']",
+                  DeprecationWarning, stacklevel=2)
+    return _get_fcr_folsom_forecast(datetime_structure, nr_value=nr_value, report=report)
+
+
+def _get_fcr_folsom_forecast(datetime_structure, nr_value=None, report=None):
+    """
+    get the Folsom forecast volumes table of the FCR report for the requested date, if the date is on or after the first
+    report with the table
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported (-NR-) entries
+        report (str, optional): the FCR report text for the requested date, if already retrieved
+    Returns:
+        df (pandas.DataFrame): the Folsom forecast volumes by forecast date and time; None if the date is before the
+            first report with the table, or the table is not reported
+    """
+    if not _check_fcr_available(datetime_structure, 'Folsom forecast volumes', start=_FCR_FOLSOM_START):
+        return None
+    section = _get_fcr_section(_get_fcr_report(datetime_structure, report), 'Sacramento Valley')
+    if section is None:
+        print(f'WARNING: Sacramento Valley section not found in FCR report')
+        return None
+    return _parse_fcr_folsom_forecast(section, nr_value=nr_value)
+
+
+def _parse_fcr_folsom_forecast(section, nr_value=None):
+    """
+    parse the Folsom forecast volumes table of the Sacramento Valley section of the FCR report, between the Folsom row
+    ("Forecasted Volumes****") and the basin totals; the storages and percent encroached are aligned with the Sacramento
+    Valley table's columns and are assigned by the positions of its rule line (see `_get_fcr_column_edges`), so a blank
+    storage does not shift later values; the forecast volumes follow the above top of conservation column, separated by
+    ';'
+
+    Arguments:
+        section (str): the Sacramento Valley section text
+        nr_value (optional): value returned for not-reported (-NR-) entries
+    Returns:
+        df (pandas.DataFrame): the Folsom storages, percent encroached, and 1-, 2-, 3-, and 5-day forecast volumes by
+            forecast date and time (e.g. "19NOV2026 12z"); None if the section has no forecast rows
+    """
+    match = re.search(r'Forecasted Volumes\*\*\*\*([\S\s]*?)BASIN TOTALS', section)
+    if match is None:
+        print(f'WARNING: Folsom forecast data not reported or format not supported')
+        return None
+    table_query = match.group(1)
+
+    edges = _get_fcr_column_edges(section.replace('\r', '').splitlines())
+    if edges is None:
+        print(f'WARNING: Folsom forecast data format not supported')
+        return None
+    _, right_edges, above_start = edges
+    # the forecast volumes begin at the first value after the above top of conservation column; a parenthesized percent
+    # encroached can extend past the column (e.g. "(-142)") and is not a forecast volume
+    forecast_start = right_edges[4]
+    token_pattern = re.compile(rf'{_FCR_PARENTHESIZED_PATTERN}|[^\s(]+')
+
+    # parse each forecast row independently so a single malformed, truncated, or not-reported (-NR-) row does not
+    # invalidate the table; separator, "No Forecast", and blank rows do not match and are skipped
+    row_pattern = re.compile(r'^\s*(\d{2}[A-Z]{3}\d{4})\s+(\d{1,2})(?:\s(.*))?$')
+
+    columns = ['Top of Conservation (acft)',
+               'Actual Res (acft)',
+               r'% of GrossPool',
+               'Above Top of Conservation(acft)',
+               'Percent Encroached',
+               '1-Day Forecasted Volume',
+               '2-Day Forecasted Volume',
+               '3-Day Forecasted Volume',
+               '5-Day Forecasted Volume']
+
+    # rows are kept as a list because observed and forecast rows can share a timestamp
+    index, rows = [], []
+    for line in table_query.splitlines():
+        match = row_pattern.match(line)
+        if match is None:
+            continue
+        # a row with only a date and time has no values and is kept with all values None; a truncated row (e.g.
+        # "22DEC2025 18  560,378") has storages only
+        forecast_date, forecast_time = match.group(1), match.group(2)
+        split = next((token.start() for token in token_pattern.finditer(line, match.end(2))
+                      if not token.group(0).startswith('(') and token.start() >= forecast_start), len(line))
+
+        # storages are assigned to the top of conservation, actual, % of gross pool, and above top of conservation
+        # columns by position; the row has no gross pool value
+        values, percent_encroached = _split_fcr_row(line[:split], match.end(2), right_edges[:5], above_start)
+        if values[0] is not None:
+            print(f'WARNING: Folsom forecast value {values[0]!r} is in the gross pool column and was ignored: '
+                  f'{line.strip()!r}')
+        storages = values[1:5]
+
+        forecasts = [x.strip() for x in line[split:].split(';') if x.strip()]
+        if len(forecasts) > 4:
+            print(f'WARNING: Folsom forecast row has more forecast volumes than columns; extra values were ignored: '
+                  f'{line.strip()!r}')
+        forecasts = (forecasts + [None] * 4)[:4]
+
+        index.append(f'{forecast_date} {forecast_time}z')
+        rows.append([_parse_fcr_value(x, nr_value) for x in storages + [percent_encroached] + forecasts])
+
+    if len(rows) == 0:
+        print(f'WARNING: Folsom forecast data not reported or format not supported')
         return None
 
-    query = extract_fcr_text(datetime_structure)
-    if len(query) > 0:
-        query = query[0]
-    else:
+    # columns without missing or text values (e.g. an `nr_value` placeholder) are float; others keep None and text
+    df = pd.DataFrame(rows, index=index, columns=columns, dtype=object)
+    return _convert_float_columns(df).replace(np.nan, None)
+
+
+def extract_basin_fcr_table(datetime_structure, basin, nr_value=None, report=None):
+    """
+    get the reservoir storages and flood control parameters table of one basin section of the FCR report
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+        basin (str): the basin section name, one of FCR_BASINS, e.g. 'Sacramento Valley'
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the string 'NR');
+            defaults to None, the same as blank and not-applicable (----, N/A) entries, so values convert to float; pass
+            'NR' to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
+    Returns:
+        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data by reservoir, including
+            upstream reservoirs listed under their downstream reservoir (e.g. Pardee); None if the requested date is
+            before the basin's first supported report, or the section is not in the report
+    Raises:
+        ValueError: if `basin` is not an FCR report basin section name
+    """
+    _check_fcr_basin(basin)
+    if not _check_fcr_available(datetime_structure, basin, start=_FCR_SECTION_START.get(basin, _FCR_START)):
         return None
 
-    table_query = re.findall(r' Shasta:[\S\s]*(?=Folsom:)', query)[0].replace('CFS', '')
+    content = _get_fcr_report(datetime_structure, report)
+    section = _get_fcr_section(content, basin)
+    if section is None:
+        print(f'WARNING: {basin} section not found in FCR report')
+        return None
+    percent_encroached = _has_fcr_percent_encroached_label(content)
 
-    # add a space before values in parentheses so they are read as a separate column
-    table_query = table_query.replace('(', '( ')
+    if basin != 'Sacramento Valley':
+        return _parse_fcr_basin_table(section, nr_value=nr_value, percent_encroached=percent_encroached)
 
-    # get the Folsom row and the Top of Conservation belonging to it
-    fol_row = re.findall(r'Folsom:\s*\S+', query)[0]
-
-    # read both tables as fixed width files
-    df = pd.read_fwf(io.StringIO(table_query), header=None)
-    fol_row = pd.read_fwf(io.StringIO(fol_row), header=None)
-
-    # Combine other resevoirs with Folsom row
-    df = pd.concat((df, fol_row), axis=0)
-
-    # remove characters from text; opt in to the pandas>=2.2 behavior of not silently
-    # downcasting object columns during replace, then downcast explicitly so columns
-    # cleared of their last non-numeric entry still become numeric
-    with pd.option_context('future.no_silent_downcasting', True):
-        df = (df
-             ).replace(',', '', regex=True
-             ).replace('-', '', regex=True
-             ).replace('', None, regex=True
-             ).replace('NR', None, regex=True
-             ).replace(r'\(', '', regex=True
-             ).replace(r'\)', '', regex=True
-             ).infer_objects(copy=False)
-
-    df[0] = df[0].str.replace(':', '')
-
-    if len(df.columns) != 9:
+    lines = section.replace('\r', '').splitlines()
+    folsom = next((i for i, line in enumerate(lines) if re.match(r'^\s*\*?Folsom:', line)), None)
+    if folsom is None:
         print(f'WARNING: FCR data format not supported')
         return None
 
-    df.columns = ['Reservoir',
-                  'Gross Pool (acft)',
-                  'Top of Conservation (acft)',
-                  'Actual Res (acft)',
-                  r'% of Gross Pool',
-                  'Above top of Conservation (acft)',
-                  r'% Encroached',
-                  'Flood Control Parameters (Rain in.)',
-                  'Flood Control Parameters (Snow acft)']
+    # before mid-2019, the Folsom row is followed by the Folsom w/SAFCA FC Diagram row and the upstream reservoirs (Union
+    # Valley, French Mdw, Hell Hole), and the table ends at the line of underscores like other basins
+    if 'Forecasted Volumes' not in lines[folsom]:
+        return _parse_fcr_basin_table(section, nr_value=nr_value, percent_encroached=percent_encroached)
 
-    df = df.set_index('Reservoir')
-
-    return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
+    # since mid-2019, the reservoir table ends at the Folsom row, followed by the Folsom forecast volumes table
+    return _parse_fcr_basin_table('\n'.join(lines[:folsom + 1]),
+                                  nr_value=nr_value,
+                                  percent_encroached=percent_encroached)
 
 
-def extract_folsom_fcr_data(datetime_structure):
+def _convert_float_columns(df):
     """
-    get the Folsom Storages, Flood Control Parameters, and Forecasted Volumes from the Sacramento Valley
-    section of the FCR report
+    convert each column to float where all of its values allow it; columns with text values (e.g. an `nr_value`
+    placeholder such as 'NR') are left as object
+
+    Arguments:
+        df (pandas.DataFrame): the parsed table, with object columns
+    Returns:
+        df (pandas.DataFrame): the table with float columns where possible
+    """
+    def convert(column):
+        try:
+            return column.astype(float)
+        except (TypeError, ValueError):
+            return column
+    return df.apply(convert)
+
+
+# a parenthesized FCR report value, e.g. a percent encroached "(  0)", "(-142)", or "(-NR-)", matched whole (including
+# non-numeric contents) so its contents are never placed in another column; converted by `_parse_fcr_value`
+_FCR_PARENTHESIZED_PATTERN = r'\([^()\n]*\)'
+
+# an FCR report value: a parenthesized value (see _FCR_PARENTHESIZED_PATTERN); an unfilled placeholder
+# starting with "%", e.g. "%NEXTCS"; a comma-grouped number; or any other value, which ends before a "(" or
+# "%"; placeholders and comma-grouped numbers are matched separately so values printed without a space
+# between them (e.g. "7,186,300%BBSTCS" or "10,469,90010,439,068") keep their own positions
+_FCR_VALUE_PATTERN = re.compile(rf'{_FCR_PARENTHESIZED_PATTERN}|%[^\s(%]*|-?\d{{1,3}}(?:,\d{{3}})+|[^\s(%]+')
+
+
+def _get_fcr_column_edges(lines):
+    """
+    the column positions of an FCR report basin section, from the rule line of dashes under the column headers
+
+    values are right-aligned and wide values can extend left past their column's rule, so a value belongs to the first
+    column whose rule ends at or after the value's last character
+
+    Arguments:
+        lines (list): lines of the basin section text
+    Returns:
+        (tuple or None): the index of the rule line; the right edges of the gross pool, top of conservation, actual, %
+            of gross pool, above top of conservation, rain, and snow columns; and the start of the above top of
+            conservation column; None if the rule line is not found
+    """
+    start = next((i for i, line in enumerate(lines) if re.match(r'^\s*-{10,}\s+-{5,}', line)), None)
+    spans = None if start is None else [(m.start(), m.end()) for m in re.finditer(r'-+', lines[start])]
+    if spans is None or len(spans) != 7:
+        return None
+
+    # the flood control parameters column holds right-aligned rain and snow values, so it is split at its midpoint
+    params_start, params_end = spans[6]
+    right_edges = [column_end for _, column_end in spans[1:6]] + [(params_start + params_end) // 2, params_end]
+    return start, right_edges, spans[5][0]
+
+
+def _split_fcr_row(line, start, right_edges, above_start, read_percent_encroached=True, warn_beyond=True):
+    """
+    assign the values in a row of an FCR report table to columns by position; prints a warning for a value that cannot
+    be placed, rather than placing it in another column: two values in one column (the last is kept), or a value beyond
+    the last column (ignored)
+
+    Arguments:
+        line (str): the table row
+        start (int): position where the values begin, after the row label
+        right_edges (list): right edge position of each column, in order; values beyond the last are ignored
+        above_start (int): start position of the above top of conservation column
+        read_percent_encroached (bool): whether to read the parenthesized value after the above top of conservation
+            value as the percent encroached
+        warn_beyond (bool): whether to warn for values beyond the last column; False where they are expected and
+            ignored (e.g. the basin totals, which report storages only)
+    Returns:
+        values (list): the raw text of each column's value, or None if blank
+        percent_encroached (str or None): the parenthesized percent encroached
+    """
+    # blank out labels that share the row with values (Shasta's "CFS" and, before mid-2019, the Folsom w/SAFCA FC
+    # Diagram row's "ACFT" flood control parameter units, both read in the rain column; the Folsom row's "Forecasted
+    # Volumes****" table heading), keeping the positions of the values
+    line_values = re.sub(r'CFS|ACFT|Forecasted Volumes\*+', lambda label: ' ' * len(label.group(0)), line)
+
+    values, percent_encroached = [None] * len(right_edges), None
+    for token in _FCR_VALUE_PATTERN.finditer(line_values, start):
+        if token.group(0).startswith('('):
+            # the percent encroached follows the above top of conservation value; a parenthesized value
+            # elsewhere in the row (e.g. after Del Valle's % of gross pool) is not a table column
+            if read_percent_encroached and token.end() > above_start:
+                percent_encroached = token.group(0)
+            continue
+        column = next((i for i, edge in enumerate(right_edges) if token.end() <= edge), None)
+        if column is None:
+            if warn_beyond:
+                print(f'WARNING: FCR value {token.group(0)!r} is beyond the last column and was ignored: '
+                      f'{line.strip()!r}')
+            continue
+        if values[column] is not None:
+            print(f'WARNING: FCR values {values[column]!r} and {token.group(0)!r} are in the same column; '
+                  f'{values[column]!r} was ignored: {line.strip()!r}')
+        values[column] = token.group(0)
+    return values, percent_encroached
+
+
+def _parse_fcr_basin_table(section, nr_value=None, percent_encroached=True):
+    """
+    parse the reservoir storages and flood control parameters table of an FCR report basin section, from the rule line
+    of dashes under the column headers to the line of underscores above the basin totals; values are assigned to columns
+    by the positions of the rule line (see `_get_fcr_column_edges`), which keeps values in place when a column is blank
+    in some or all rows (e.g. upstream reservoirs without a Top of Conservation, or a table with one row)
+
+    Arguments:
+        section (str): the basin section text
+        nr_value (optional): value returned for not-reported (-NR-) entries
+        percent_encroached (bool): whether to read the parenthesized value after the above top of conservation storage
+            as the percent encroached; if False, the % Encroached column is None
+    Returns:
+        result (pandas.DataFrame): storage and flood control parameters by reservoir; None if table format not supported
+            or the table has no reservoir rows with values
+    """
+    lines = section.replace('\r', '').splitlines()
+    columns = _get_fcr_column_edges(lines)
+    if columns is None:
+        print(f'WARNING: FCR data format not supported')
+        return None
+    start, right_edges, above_start = columns
+    # the line of underscores above the basin totals is searched for after the rule line, so a line of underscores
+    # above the column headers does not end the table
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith(' ___')), len(lines))
+
+    names, rows = [], []
+    for line in lines[start + 1:end]:
+        match = re.match(r'^\s*\*?([A-Za-z][\w /.]*?):', line)
+        if match is None:
+            # rows without values (e.g. blank lines) are skipped silently; a row with values but no recognized
+            # reservoir label is reported rather than dropped silently
+            if re.search(r'\d', line):
+                print(f'WARNING: FCR row not recognized as a reservoir and was ignored: {line.strip()!r}')
+            continue
+        values, percent = _split_fcr_row(line, match.end(), right_edges, above_start, percent_encroached)
+        names.append(match.group(1))
+        rows.append([_parse_fcr_value(x, nr_value) for x in values[:5] + [percent] + values[5:]])
+
+    columns = ['Gross Pool (acft)',
+               'Top of Conservation (acft)',
+               'Actual Res (acft)',
+               r'% of Gross Pool',
+               'Above top of Conservation (acft)',
+               r'% Encroached',
+               'Flood Control Parameters (Rain in.)',
+               'Flood Control Parameters (Snow acft)']
+    df = pd.DataFrame(rows, index=pd.Index(names, name='Reservoir'), columns=columns, dtype=object)
+
+    # drop group label rows without values, e.g. "EBMUD Reservoirs:"
+    df = df.dropna(how='all')
+    if df.empty:
+        print(f'WARNING: FCR data not reported or format not supported')
+        return None
+
+    # columns without missing or text values (e.g. an `nr_value` placeholder) are float, others keep None and text
+    return _convert_float_columns(df).replace(np.nan, None)
+
+
+def _parse_fcr_basin_totals(section, nr_value=None, percent_encroached=True):
+    """
+    parse the basin totals rows of an FCR report basin section (BASIN TOTALS, TOTAL FLOOD SPACE ENCROACHED, and w/US
+    Storages, as present); values are assigned to columns by the positions of the section's rule line, as for the
+    reservoir table, so blank columns (e.g. the top of conservation of w/US Storages) stay in place
+
+    Arguments:
+        section (str): the basin section text
+        nr_value (optional): value returned for not-reported (-NR-) entries
+        percent_encroached (bool): whether to read the parenthesized value after the above top of conservation storage
+            as the percent encroached; if False, the Percent Encroached column is None
+    Returns:
+        df (pandas.DataFrame): the basin totals by row; None if the section has no basin totals or the table format is
+            not supported
+    """
+    lines = section.replace('\r', '').splitlines()
+    columns = _get_fcr_column_edges(lines)
+    if columns is None:
+        return None
+    start, right_edges, above_start = columns
+
+    index, rows = [], []
+    for label in ('BASIN TOTALS', 'TOTAL FLOOD SPACE ENCROACHED', 'w/US Storages'):
+        line = next((line for line in lines[start + 1:] if line.startswith(f' {label}')), None)
+        if line is None:
+            continue
+        # the totals report storages only; values beyond the above top of conservation column (e.g. a trailing
+        # value in the flood control parameters column of 2014 reports) are ignored
+        values, percent = _split_fcr_row(line, len(label) + 1, right_edges[:5], above_start, percent_encroached,
+                                         warn_beyond=False)
+        index.append(label)
+        rows.append([_parse_fcr_value(x, nr_value) for x in values + [percent]])
+
+    if len(rows) == 0:
+        return None
+
+    columns = ['Gross Pool (acft)',
+               'Top of Conservation (acft)',
+               'Actual Res (acft)',
+               r'% of GrossPool',
+               'Above Top of Conservation (acft)',
+               'Percent Encroached']
+    # columns without missing or text values (e.g. an `nr_value` placeholder) are float; others keep None and text
+    df = pd.DataFrame(rows, index=pd.Index(index, name='Metric'), columns=columns, dtype=object)
+    return _convert_float_columns(df).replace(np.nan, None)
+
+
+def _parse_fcr_value(value, nr_value=None):
+    """
+    convert an FCR report value to float, keeping its sign; not reported (-NR-) values are returned as `nr_value`, and
+    not applicable (----, N/A), blank, or non-numeric values are returned as None, including unfilled report
+    placeholders such as codes ending in SP (e.g. "NHSP", "PFSP"), unfilled template variables (e.g. "%NEXTCS"), and
+    "****"
+
+    Arguments:
+        value (str or number): the raw value text, which may include thousands separators and parentheses, or a value
+            already read as a number
+        nr_value (optional): value returned for not-reported (-NR-) entries
+    Returns:
+        (float, None, or nr_value): the numeric value
+    """
+    if isinstance(value, (int, float, np.number)):
+        return None if pd.isna(value) else float(value)
+    if not isinstance(value, str):
+        return None
+    # any whitespace (spaces, tabs) may pad the value inside or outside its parentheses
+    text = value.replace(',', '').strip().strip('()').strip()
+    if text == '-NR-':
+        return nr_value
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def extract_basin_totals(datetime_structure, basin, nr_value=None, report=None):
+    """
+    get the basin FCR totals for one basin section of the FCR report
 
     Arguments:
         datetime_structure (datetime): datetime object
+        basin (str): the basin section name, one of FCR_BASINS, e.g. 'Sacramento Valley'
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the string 'NR');
+            defaults to None, the same as blank and not-applicable (----) entries, so values convert to float; pass 'NR'
+            to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
-        df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes,
-            specific to Folsom
-    """
-    last_date = dt.datetime(2019, 7, 1, 0, tzinfo=utils.tz_function('US/Pacific'))
-    if datetime_structure <= last_date:
-        print(f'WARNING: Folsom forecasted volumes table unavailable before {last_date:%Y-%m-%d}')
-        return None
-
-    query = extract_fcr_text(datetime_structure)[0]
-    table_query = re.findall(r'(?=Forecasted Volumes)[\S\s]*(?=BASIN TOTALS)', query)[0].split('Forecasted Volumes****')[1]
-    for symbol in ['-', '(', ')', ';', ',']:
-        table_query = table_query.replace(symbol, '')
-
-    # remove No Forecast rows or blank rows if in table
-    table_query = table_query.split('No Forecast')[0].split('______')[0]
-
-    df = pd.read_fwf(io.StringIO(table_query), header=None)
-
-    if len(df.columns) != 11:
-        print(f'WARNING: Folsom data format not supported')
-        return None
-
-    df.columns = ['Forecasted Date',
-                  'Forecasted Time',
-                  'Top of Conservation (acft)',
-                  'Actual Res (acft)',
-                  r'% of GrossPool',
-                  'Above Top of Conservation(acft)',
-                  'Percent Encroached',
-                  '1-Day Forecasted Volume',
-                  '2-Day Forecasted Volume',
-                  '3-Day Forecasted Volume',
-                  '5-Day Forecasted Volume'
-                  ]
-
-    df.index = df.apply(lambda x: f"{x['Forecasted Date']} {x['Forecasted Time']}z", axis=1) 
-    df = df.drop(columns=['Forecasted Date', 'Forecasted Time'])
-
-    return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
-
-
-def extract_basin_totals(datetime_structure):
-    """
-    get the Sacramento Valley basin FCR totals
-
-    Arguments:
-        datetime_structure (datetime): datetime object
-    Returns:
-        df (pandas.DataFrame): the USACE SPK total Sacramento Valley basin FCR values
+        df (pandas.DataFrame): the USACE SPK basin totals, with rows BASIN TOTALS, TOTAL FLOOD SPACE ENCROACHED, and
+            w/US Storages, as reported for the basin (Truckee River and Russian River report no w/US Storages, and
+            reports before late 2014 no TOTAL FLOOD SPACE ENCROACHED)
         OR
-        table_query (str): raw text for basin totals
+        None: if the requested date is before the basin's first supported report, or the basin has no totals (e.g. So.
+            San Francisco Bay Basin)
+    Raises:
+        ValueError: if `basin` is not an FCR report basin section name
     """
-    query = extract_fcr_text(datetime_structure)[0]
+    _check_fcr_basin(basin)
+    if not _check_fcr_available(datetime_structure, f'{basin} basin totals',
+                          start=_FCR_SECTION_START.get(basin, _FCR_START)):
+        return None
 
-    # try reading data in one of two formats
-    try:
-        table_query = re.findall(r' BASIN TOTALS[\S\s]*(?=Percent Encroached)', query)[0].replace('CFS', '')
-    except IndexError:
-        table_query = re.findall(r' BASIN TOTALS[\S\s]*(?=Folsom \(COE\) Diagram not used in Calculations)', query)[0].replace('CFS', '')
+    content = _get_fcr_report(datetime_structure, report)
+    section = _get_fcr_section(content, basin)
+    if section is None:
+        print(f'WARNING: {basin} section not found in FCR report')
+        return None
 
-    try:
-        # read fixed-width format file into pandas Dataframe
-        df = pd.read_fwf(io.StringIO(table_query),
-                         names=[
-                            'Col0',
-                            'Actual Res (acft)', r'% of GrossPool',
-                            'Above Top of Conservation(acft)',
-                            'Percent Encroached'
-                            ]
-                        )
+    df = _parse_fcr_basin_totals(section, nr_value=nr_value,
+                                 percent_encroached=_has_fcr_percent_encroached_label(content))
+    if df is None and basin not in _FCR_BASINS_WITHOUT_TOTALS:
+        print(f'WARNING: {basin} basin totals not found in FCR report')
+    return df
 
-        df['Above Top of Conservation (acft)'] = df['Above Top of Conservation(acft)'].str.replace('(', '', regex=False)
-        df['Percent Encroached'] = df['Percent Encroached'].str.replace(')', '', regex=False)
 
-        # remove commas from values in dataframe
-        df = df.replace(',', '', regex=True)
-        
-        df[['Metric', 'Gross Pool (acft)', 'Top of Conservation (acft)']
-            ] = df['Col0'].str.extract(r'([a-zA-Z\s]+)  (\d+) (\d+)')
-        df.loc[1, 'Metric'] = df.loc[1, 'Col0'] 
-
-        rowindexer = df.index == 2
-        df.loc[rowindexer, ['Metric', 'Gross Pool (acft)']
-            ] = df.loc[rowindexer, 'Col0'].str.extract(r'(w/[a-zA-Z\s]+) (\d+)').values
-
-        df = df.drop('Col0', axis=1)
-        df = df[[
-            'Metric',
-            'Gross Pool (acft)',
-            'Top of Conservation (acft)',
-            'Actual Res (acft)',
-            r'% of GrossPool',
-            'Above Top of Conservation (acft)',
-            'Percent Encroached'
-        ]]
-        df = df.set_index('Metric')
-        df = df.replace(',', '', regex=True)
-
-        return df.dropna(how='all').astype(float).replace(np.nan, None)
-
-    except (KeyError, ValueError, AttributeError):
-        return table_query
-
-def get_fcr_data(datetime_structure):
+def extract_basin_footnotes(datetime_structure, basin, report=None):
     """
-    get all of the FCR date for Sacramento Valley basin
+    get the footnotes of one basin section of the FCR report, as an unparsed block of text
 
     Arguments:
         datetime_structure (datetime): datetime object
+        basin (str): the basin section name, one of FCR_BASINS, e.g. 'Sacramento Valley'
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
-        (dict): dictionary containing each dataframe for all FCR, Folsom specific metrics, and basin totals
+        (str or None): the footnotes text, from the first footnote (e.g. " **  Percent Encroached") to the end of the
+            section, including continuation lines; None if the requested date is before the basin's first supported
+            report, the section is not in the report, or the section has no footnotes (e.g. Tulare Lake Basin)
+    Raises:
+        ValueError: if `basin` is not an FCR report basin section name
     """
-    return {'date': f'{datetime_structure:%Y-%m-%d}',
-            'fcr': extract_sac_valley_fcr_data(datetime_structure),
-            'folsom': extract_folsom_fcr_data(datetime_structure),
-            'totals': extract_basin_totals(datetime_structure)}
+    _check_fcr_basin(basin)
+    if not _check_fcr_available(datetime_structure, f'{basin} footnotes',
+                                start=_FCR_SECTION_START.get(basin, _FCR_START)):
+        return None
+
+    section = _get_fcr_section(_get_fcr_report(datetime_structure, report), basin)
+    if section is None:
+        print(f'WARNING: {basin} section not found in FCR report')
+        return None
+    return _parse_fcr_basin_footnotes(section)
+
+
+def _parse_fcr_basin_footnotes(section):
+    """
+    the footnotes of an FCR report basin section, from the first footnote line to the end of the section, unparsed
+
+    footnote lines begin with their asterisk marker followed by whitespace (e.g. " *** For a definition"), which tells
+    them apart from a marked reservoir row (e.g. "*Folsom:") and the column header markers (e.g. "(acft)***")
+
+    Arguments:
+        section (str): the basin section text
+    Returns:
+        (str or None): the footnotes text with trailing blank lines removed; None if the section has no footnotes
+    """
+    lines = section.replace('\r', '').splitlines()
+    first = next((i for i, line in enumerate(lines) if re.match(r'^\s*\*+\s', line)), None)
+    if first is None:
+        return None
+    return '\n'.join(lines[first:]).rstrip()
+
+
+def get_fcr_data(datetime_structure, nr_value=None):
+    """
+    get all of the FCR report tables for the requested date, by basin section: each basin's reservoir table, basin
+    totals, and footnotes, and for Sacramento Valley, the Folsom forecast volumes; the report is retrieved once for all
+    tables
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the string 'NR');
+            defaults to None, the same as blank and not-applicable (----) entries, so values convert to float; pass 'NR'
+            to keep not-reported entries distinguishable
+    Returns:
+        (dict): 'date' (the report date, YYYY-MM-DD in US/Pacific), 'generated' (when the report was generated, a
+            US/Pacific datetime, or None if not found; a report is regenerated during the following days, so the same
+            date can return different versions), and each basin section in FCR_BASINS by name (e.g. 'Sacramento
+            Valley'), with 'fcr' (the reservoir table, see `extract_basin_fcr_table`), 'totals' (the basin totals, see
+            `extract_basin_totals`), and 'footnotes' (the footnotes as unparsed text, see `extract_basin_footnotes`);
+            'Sacramento Valley' also has 'folsom' (the Folsom forecast volumes); a table that fails to parse or is
+            unavailable for the date is None, so the remaining tables are still returned
+    Raises:
+        ValueError: if the requested date is today or later, as the report is not yet available, or if the report
+            returned is not for the requested date (Pacific)
+    """
+    # raise for unavailable dates up front, rather than reporting each table as failed
+    _count_fcr_days_ago(datetime_structure)
+    report = _get_fcr_report(datetime_structure)
+
+    # the report date, which is in Pacific
+    date = f'{datetime_structure.astimezone(utils.tz_function("US/Pacific")):%Y-%m-%d}'
+
+    def extract(name, function, **kwargs):
+        try:
+            return function(datetime_structure, report=report, **kwargs)
+        except Exception as error:
+            print(f'WARNING: FCR `{name}` table could not be parsed for {date}: {type(error).__name__}: {error}')
+            return None
+
+    result = {'date': date, 'generated': _get_fcr_report_generated(report)}
+    for basin in FCR_BASINS:
+        result[basin] = {'fcr': extract(f'{basin} fcr', extract_basin_fcr_table, basin=basin, nr_value=nr_value),
+                         'totals': extract(f'{basin} totals', extract_basin_totals, basin=basin, nr_value=nr_value),
+                         'footnotes': extract(f'{basin} footnotes', extract_basin_footnotes, basin=basin)}
+    result['Sacramento Valley']['folsom'] = extract('Sacramento Valley folsom', _get_fcr_folsom_forecast,
+                                                    nr_value=nr_value)
+    return result
