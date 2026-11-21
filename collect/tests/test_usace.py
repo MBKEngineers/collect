@@ -68,7 +68,7 @@ class TestUSACE(unittest.TestCase):
                          [10469900.0, 7919960.0, 4238480.0, 40.0, -3681480.0, None])
         self.assertEqual(result.loc['w/US Storages'].tolist(), [11124200.0, None, 4563619.0, 41.0, None, None])
 
-    def _extract_basin_totals_from_text(self, totals_rows):
+    def _extract_basin_totals_from_text(self, totals_rows, **kwargs):
         report = '\n'.join([
             '                           ---- Sacramento Valley ----',
             *totals_rows,
@@ -78,19 +78,24 @@ class TestUSACE(unittest.TestCase):
         ])
         with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
             mock_response.return_value.text = report
-            return wcds.extract_basin_totals(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
+            return wcds.extract_basin_totals(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')), **kwargs)
 
     def test_extract_basin_totals_not_reported(self):
         """
-        not-reported (-NR-) totals are None and a missing row is omitted (report data ending 16 NOV 2014)
+        not-reported (-NR-) totals are None by default or `nr_value` when given, and a missing row is omitted
+        (report data ending 16 NOV 2014)
         """
-        result = self._extract_basin_totals_from_text([
-            ' BASIN TOTALS  10,469,900      -NR-      -NR-               -NR-       -NR-',
-            ' w/US Storages 11,124,200                -NR-',
-        ])
+        rows = [' BASIN TOTALS  10,469,900      -NR-      -NR-               -NR-       -NR-',
+                ' w/US Storages 11,124,200                -NR-']
+        result = self._extract_basin_totals_from_text(rows)
         self.assertEqual(result.index.tolist(), ['BASIN TOTALS', 'w/US Storages'])
         self.assertEqual(result.loc['BASIN TOTALS'].tolist(), [10469900.0] + [None] * 5)
         self.assertEqual(result.loc['w/US Storages'].tolist(), [11124200.0] + [None] * 5)
+
+        # the blank % of gross pool stays None, so later -NR- values stay in their columns
+        result = self._extract_basin_totals_from_text(rows, nr_value='NR')
+        self.assertEqual(result.loc['BASIN TOTALS'].tolist(), [10469900.0, 'NR', 'NR', None, 'NR', None])
+        self.assertEqual(result.loc['w/US Storages'].tolist(), [11124200.0, None, 'NR', None, None, None])
 
     def test_extract_basin_totals_zero(self):
         """
@@ -180,29 +185,34 @@ class TestUSACE(unittest.TestCase):
             '                           ---- San Joaquin Valley ----',
         ])
 
-    def _extract_folsom_from_text(self, folsom_rows):
+    def _extract_folsom_from_text(self, folsom_rows, **kwargs):
         with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
             mock_response.return_value.text = self._mock_fcr_report(folsom_rows)
-            return wcds.extract_folsom_fcr_data(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
+            return wcds.extract_folsom_fcr_data(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')), **kwargs)
 
     def test_extract_folsom_fcr_data_not_reported(self):
         """
-        a not-reported (-NR-) forecast row is returned with None values rather than invalidating the
-        table (report data ending 18 NOV 2026)
+        a not-reported (-NR-) forecast row is returned with None values, or `nr_value` when given, rather
+        than invalidating the table (report data ending 18 NOV 2026)
         """
-        result = self._extract_folsom_from_text("""
+        rows = """
           18NOV2026 18              566,823   363,627  38       -203,196(  0)        3,974;   14,980;   23,547;   33,685
          --------------------------------------------------------------------------------------------------------
           19NOV2026 12              566,823   365,307  38       -201,516(  0)        7,454;   14,687;   19,671;   27,968
           19NOV2026 18              566,823      -NR-     -NR-     -NR- (  0)        6,396;   11,952;   16,153;   23,620
           No Forecast
           No Forecast
-        """)
+        """
+        result = self._extract_folsom_from_text(rows)
         self.assertEqual(result.index.tolist(), ['18NOV2026 18z', '19NOV2026 12z', '19NOV2026 18z'])
         self.assertEqual(result.loc['19NOV2026 18z'].tolist(),
                          [566823.0, None, None, None, 0.0, 6396.0, 11952.0, 16153.0, 23620.0])
         # values below top of conservation keep their sign
         self.assertEqual(result.loc['18NOV2026 18z', 'Above Top of Conservation(acft)'], -203196.0)
+
+        result = self._extract_folsom_from_text(rows, nr_value='NR')
+        self.assertEqual(result.loc['19NOV2026 18z'].tolist(),
+                         [566823.0, 'NR', 'NR', 'NR', 0.0, 6396.0, 11952.0, 16153.0, 23620.0])
 
     def test_extract_folsom_fcr_data_irregular_rows(self):
         """
@@ -267,6 +277,14 @@ class TestUSACE(unittest.TestCase):
         self.assertEqual(result.loc['Stony Gorge'].tolist(), [50000.0, None, 38311.0, 77.0] + [None] * 4)
         self.assertEqual(result.loc['Folsom', 'Gross Pool (acft)'], 966823.0)
 
+        # not-reported values are distinguishable from not-applicable (----) values when `nr_value` is given
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
+            mock_response.return_value.text = report
+            result = wcds.extract_sac_valley_fcr_data(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')),
+                                                      nr_value='NR')
+        self.assertEqual(result.loc['Oroville'].tolist(), [3425000.0, 'NR', 2780358.0, 81.0, 'NR', 0.0, 'NR', None])
+        self.assertEqual(result.loc['Indian Valley', above], -24900.0)
+
     def test_get_fcr_data_table_failure(self):
         """
         a table that fails to parse is returned as None without discarding the other tables
@@ -274,15 +292,16 @@ class TestUSACE(unittest.TestCase):
         requested = dt.datetime.now(tz=ZoneInfo('US/Pacific')) - dt.timedelta(days=2)
         with mock.patch.object(wcds, 'extract_sac_valley_fcr_data', return_value='fcr table'), \
              mock.patch.object(wcds, 'extract_folsom_fcr_data', side_effect=IndexError('list index out of range')), \
-             mock.patch.object(wcds, 'extract_basin_totals', return_value='totals table'), \
+             mock.patch.object(wcds, 'extract_basin_totals', return_value='totals table') as mock_totals, \
              mock.patch('builtins.print') as mock_print:
-            result = wcds.get_fcr_data(requested)
+            result = wcds.get_fcr_data(requested, nr_value='NR')
 
         self.assertEqual(result, {'date': f'{requested:%Y-%m-%d}',
                                   'fcr': 'fcr table',
                                   'folsom': None,
                                   'totals': 'totals table'})
         self.assertIn('FCR `folsom` table could not be parsed', mock_print.call_args.args[0])
+        mock_totals.assert_called_once_with(requested, nr_value='NR')
 
     def test_get_fcr_data_unavailable_date(self):
         """

@@ -358,18 +358,21 @@ def extract_fcr_text(datetime_structure):
     days = _fcr_days_ago(datetime_structure)
 
     # midnight.py `days=N` returns the report with data ending on (today - N - 1), so offset by one
-    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days - 1}&report=FCR&textonly=true'
     content = utils.get_session_response(url).text
     # get the list of text between Sacramento Valley and San Joaquin Valley
     return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 
 
-def extract_sac_valley_fcr_data(datetime_structure):
+def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
     """
     get the Sacramento Valley Storages and Flood Control Parameters from the FCR report
 
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
+            string 'NR'); defaults to None, the same as blank and not-applicable (----) entries, so values
+            convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Sacramento Valley
@@ -400,10 +403,10 @@ def extract_sac_valley_fcr_data(datetime_structure):
     # Combine other resevoirs with Folsom row
     df = pd.concat((df, fol_row), axis=0)
 
-    # convert values to numbers, keeping negative signs; not reported (-NR-) and not applicable (----)
-    # values become None
+    # convert values to numbers, keeping negative signs; not reported (-NR-) values become `nr_value`, and
+    # not applicable (----) values become None
     df[0] = df[0].str.replace(':', '')
-    df[df.columns[1:]] = df[df.columns[1:]].map(_parse_fcr_value).astype(object)
+    df[df.columns[1:]] = df[df.columns[1:]].map(lambda x: _parse_fcr_value(x, nr_value)).astype(object)
 
     if len(df.columns) != 9:
         print(f'WARNING: FCR data format not supported')
@@ -424,13 +427,16 @@ def extract_sac_valley_fcr_data(datetime_structure):
     return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
 
 
-def extract_folsom_fcr_data(datetime_structure):
+def extract_folsom_fcr_data(datetime_structure, nr_value=None):
     """
     get the Folsom Storages, Flood Control Parameters, and Forecasted Volumes from the Sacramento Valley
     section of the FCR report
 
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
+            string 'NR'); defaults to None, the same as blank and not-applicable (----) entries, so values
+            convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes,
             specific to Folsom
@@ -472,7 +478,7 @@ def extract_folsom_fcr_data(datetime_structure):
         forecasts = (forecasts.split(';') + [None] * 4)[:4]
 
         index.append(f'{forecast_date} {forecast_time}z')
-        rows.append([_parse_fcr_value(x) for x in storages + [percent_encroached] + forecasts])
+        rows.append([_parse_fcr_value(x, nr_value) for x in storages + [percent_encroached] + forecasts])
 
     if len(rows) == 0:
         print(f'WARNING: Folsom forecast data not reported or format not supported')
@@ -547,31 +553,40 @@ def extract_so_san_francisco_bay_basin_fcr_data(datetime_structure):
     return None
 
 
-def _parse_fcr_value(value):
+def _parse_fcr_value(value, nr_value=None):
     """
-    convert an FCR report value to float, keeping its sign; not reported (-NR-), not applicable (----),
-    and blank or non-numeric values are returned as None
+    convert an FCR report value to float, keeping its sign; not reported (-NR-) values are returned as
+    `nr_value`, and not applicable (----), blank, or non-numeric values are returned as None
 
     Arguments:
         value (str or number): the raw value text, which may include thousands separators and parentheses,
             or a value already read as a number
+        nr_value (optional): value returned for not-reported (-NR-) entries
     Returns:
-        (float or None): the numeric value
+        (float, None, or nr_value): the numeric value
     """
     if isinstance(value, (int, float, np.number)):
         return None if pd.isna(value) else float(value)
+    if not isinstance(value, str):
+        return None
+    text = value.replace(',', '').strip('() ')
+    if text == '-NR-':
+        return nr_value
     try:
-        return float(value.replace(',', '').strip('() '))
-    except (AttributeError, ValueError):
+        return float(text)
+    except ValueError:
         return None
 
 
-def extract_basin_totals(datetime_structure):
+def extract_basin_totals(datetime_structure, nr_value=None):
     """
     get the Sacramento Valley basin FCR totals
 
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
+            string 'NR'); defaults to None, the same as blank and not-applicable (----) entries, so values
+            convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         df (pandas.DataFrame): the USACE SPK total Sacramento Valley basin FCR values
         OR
@@ -614,9 +629,18 @@ def extract_basin_totals(datetime_structure):
         values, _, remainder = match.group(1).partition('(')
         percent_encroached = remainder.partition(')')[0] if remainder else None
 
+        # values fill the row's columns in order; the % of gross pool is a whole number and is left blank when
+        # the actual storage is not reported, e.g. "10,469,900  -NR-  -NR-  [blank]  -NR-", so a value that
+        # is not a whole number belongs to the following column
         row = dict.fromkeys(columns)
-        row.update(zip(label_columns, map(_parse_fcr_value, values.split())))
-        row['Percent Encroached'] = _parse_fcr_value(percent_encroached)
+        remaining_columns = iter(label_columns)
+        for value in values.split():
+            for column in remaining_columns:
+                if column == r'% of GrossPool' and not re.fullmatch(r'\d+', value):
+                    continue
+                row[column] = _parse_fcr_value(value, nr_value)
+                break
+        row['Percent Encroached'] = _parse_fcr_value(percent_encroached, nr_value)
         index.append(label)
         rows.append([row[column] for column in columns])
 
@@ -627,12 +651,15 @@ def extract_basin_totals(datetime_structure):
     return pd.DataFrame(rows, index=pd.Index(index, name='Metric'), columns=columns, dtype=object)
 
 
-def get_fcr_data(datetime_structure):
+def get_fcr_data(datetime_structure, nr_value=None):
     """
     get all of the FCR date for Sacramento Valley basin
 
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
+            string 'NR'); defaults to None, the same as blank and not-applicable (----) entries, so values
+            convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         (dict): dictionary containing each dataframe for all FCR, Folsom specific metrics, and basin totals;
             a table that fails to parse is None so the remaining tables are still returned
@@ -647,7 +674,7 @@ def get_fcr_data(datetime_structure):
                          ('folsom', extract_folsom_fcr_data),
                          ('totals', extract_basin_totals)):
         try:
-            result[key] = extract(datetime_structure)
+            result[key] = extract(datetime_structure, nr_value=nr_value)
         except Exception as error:
             print(f'WARNING: FCR `{key}` table could not be parsed for '
                   f'{datetime_structure:%Y-%m-%d}: {type(error).__name__}: {error}')
