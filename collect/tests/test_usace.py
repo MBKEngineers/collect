@@ -351,6 +351,65 @@ class TestUSACE(unittest.TestCase):
         self.assertEqual(result.loc['Farmington'].tolist(), [52000.0, 0.0, 141.0, 0.0, 141.0, 0.0, None, None])
         self.assertEqual(result.loc['Total U/S'].tolist(), [628500.0, None, 346638.0, 55.0] + [None] * 4)
 
+    def _extract_basin_from_text(self, extract, section_lines, **kwargs):
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
+            mock_response.return_value.text = '\n'.join(section_lines)
+            return extract(dt.datetime(2025, 10, 2, tzinfo=ZoneInfo('US/Pacific')), **kwargs)
+
+    def test_extract_truckee_river_basin_fcr_data_none_reported(self):
+        """
+        a column blank in every row (% of gross pool when no storages are reported) stays in place
+        (report data ending 26 DEC 2025)
+        """
+        lines = [
+            '                          ---- Truckee River Basin ----',
+            '                -------------------- Storages -----------------------  Flood Control',
+            '                   Gross    Top of     Actual  % of       Above Top     Parameters',
+            '                   Pool  Conservation   Res    Gross     of Conserv    Rain     Snow',
+            '                   (acft) (acft)***    (acft)  Pool         (acft)     (in)    (acft)',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
+            ' Martis Creek:     20,400      -NR-      -NR-               -NR-(  0)  ----      ---',
+            ' Prosser:          29,800      -NR-      -NR-               -NR-(  0)  ----       N/A',
+            ' Boca:             41,100      -NR-      -NR-               -NR-(  0)  ----       N/A',
+            ' Stampede:        226,500      -NR-      -NR-               -NR-(  0)  ----       N/A',
+            ' ____________________________________________________________________________________',
+            ' BASIN TOTALS     317,800         0         0   0              0(  0)',
+        ]
+        result = self._extract_basin_from_text(wcds.extract_truckee_river_basin_fcr_data, lines, nr_value='NR')
+        self.assertEqual(result.index.tolist(), ['Martis Creek', 'Prosser', 'Boca', 'Stampede'])
+        self.assertEqual(result.loc['Stampede'].tolist(), [226500.0, 'NR', 'NR', None, 'NR', 0.0, None, None])
+        result = self._extract_basin_from_text(wcds.extract_truckee_river_basin_fcr_data, lines)
+        self.assertEqual(result.loc['Martis Creek'].tolist(), [20400.0, None, None, None, None, 0.0, None, None])
+
+    def test_extract_so_san_francisco_bay_basin_fcr_data(self):
+        """
+        a one-row table is parsed by column position; the parenthesized value after Del Valle's % of gross
+        pool is not a table column (report data ending 19 NOV 2026)
+        """
+        lines = [
+            '                       ---- So. San Francisco Bay Basin ----',
+            '                -------------------- Storages -----------------------  Flood Control',
+            '                   Gross    Top of     Actual  % of       Above Top     Parameters',
+            '                   Pool  Conservation   Res    Gross     of Conserv    Rain     Snow',
+            '                   (acft) (acft)***    (acft)  Pool       (acft)( **)  (in)    (acft)',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
+            ' Del Valle:        77,000    39,000    27,797  36(  0)   -11,203(  0)  ----      ---',
+            ' ____________________________________________________________________________________',
+        ]
+        result = self._extract_basin_from_text(wcds.extract_so_san_francisco_bay_basin_fcr_data, lines)
+        self.assertEqual(result.index.tolist(), ['Del Valle'])
+        self.assertEqual(result.loc['Del Valle'].tolist(), [77000.0, 39000.0, 27797.0, 36.0, -11203.0, 0.0, None, None])
+
+    def test_extract_basin_fcr_data_section_not_found(self):
+        """
+        a basin section missing from the report returns None
+        """
+        with mock.patch('builtins.print') as mock_print:
+            result = self._extract_basin_from_text(wcds.extract_tulare_lake_basin_fcr_data,
+                                                   ['                           ---- San Joaquin Valley ----'])
+        self.assertIsNone(result)
+        self.assertIn('Tulare Lake Basin section not found', mock_print.call_args.args[0])
+
     def test_get_fcr_data_table_failure(self):
         """
         a table that fails to parse is returned as None without discarding the other tables

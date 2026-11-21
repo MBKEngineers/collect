@@ -532,72 +532,109 @@ def extract_san_joaquin_valley_fcr_data(datetime_structure, nr_value=None):
             values convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
-            specific to San Joaquin Valley, including upstream reservoirs (e.g. Pardee) listed under their
-            downstream reservoir
+            specific to San Joaquin Valley,
+            including upstream reservoirs listed under their downstream reservoir
     """
-    section = _extract_fcr_section(datetime_structure, 'San Joaquin Valley')
-    if section is None:
-        print(f'WARNING: San Joaquin Valley section not found in FCR report')
-        return None
-    return _parse_fcr_reservoir_table(section, nr_value=nr_value)
+    return _extract_basin_reservoir_data(datetime_structure, 'San Joaquin Valley', nr_value=nr_value)
 
 
-def extract_tulare_lake_basin_fcr_data(datetime_structure):
+def extract_tulare_lake_basin_fcr_data(datetime_structure, nr_value=None):
     """
     get the Tulare Lake Basin Flood Control Requirements report
 
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
+            string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
+            values convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
-            specific to Tulare Lake Basin
+            specific to Tulare Lake Basin,
+            including upstream reservoirs listed under their downstream reservoir
     """
-    return None
+    return _extract_basin_reservoir_data(datetime_structure, 'Tulare Lake Basin', nr_value=nr_value)
 
 
-def extract_truckee_river_basin_fcr_data(datetime_structure):
+def extract_truckee_river_basin_fcr_data(datetime_structure, nr_value=None):
     """
     get the Truckee River Basin Flood Control Requirements report
 
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
+            string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
+            values convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Truckee River Basin
     """
-    return None
+    return _extract_basin_reservoir_data(datetime_structure, 'Truckee River Basin', nr_value=nr_value)
 
 
-def extract_russian_river_basin_fcr_data(datetime_structure):
+def extract_russian_river_basin_fcr_data(datetime_structure, nr_value=None):
     """
     get the Russian River Basin Flood Control Requirements report
 
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
+            string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
+            values convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Russian River Basin
     """
-    return None
+    return _extract_basin_reservoir_data(datetime_structure, 'Russian River Basin', nr_value=nr_value)
 
 
-def extract_so_san_francisco_bay_basin_fcr_data(datetime_structure):
+def extract_so_san_francisco_bay_basin_fcr_data(datetime_structure, nr_value=None):
     """
     get the So. San Francisco Bay Basin Flood Control Requirements report
 
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
+            string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
+            values convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to So. San Francisco Bay Basin
     """
-    return None
+    return _extract_basin_reservoir_data(datetime_structure, 'So. San Francisco Bay Basin', nr_value=nr_value)
+
+
+def _extract_basin_reservoir_data(datetime_structure, heading, nr_value=None):
+    """
+    get the reservoir storages and flood control parameters table of one FCR report basin section
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+        heading (str): the section name, e.g. 'San Joaquin Valley'
+        nr_value (optional): value returned for not-reported (-NR-) entries
+    Returns:
+        df (pandas.DataFrame): storage and flood control parameters by reservoir; None if the section is not
+            in the report or its table format is not supported
+    """
+    section = _extract_fcr_section(datetime_structure, heading)
+    if section is None:
+        print(f'WARNING: {heading} section not found in FCR report')
+        return None
+    return _parse_fcr_reservoir_table(section, nr_value=nr_value)
+
+
+# a parenthesized percent encroached, e.g. "(  0)" or "(-142)", or any other value, which ends before a "("
+_FCR_VALUE_PATTERN = re.compile(r'\(\s*-?\d+\s*\)|[^\s(]+')
 
 
 def _parse_fcr_reservoir_table(section, nr_value=None):
     """
     parse the reservoir storages and flood control parameters table of an FCR report basin section, from
     the rule line of dashes under the column headers to the line of underscores above the basin totals
+
+    values are assigned to columns by the positions of the rule line: values are right-aligned and wide
+    values can extend left past their column's rule, so a value belongs to the first column whose rule
+    ends at or after the value's last character; this keeps values in place when a column is blank in
+    some or all rows (e.g. upstream reservoirs without a Top of Conservation, or a table with one row)
 
     Arguments:
         section (str): the basin section text
@@ -606,41 +643,48 @@ def _parse_fcr_reservoir_table(section, nr_value=None):
         df (pandas.DataFrame): storage and flood control parameters by reservoir; None if the table format
             is not supported
     """
-    lines = section.splitlines()
+    lines = section.replace('\r', '').splitlines()
     start = next((i for i, line in enumerate(lines) if re.match(r'^\s*-{10,}\s+-{5,}', line)), None)
     end = next((i for i, line in enumerate(lines) if line.startswith(' ___')), len(lines))
-    if start is None:
+    spans = None if start is None else [(m.start(), m.end()) for m in re.finditer(r'-+', lines[start])]
+    if spans is None or len(spans) != 7:
         print(f'WARNING: FCR data format not supported')
         return None
 
-    # the reservoir name is blanked in place so value positions are unchanged for read_fwf column inference;
-    # rows without values (e.g. "EBMUD Reservoirs:") are kept so names and values stay aligned
-    names, values = [], []
+    # right edges of the gross pool through above top of conservation columns; the flood control parameters
+    # column holds right-aligned rain and snow values, so it is split at its midpoint
+    params_start, params_end = spans[6]
+    right_edges = [column_end for _, column_end in spans[1:6]] + [(params_start + params_end) // 2, params_end]
+    above_start = spans[5][0]
+
+    names, rows = [], []
     for line in lines[start + 1:end]:
         match = re.match(r'^\s*\*?([A-Za-z][\w /.]*?):', line)
         if match is None:
             continue
+        values, percent_encroached = [None] * len(right_edges), None
+        for token in _FCR_VALUE_PATTERN.finditer(line.replace('CFS', '   '), match.end()):
+            if token.group(0).startswith('('):
+                # the percent encroached follows the above top of conservation value; a parenthesized value
+                # elsewhere in the row (e.g. after Del Valle's % of gross pool) is not a table column
+                if token.end() > above_start:
+                    percent_encroached = token.group(0)
+                continue
+            column = next((i for i, edge in enumerate(right_edges) if token.end() <= edge), None)
+            if column is not None:
+                values[column] = token.group(0)
         names.append(match.group(1))
-        values.append(' ' * match.end() + line[match.end():].replace('CFS', '   ').replace('(', '( '))
+        rows.append([_parse_fcr_value(x, nr_value) for x in values[:5] + [percent_encroached] + values[5:]])
 
-    # read values as text; pandas would otherwise read "N/A" as missing before it is parsed
-    df = pd.read_fwf(io.StringIO('\n'.join(values)), header=None, dtype=str,
-                     keep_default_na=False, skip_blank_lines=False)
-
-    if len(df.columns) != 8:
-        print(f'WARNING: FCR data format not supported')
-        return None
-
-    df = df.map(lambda x: _parse_fcr_value(x, nr_value)).astype(object).replace(np.nan, None)
-    df.columns = ['Gross Pool (acft)',
-                  'Top of Conservation (acft)',
-                  'Actual Res (acft)',
-                  r'% of Gross Pool',
-                  'Above top of Conservation (acft)',
-                  r'% Encroached',
-                  'Flood Control Parameters (Rain in.)',
-                  'Flood Control Parameters (Snow acft)']
-    df.index = pd.Index(names, name='Reservoir')
+    columns = ['Gross Pool (acft)',
+               'Top of Conservation (acft)',
+               'Actual Res (acft)',
+               r'% of Gross Pool',
+               'Above top of Conservation (acft)',
+               r'% Encroached',
+               'Flood Control Parameters (Rain in.)',
+               'Flood Control Parameters (Snow acft)']
+    df = pd.DataFrame(rows, index=pd.Index(names, name='Reservoir'), columns=columns, dtype=object)
 
     # drop group label rows without values, e.g. "EBMUD Reservoirs:"
     return df.dropna(how='all')
