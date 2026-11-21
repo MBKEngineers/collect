@@ -415,49 +415,24 @@ def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
         print(f'WARNING: Sac Valley table unavailable before {last_date:%Y-%m-%d}')
         return None
 
-    query = extract_fcr_text(datetime_structure)
-    if len(query) > 0:
-        query = query[0]
-    else:
+    section = _extract_fcr_section(datetime_structure, 'Sacramento Valley')
+    if section is None:
+        print(f'WARNING: Sacramento Valley section not found in FCR report')
         return None
 
-    table_query = re.findall(r' Shasta:[\S\s]*(?=Folsom:)', query)[0].replace('CFS', '')
-
-    # add a space before values in parentheses so they are read as a separate column
-    table_query = table_query.replace('(', '( ')
-
-    # get the Folsom row and the Top of Conservation belonging to it
-    fol_row = re.findall(r'Folsom:\s*\S+', query)[0]
-
-    # read both tables as fixed width files
-    df = pd.read_fwf(io.StringIO(table_query), header=None)
-    fol_row = pd.read_fwf(io.StringIO(fol_row), header=None)
-
-    # Combine other resevoirs with Folsom row
-    df = pd.concat((df, fol_row), axis=0)
-
-    # convert values to numbers, keeping negative signs; not reported (-NR-) values become `nr_value`, and
-    # not applicable (----) values become None
-    df[0] = df[0].str.replace(':', '')
-    df[df.columns[1:]] = df[df.columns[1:]].map(lambda x: _parse_fcr_value(x, nr_value)).astype(object)
-
-    if len(df.columns) != 9:
+    # the reservoir table ends at the Folsom row, which is followed by the Folsom forecasted volumes table
+    lines = section.replace('\r', '').splitlines()
+    folsom = next((i for i, line in enumerate(lines) if re.match(r'^\s*\*?Folsom:', line)), None)
+    if folsom is None:
         print(f'WARNING: FCR data format not supported')
         return None
 
-    df.columns = ['Reservoir',
-                  'Gross Pool (acft)',
-                  'Top of Conservation (acft)',
-                  'Actual Res (acft)',
-                  r'% of Gross Pool',
-                  'Above top of Conservation (acft)',
-                  r'% Encroached',
-                  'Flood Control Parameters (Rain in.)',
-                  'Flood Control Parameters (Snow acft)']
+    df = _parse_fcr_reservoir_table('\n'.join(lines[:folsom + 1]), nr_value=nr_value)
+    if df is None:
+        return None
 
-    df = df.set_index('Reservoir')
-
-    return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
+    # columns without missing values are returned as float, as before the shared basin table parser was used
+    return df.astype(float, errors='ignore').replace(np.nan, None)
 
 
 def extract_folsom_fcr_data(datetime_structure, nr_value=None):

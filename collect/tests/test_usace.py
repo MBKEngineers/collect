@@ -410,6 +410,38 @@ class TestUSACE(unittest.TestCase):
         self.assertIsNone(result)
         self.assertIn('Tulare Lake Basin section not found', mock_print.call_args.args[0])
 
+    def test_extract_sac_valley_fcr_data_2014_format(self):
+        """
+        the earlier report format, with -NR- values without percent encroached and a full Folsom row
+        (report data ending 16 NOV 2014)
+        """
+        report = '\n'.join([
+            '                           ---- Sacramento Valley ----',
+            '                -------------------- Storages -----------------------  Flood Control',
+            '                   Gross    Top of     Actual  % of       Above Top     Parameters',
+            '                   Pool  Conservation   Res    Gross     of Conserv    Rain     Snow',
+            '                   (acft) (acft)***    (acft)  Pool         (acft)     (in)    (acft)',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
+            ' Shasta:        4,552,100      -NR- 1,059,352  23           -NR-       -NR-',
+            ' Black Butte:     136,200      -NR-      -NR-               -NR-       -NR-      ---',
+            '   East Park:      50,900               7,782  15',
+            '   Stony Gorge:    50,000               8,300  17',
+            ' Oroville:      3,538,000      -NR-      -NR-               -NR-       -NR-      ---',
+            ' New Bullards:    966,000      -NR-      -NR-               -NR-       ----      ---',
+            ' Indian Valley:   300,600      -NR-      -NR-               -NR-       ----      ---',
+            '*Folsom:          977,000      -NR-   284,757  29           -NR-       -NR-      ---',
+            '                           ---- San Joaquin Valley ----',
+        ])
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
+            mock_response.return_value.text = report
+            result = wcds.extract_sac_valley_fcr_data(dt.datetime(2014, 11, 16, tzinfo=ZoneInfo('US/Pacific')),
+                                                      nr_value='NR')
+        self.assertEqual(result.index.tolist(), ['Shasta', 'Black Butte', 'East Park', 'Stony Gorge', 'Oroville',
+                                                 'New Bullards', 'Indian Valley', 'Folsom'])
+        self.assertEqual(result.loc['Shasta'].tolist(), [4552100.0, 'NR', 1059352.0, 23.0, 'NR', None, 'NR', None])
+        self.assertEqual(result.loc['East Park'].tolist(), [50900.0, None, 7782.0, 15.0, None, None, None, None])
+        self.assertEqual(result.loc['Folsom'].tolist(), [977000.0, 'NR', 284757.0, 29.0, 'NR', None, 'NR', None])
+
     def test_get_fcr_data_table_failure(self):
         """
         a table that fails to parse is returned as None without discarding the other tables
