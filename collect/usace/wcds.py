@@ -346,6 +346,24 @@ def _fcr_days_ago(datetime_structure):
     return days
 
 
+def _get_fcr_report(datetime_structure):
+    """
+    get the full text of the USACE SPK FCR report for the requested date
+
+    Arguments:
+        datetime_structure (datetime.datetime): timezone-aware datetime object
+    Returns:
+        (str): the report text
+    Raises:
+        ValueError: if the requested date is today or later, as the report is not yet available
+    """
+    days = _fcr_days_ago(datetime_structure)
+
+    # midnight.py `days=N` returns the report with data ending on (today - N - 1), so offset by one
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days - 1}&report=FCR&textonly=true'
+    return utils.get_session_response(url).text
+
+
 def extract_fcr_text(datetime_structure):
     """
     read the text in the Sacramento Valley section of the USACE SPK FCR report
@@ -355,13 +373,28 @@ def extract_fcr_text(datetime_structure):
     Returns:
         (list): list of text from the FCR report
     """
-    days = _fcr_days_ago(datetime_structure)
-
-    # midnight.py `days=N` returns the report with data ending on (today - N - 1), so offset by one
-    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days - 1}&report=FCR&textonly=true'
-    content = utils.get_session_response(url).text
+    content = _get_fcr_report(datetime_structure)
     # get the list of text between Sacramento Valley and San Joaquin Valley
     return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
+
+
+def _extract_fcr_section(datetime_structure, heading):
+    """
+    read the text of one basin section of the USACE SPK FCR report, from its heading (e.g.
+    "---- San Joaquin Valley ----") to the next section heading or the end of the report
+
+    Arguments:
+        datetime_structure (datetime.datetime): datetime object
+        heading (str): the section name, e.g. 'San Joaquin Valley'
+    Returns:
+        (str or None): the section text, or None if the section is not in the report
+    """
+    content = _get_fcr_report(datetime_structure).replace('\r', '')
+    # section headings are centered names between dashes; the space before the closing dashes is not
+    # always present (e.g. "---- Russian River Basin----")
+    match = re.search(rf'^\s*---- {re.escape(heading)} ?----\s*$([\S\s]*?)(?=^\s*---- [^\n]*?----\s*$|\Z)',
+                      content, re.MULTILINE)
+    return None if match is None else match.group(0)
 
 
 def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
@@ -488,17 +521,25 @@ def extract_folsom_fcr_data(datetime_structure, nr_value=None):
     return pd.DataFrame(rows, index=index, columns=columns, dtype=object)
 
 
-def extract_san_joaquin_valley_fcr_data(datetime_structure):
+def extract_san_joaquin_valley_fcr_data(datetime_structure, nr_value=None):
     """
     get the San Joaquin Valley Flood Control Requirements report
 
     Arguments:
         datetime_structure (datetime): datetime object
+        nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
+            string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
+            values convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
-            specific to San Joaquin Valley
+            specific to San Joaquin Valley, including upstream reservoirs (e.g. Pardee) listed under their
+            downstream reservoir
     """
-    return None
+    section = _extract_fcr_section(datetime_structure, 'San Joaquin Valley')
+    if section is None:
+        print(f'WARNING: San Joaquin Valley section not found in FCR report')
+        return None
+    return _parse_fcr_reservoir_table(section, nr_value=nr_value)
 
 
 def extract_tulare_lake_basin_fcr_data(datetime_structure):
@@ -551,6 +592,58 @@ def extract_so_san_francisco_bay_basin_fcr_data(datetime_structure):
             specific to So. San Francisco Bay Basin
     """
     return None
+
+
+def _parse_fcr_reservoir_table(section, nr_value=None):
+    """
+    parse the reservoir storages and flood control parameters table of an FCR report basin section, from
+    the rule line of dashes under the column headers to the line of underscores above the basin totals
+
+    Arguments:
+        section (str): the basin section text
+        nr_value (optional): value returned for not-reported (-NR-) entries
+    Returns:
+        df (pandas.DataFrame): storage and flood control parameters by reservoir; None if the table format
+            is not supported
+    """
+    lines = section.splitlines()
+    start = next((i for i, line in enumerate(lines) if re.match(r'^\s*-{10,}\s+-{5,}', line)), None)
+    end = next((i for i, line in enumerate(lines) if line.startswith(' ___')), len(lines))
+    if start is None:
+        print(f'WARNING: FCR data format not supported')
+        return None
+
+    # the reservoir name is blanked in place so value positions are unchanged for read_fwf column inference;
+    # rows without values (e.g. "EBMUD Reservoirs:") are kept so names and values stay aligned
+    names, values = [], []
+    for line in lines[start + 1:end]:
+        match = re.match(r'^\s*\*?([A-Za-z][\w /.]*?):', line)
+        if match is None:
+            continue
+        names.append(match.group(1))
+        values.append(' ' * match.end() + line[match.end():].replace('CFS', '   ').replace('(', '( '))
+
+    # read values as text; pandas would otherwise read "N/A" as missing before it is parsed
+    df = pd.read_fwf(io.StringIO('\n'.join(values)), header=None, dtype=str,
+                     keep_default_na=False, skip_blank_lines=False)
+
+    if len(df.columns) != 8:
+        print(f'WARNING: FCR data format not supported')
+        return None
+
+    df = df.map(lambda x: _parse_fcr_value(x, nr_value)).astype(object).replace(np.nan, None)
+    df.columns = ['Gross Pool (acft)',
+                  'Top of Conservation (acft)',
+                  'Actual Res (acft)',
+                  r'% of Gross Pool',
+                  'Above top of Conservation (acft)',
+                  r'% Encroached',
+                  'Flood Control Parameters (Rain in.)',
+                  'Flood Control Parameters (Snow acft)']
+    df.index = pd.Index(names, name='Reservoir')
+
+    # drop group label rows without values, e.g. "EBMUD Reservoirs:"
+    return df.dropna(how='all')
 
 
 def _parse_fcr_value(value, nr_value=None):

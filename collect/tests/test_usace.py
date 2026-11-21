@@ -285,6 +285,72 @@ class TestUSACE(unittest.TestCase):
         self.assertEqual(result.loc['Oroville'].tolist(), [3425000.0, 'NR', 2780358.0, 81.0, 'NR', 0.0, 'NR', None])
         self.assertEqual(result.loc['Indian Valley', above], -24900.0)
 
+    def test_extract_san_joaquin_valley_fcr_data(self):
+        """
+        San Joaquin Valley reservoirs, including upstream reservoirs with a blank Top of Conservation, with
+        not-reported (-NR-), not-applicable (----, N/A), zero, and negative values (report data ending
+        02 OCT 2025)
+        """
+        report = '\n'.join([
+            '                           ---- San Joaquin Valley ----',
+            '                -------------------- Storages -----------------------  Flood Control',
+            '                   Gross    Top of     Actual  % of       Above Top     Parameters',
+            '                   Pool  Conservation   Res    Gross     of Conserv    Rain     Snow',
+            '                   (acft) (acft)***    (acft)  Pool       (acft)( **)  (in)    (acft)',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
+            ' EBMUD Reservoirs:',
+            '   Camanche:      417,120      -NR-   308,550  74           -NR-(  0)  ----       N/A',
+            '   Pardee:        203,795             193,420  95',
+            '   Salt Springs:  140,000              68,603  49',
+            '   Lower Bear:     49,000              34,076  70',
+            ' New Hogan:       317,100   311,600   156,564  49       -155,036(  0)  0.67      ---',
+            ' Farmington:       52,000         0       141   0            141(  0)  ----      ---',
+            ' New Melones:   2,420,000 2,253,696 1,624,299  67       -629,397(  0)  ----       N/A',
+            '   Beardsly:       97,800              63,567  65',
+            '   Donnells:       64,300              20,117  31',
+            ' Tulloch:          67,000    63,304    61,025  91         -2,279(  0)  ----      ---',
+            ' Don Pedro:     2,030,000      -NR- 1,564,529  77           -NR-(  0)  ----       N/A',
+            '   Hetch Hetchy:  360,400             280,538  78',
+            '   Cherry Vly:    268,200             244,541  91',
+            '   Eleanor:        26,000              18,428  71',
+            ' New Exchequer: 1,024,600      -NR-   632,499  62           -NR-(  0)  ----       N/A',
+            ' Burns:             6,800         0         3   0              3(  0)  ----      ---',
+            ' Bear:              7,700         0         2   0              2(  0)  ----      ---',
+            ' Owens:             3,600         0         0   0              0(  0)  ----      ---',
+            ' Mariposa:         15,000         0         2   0              2(  0)  ----      ---',
+            ' Los Banos:        34,600    20,562     9,836  28        -10,726(  0)  ----      ---',
+            ' Buchanan:        150,000   134,159    14,697  10       -119,462(  0)  0.31      ---',
+            ' Hidden:           90,000    67,142     7,300   8        -59,842(  0)  0.46      ---',
+            ' Friant:          520,500   508,776   247,977  48       -260,799(  0)  ----       N/A',
+            '   Mammoth:       122,700              58,784  48',
+            '   Total U/S:     628,500             346,638  55',
+            ' Big Dry Creek:    30,200       200       188   1            -12(  0)  ----      ---',
+            ' ___________________________________________________________________________________',
+            ' BASIN TOTALS   7,186,300 3,359,440 4,627,612  64      1,268,172( 33)',
+            ' TOTAL FLOOD SPACE ENCROACHED                                148',
+            ' w/US Storages  9,018,450           5,897,540  65',
+            '',
+            '                           ---- Tulare Lake Basin ----',
+        ])
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
+            mock_response.return_value.text = report
+            result = wcds.extract_san_joaquin_valley_fcr_data(dt.datetime(2025, 10, 2, tzinfo=ZoneInfo('US/Pacific')))
+            result_nr = wcds.extract_san_joaquin_valley_fcr_data(dt.datetime(2025, 10, 2, tzinfo=ZoneInfo('US/Pacific')),
+                                                                 nr_value='NR')
+
+        # the "EBMUD Reservoirs" group label has no values and is dropped
+        self.assertEqual(len(result), 26)
+        self.assertEqual(result.index[:3].tolist(), ['Camanche', 'Pardee', 'Salt Springs'])
+        self.assertEqual(result.index[-1], 'Big Dry Creek')
+
+        self.assertEqual(result.loc['Camanche'].tolist(), [417120.0, None, 308550.0, 74.0, None, 0.0, None, None])
+        self.assertEqual(result_nr.loc['Camanche'].tolist(), [417120.0, 'NR', 308550.0, 74.0, 'NR', 0.0, None, None])
+        self.assertEqual(result.loc['Pardee'].tolist(), [203795.0, None, 193420.0, 95.0] + [None] * 4)
+        self.assertEqual(result.loc['New Hogan'].tolist(),
+                         [317100.0, 311600.0, 156564.0, 49.0, -155036.0, 0.0, 0.67, None])
+        self.assertEqual(result.loc['Farmington'].tolist(), [52000.0, 0.0, 141.0, 0.0, 141.0, 0.0, None, None])
+        self.assertEqual(result.loc['Total U/S'].tolist(), [628500.0, None, 346638.0, 55.0] + [None] * 4)
+
     def test_get_fcr_data_table_failure(self):
         """
         a table that fails to parse is returned as None without discarding the other tables
