@@ -71,6 +71,7 @@ class TestUSACE(unittest.TestCase):
     def _extract_basin_totals_from_text(self, totals_rows, **kwargs):
         report = '\n'.join([
             '                           ---- Sacramento Valley ----',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
             *totals_rows,
             '',
             ' **  Percent Encroached',
@@ -96,6 +97,81 @@ class TestUSACE(unittest.TestCase):
         result = self._extract_basin_totals_from_text(rows, nr_value='NR')
         self.assertEqual(result.loc['BASIN TOTALS'].tolist(), [10469900.0, 'NR', 'NR', None, 'NR', None])
         self.assertEqual(result.loc['w/US Storages'].tolist(), [11124200.0, None, 'NR', None, None, None])
+
+    def _extract_basin_totals_from_lines(self, section_lines, basin, requested, **kwargs):
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
+            mock_response.return_value.text = '\n'.join(section_lines)
+            return wcds.extract_basin_totals(requested, basin=basin, **kwargs)
+
+    def test_extract_basin_totals_by_basin_blank_columns(self):
+        """
+        basin totals are read for other basin sections, with values assigned by column position so blank
+        columns stay in place; Russian River reports no w/US Storages row (report data ending 22 JAN 2026)
+        """
+        lines = [
+            '                          ---- Russian River Basin----',
+            '                -------------------- Storages -----------------------  Flood Control',
+            '                   Gross    Top of     Actual  % of       Above Top     Parameters',
+            '                   Pool  Conservation   Res    Gross     of Conserv    Rain     Snow',
+            '                   (acft) (acft)***    (acft)  Pool       (acft)( **)  (in)    (acft)',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
+            ' BASIN TOTALS     497,500      -NR-                         -NR-(  0)',
+            ' TOTAL FLOOD SPACE ENCROACHED                                 0',
+            '',
+            ' **  Percent Encroached',
+        ]
+        result = self._extract_basin_totals_from_lines(lines, 'Russian River Basin',
+                                                       dt.datetime(2026, 1, 22, tzinfo=ZoneInfo('US/Pacific')),
+                                                       nr_value='NR')
+        self.assertEqual(result.index.tolist(), ['BASIN TOTALS', 'TOTAL FLOOD SPACE ENCROACHED'])
+        self.assertEqual(result.loc['BASIN TOTALS'].tolist(), [497500.0, 'NR', None, None, 'NR', 0.0])
+        self.assertEqual(result.loc['TOTAL FLOOD SPACE ENCROACHED'].tolist(), [None, None, None, None, 0.0, None])
+
+    def test_extract_basin_totals_values_without_spaces(self):
+        """
+        values printed without a space between them keep their own columns: an unfilled placeholder after a
+        number, and two numbers (report data ending 27 MAY 2014)
+        """
+        requested = dt.datetime(2014, 5, 27, tzinfo=ZoneInfo('US/Pacific'))
+        result = self._extract_basin_totals_from_lines([
+            '                           ---- San Joaquin Valley ----',
+            '                -------------------- Storages -----------------------  Flood Control',
+            '                   Gross    Top of     Actual  % of       Above Top     Parameters',
+            '                   Pool  Conservation   Res    Gross     of Conserv    Rain     Snow',
+            '                   (acft) (acft)***    (acft)  Pool         (acft)     (in)    (acft)',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
+            ' BASIN TOTALS   7,186,300%BBSTCS    2,857,502  40     %BBSSP     %BBS2',
+            ' w/US Storages  9,018,450           4,169,585  46',
+        ], 'San Joaquin Valley', requested)
+        self.assertEqual(result.loc['BASIN TOTALS'].tolist(), [7186300.0, None, 2857502.0, 40.0, None, None])
+        self.assertEqual(result.loc['w/US Storages'].tolist(), [9018450.0, None, 4169585.0, 46.0, None, None])
+
+        result = self._extract_basin_totals_from_lines([
+            '                           ---- Sacramento Valley ----',
+            '                -------------------- Storages -----------------------  Flood Control',
+            '                   Gross    Top of     Actual  % of       Above Top     Parameters',
+            '                   Pool  Conservation   Res    Gross     of Conserv    Rain     Snow',
+            '                   (acft) (acft)***    (acft)  Pool         (acft)     (in)    (acft)',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
+            ' BASIN TOTALS  10,469,90010,439,068 5,294,714  51     -5,144,354          0',
+            ' w/US Storages 11,124,200           5,531,111  50',
+        ], 'Sacramento Valley', requested)
+        self.assertEqual(result.loc['BASIN TOTALS'].tolist(),
+                         [10469900.0, 10439068.0, 5294714.0, 51.0, -5144354.0, None])
+
+    def test_extract_basin_totals_none_reported_for_basin(self):
+        """
+        a basin section without basin totals returns None (So. San Francisco Bay Basin)
+        """
+        with mock.patch('builtins.print') as mock_print:
+            result = self._extract_basin_totals_from_lines([
+                '                       ---- So. San Francisco Bay Basin ----',
+                ' -------------- --------- --------- --------- -------- -------------- ---------------',
+                ' Del Valle:        77,000    39,000    27,797  36(  0)   -11,203(  0)  ----      ---',
+                ' ____________________________________________________________________________________',
+            ], 'So. San Francisco Bay Basin', dt.datetime(2026, 11, 19, tzinfo=ZoneInfo('US/Pacific')))
+        self.assertIsNone(result)
+        self.assertIn('So. San Francisco Bay Basin basin totals not found', mock_print.call_args.args[0])
 
     def test_extract_basin_totals_zero(self):
         """
@@ -440,10 +516,7 @@ class TestUSACE(unittest.TestCase):
 
                 # midnight on the cutoff date in US/Pacific queries the report
                 mock_response.return_value.text = ''
-                try:
-                    extract(dt.datetime(2014, 2, 5, tzinfo=ZoneInfo('US/Pacific')))
-                except IndexError:
-                    pass  # extract_basin_totals indexes the (empty) report text
+                extract(dt.datetime(2014, 2, 5, tzinfo=ZoneInfo('US/Pacific')))
                 mock_response.assert_called_once()
 
     def test_parse_fcr_value(self):
@@ -471,6 +544,12 @@ class TestUSACE(unittest.TestCase):
                 dt.datetime(2014, 5, 26, 23, 59, tzinfo=ZoneInfo('US/Pacific'))))
             self.assertEqual(mock_print.call_args.args[0],
                              'WARNING: San Joaquin Valley table unavailable before 2014-05-27')
+            mock_response.assert_not_called()
+
+            self.assertIsNone(wcds.extract_basin_totals(
+                dt.datetime(2014, 5, 26, 23, 59, tzinfo=ZoneInfo('US/Pacific')), basin='San Joaquin Valley'))
+            self.assertEqual(mock_print.call_args.args[0],
+                             'WARNING: San Joaquin Valley basin totals table unavailable before 2014-05-27')
             mock_response.assert_not_called()
 
             mock_response.return_value.text = ''

@@ -660,19 +660,74 @@ def _extract_basin_reservoir_data(datetime_structure, heading, nr_value=None):
                                       percent_encroached=_fcr_labels_percent_encroached(content))
 
 
-# a parenthesized percent encroached, e.g. "(  0)" or "(-142)", or any other value, which ends before a "("
-_FCR_VALUE_PATTERN = re.compile(r'\(\s*-?\d+\s*\)|[^\s(]+')
+# an FCR report value: a parenthesized percent encroached, e.g. "(  0)" or "(-142)"; an unfilled placeholder
+# starting with "%", e.g. "%NEXTCS"; a comma-grouped number; or any other value, which ends before a "(" or
+# "%"; placeholders and comma-grouped numbers are matched separately so values printed without a space
+# between them (e.g. "7,186,300%BBSTCS" or "10,469,90010,439,068") keep their own positions
+_FCR_VALUE_PATTERN = re.compile(r'\(\s*-?\d+\s*\)|%[^\s(%]*|-?\d{1,3}(?:,\d{3})+|[^\s(%]+')
+
+
+def _fcr_column_edges(lines):
+    """
+    the column positions of an FCR report basin section, from the rule line of dashes under the column headers
+
+    values are right-aligned and wide values can extend left past their column's rule, so a value belongs to the
+    first column whose rule ends at or after the value's last character
+
+    Arguments:
+        lines (list): lines of the basin section text
+    Returns:
+        (tuple or None): the index of the rule line; the right edges of the gross pool, top of conservation,
+            actual, % of gross pool, above top of conservation, rain, and snow columns; and the start of the
+            above top of conservation column; None if the rule line is not found
+    """
+    start = next((i for i, line in enumerate(lines) if re.match(r'^\s*-{10,}\s+-{5,}', line)), None)
+    spans = None if start is None else [(m.start(), m.end()) for m in re.finditer(r'-+', lines[start])]
+    if spans is None or len(spans) != 7:
+        return None
+
+    # the flood control parameters column holds right-aligned rain and snow values, so it is split at its midpoint
+    params_start, params_end = spans[6]
+    right_edges = [column_end for _, column_end in spans[1:6]] + [(params_start + params_end) // 2, params_end]
+    return start, right_edges, spans[5][0]
+
+
+def _split_fcr_row(line, start, right_edges, above_start, read_percent_encroached=True):
+    """
+    assign the values in a row of an FCR report table to columns by position
+
+    Arguments:
+        line (str): the table row
+        start (int): position where the values begin, after the row label
+        right_edges (list): right edge position of each column, in order; values beyond the last are ignored
+        above_start (int): start position of the above top of conservation column
+        read_percent_encroached (bool): whether to read the parenthesized value after the above top of
+            conservation value as the percent encroached
+    Returns:
+        values (list): the raw text of each column's value, or None if blank
+        percent_encroached (str or None): the parenthesized percent encroached
+    """
+    values, percent_encroached = [None] * len(right_edges), None
+    for token in _FCR_VALUE_PATTERN.finditer(line.replace('CFS', '   '), start):
+        if token.group(0).startswith('('):
+            # the percent encroached follows the above top of conservation value; a parenthesized value
+            # elsewhere in the row (e.g. after Del Valle's % of gross pool) is not a table column
+            if read_percent_encroached and token.end() > above_start:
+                percent_encroached = token.group(0)
+            continue
+        column = next((i for i, edge in enumerate(right_edges) if token.end() <= edge), None)
+        if column is not None:
+            values[column] = token.group(0)
+    return values, percent_encroached
 
 
 def _parse_fcr_reservoir_table(section, nr_value=None, percent_encroached=True):
     """
     parse the reservoir storages and flood control parameters table of an FCR report basin section, from
-    the rule line of dashes under the column headers to the line of underscores above the basin totals
-
-    values are assigned to columns by the positions of the rule line: values are right-aligned and wide
-    values can extend left past their column's rule, so a value belongs to the first column whose rule
-    ends at or after the value's last character; this keeps values in place when a column is blank in
-    some or all rows (e.g. upstream reservoirs without a Top of Conservation, or a table with one row)
+    the rule line of dashes under the column headers to the line of underscores above the basin totals;
+    values are assigned to columns by the positions of the rule line (see `_fcr_column_edges`), which keeps
+    values in place when a column is blank in some or all rows (e.g. upstream reservoirs without a Top of
+    Conservation, or a table with one row)
 
     Arguments:
         section (str): the basin section text
@@ -683,39 +738,22 @@ def _parse_fcr_reservoir_table(section, nr_value=None, percent_encroached=True):
         df (pandas.DataFrame): storage and flood control parameters by reservoir; None if the table format
             is not supported
     """
-    read_percent_encroached = percent_encroached
     lines = section.replace('\r', '').splitlines()
-    start = next((i for i, line in enumerate(lines) if re.match(r'^\s*-{10,}\s+-{5,}', line)), None)
-    end = next((i for i, line in enumerate(lines) if line.startswith(' ___')), len(lines))
-    spans = None if start is None else [(m.start(), m.end()) for m in re.finditer(r'-+', lines[start])]
-    if spans is None or len(spans) != 7:
+    columns = _fcr_column_edges(lines)
+    if columns is None:
         print(f'WARNING: FCR data format not supported')
         return None
-
-    # right edges of the gross pool through above top of conservation columns; the flood control parameters
-    # column holds right-aligned rain and snow values, so it is split at its midpoint
-    params_start, params_end = spans[6]
-    right_edges = [column_end for _, column_end in spans[1:6]] + [(params_start + params_end) // 2, params_end]
-    above_start = spans[5][0]
+    start, right_edges, above_start = columns
+    end = next((i for i, line in enumerate(lines) if line.startswith(' ___')), len(lines))
 
     names, rows = [], []
     for line in lines[start + 1:end]:
         match = re.match(r'^\s*\*?([A-Za-z][\w /.]*?):', line)
         if match is None:
             continue
-        values, percent_encroached = [None] * len(right_edges), None
-        for token in _FCR_VALUE_PATTERN.finditer(line.replace('CFS', '   '), match.end()):
-            if token.group(0).startswith('('):
-                # the percent encroached follows the above top of conservation value; a parenthesized value
-                # elsewhere in the row (e.g. after Del Valle's % of gross pool) is not a table column
-                if read_percent_encroached and token.end() > above_start:
-                    percent_encroached = token.group(0)
-                continue
-            column = next((i for i, edge in enumerate(right_edges) if token.end() <= edge), None)
-            if column is not None:
-                values[column] = token.group(0)
+        values, percent = _split_fcr_row(line, match.end(), right_edges, above_start, percent_encroached)
         names.append(match.group(1))
-        rows.append([_parse_fcr_value(x, nr_value) for x in values[:5] + [percent_encroached] + values[5:]])
+        rows.append([_parse_fcr_value(x, nr_value) for x in values[:5] + [percent] + values[5:]])
 
     columns = ['Gross Pool (acft)',
                'Top of Conservation (acft)',
@@ -729,6 +767,51 @@ def _parse_fcr_reservoir_table(section, nr_value=None, percent_encroached=True):
 
     # drop group label rows without values, e.g. "EBMUD Reservoirs:"
     return df.dropna(how='all')
+
+
+def _parse_fcr_basin_totals(section, nr_value=None, percent_encroached=True):
+    """
+    parse the basin totals rows of an FCR report basin section (BASIN TOTALS, TOTAL FLOOD SPACE ENCROACHED, and
+    w/US Storages, as present); values are assigned to columns by the positions of the section's rule line, as
+    for the reservoir table, so blank columns (e.g. the top of conservation of w/US Storages) stay in place
+
+    Arguments:
+        section (str): the basin section text
+        nr_value (optional): value returned for not-reported (-NR-) entries
+        percent_encroached (bool): whether to read the parenthesized value after the above top of
+            conservation storage as the percent encroached; if False, the Percent Encroached column is None
+    Returns:
+        df (pandas.DataFrame): the basin totals by row; None if the section has no basin totals or the table
+            format is not supported
+    """
+    lines = section.replace('\r', '').splitlines()
+    columns = _fcr_column_edges(lines)
+    if columns is None:
+        return None
+    start, right_edges, above_start = columns
+
+    index, rows = [], []
+    for label in ('BASIN TOTALS', 'TOTAL FLOOD SPACE ENCROACHED', 'w/US Storages'):
+        line = next((line for line in lines[start + 1:] if line.startswith(f' {label}')), None)
+        if line is None:
+            continue
+        # the totals report storages only; values beyond the above top of conservation column (e.g. a trailing
+        # value in the flood control parameters column of 2014 reports) are ignored
+        values, percent = _split_fcr_row(line, len(label) + 1, right_edges[:5], above_start, percent_encroached)
+        index.append(label)
+        rows.append([_parse_fcr_value(x, nr_value) for x in values + [percent]])
+
+    if len(rows) == 0:
+        return None
+
+    columns = ['Gross Pool (acft)',
+               'Top of Conservation (acft)',
+               'Actual Res (acft)',
+               r'% of GrossPool',
+               'Above Top of Conservation (acft)',
+               'Percent Encroached']
+    # object dtype keeps missing values as None, consistent with the other FCR tables
+    return pd.DataFrame(rows, index=pd.Index(index, name='Metric'), columns=columns, dtype=object)
 
 
 def _parse_fcr_value(value, nr_value=None):
@@ -758,82 +841,40 @@ def _parse_fcr_value(value, nr_value=None):
         return None
 
 
-def extract_basin_totals(datetime_structure, nr_value=None):
+def extract_basin_totals(datetime_structure, nr_value=None, basin='Sacramento Valley'):
     """
-    get the Sacramento Valley basin FCR totals
+    get the basin FCR totals for one basin section of the FCR report
 
     Arguments:
         datetime_structure (datetime): datetime object
         nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
             string 'NR'); defaults to None, the same as blank and not-applicable (----) entries, so values
             convert to float; pass 'NR' to keep not-reported entries distinguishable
+        basin (str): the basin section name; one of 'Sacramento Valley' (default), 'San Joaquin Valley',
+            'Tulare Lake Basin', 'Truckee River Basin', or 'Russian River Basin'
     Returns:
-        df (pandas.DataFrame): the USACE SPK total Sacramento Valley basin FCR values
+        df (pandas.DataFrame): the USACE SPK basin totals, with rows BASIN TOTALS, TOTAL FLOOD SPACE ENCROACHED,
+            and w/US Storages, as reported for the basin (Truckee River and Russian River report no w/US Storages,
+            and reports before late 2014 no TOTAL FLOOD SPACE ENCROACHED)
         OR
-        table_query (str): raw text for basin totals
-        OR
-        None: if the requested date is before the first supported report (5 FEB 2014, US/Pacific)
+        None: if the requested date is before the basin's first supported report, or the basin has no totals
+            (e.g. So. San Francisco Bay Basin)
     """
-    if not _fcr_available(datetime_structure, 'Sacramento Valley basin totals'):
+    if not _fcr_available(datetime_structure, f'{basin} basin totals',
+                          start=_FCR_SECTION_START.get(basin, _FCR_START)):
         return None
 
-    query = extract_fcr_text(datetime_structure)[0]
+    content = _get_fcr_report(datetime_structure)
+    section = _fcr_section(content, basin)
+    if section is None:
+        print(f'WARNING: {basin} section not found in FCR report')
+        return None
 
-    # try reading data in one of two formats
-    try:
-        table_query = re.findall(r' BASIN TOTALS[\S\s]*(?=Percent Encroached)', query)[0].replace('CFS', '')
-    except IndexError:
-        table_query = re.findall(r' BASIN TOTALS[\S\s]*(?=Folsom \(COE\) Diagram not used in Calculations)', query)[0].replace('CFS', '')
-
-    columns = ['Gross Pool (acft)',
-               'Top of Conservation (acft)',
-               'Actual Res (acft)',
-               r'% of GrossPool',
-               'Above Top of Conservation (acft)',
-               'Percent Encroached']
-
-    # each row reports a fixed set of columns; parsing rows by label rather than inferring a fixed-width
-    # layout keeps not-reported (-NR-) values and missing rows from invalidating the table
-    row_columns = {'BASIN TOTALS': ['Gross Pool (acft)',
-                                    'Top of Conservation (acft)',
-                                    'Actual Res (acft)',
-                                    r'% of GrossPool',
-                                    'Above Top of Conservation (acft)'],
-                   'TOTAL FLOOD SPACE ENCROACHED': ['Above Top of Conservation (acft)'],
-                   'w/US Storages': ['Gross Pool (acft)',
-                                     'Actual Res (acft)',
-                                     r'% of GrossPool']}
-
-    index, rows = [], []
-    for label, label_columns in row_columns.items():
-        match = re.search(rf'^ {re.escape(label)}(.*)$', table_query, re.MULTILINE)
-        if match is None:
-            continue
-
-        # the percent encroached follows in parentheses, e.g. "-2,713,587(  0)"
-        values, _, remainder = match.group(1).partition('(')
-        percent_encroached = remainder.partition(')')[0] if remainder else None
-
-        # values fill the row's columns in order; the % of gross pool is a whole number and is left blank when
-        # the actual storage is not reported, e.g. "10,469,900  -NR-  -NR-  [blank]  -NR-", so a value that
-        # is not a whole number belongs to the following column
-        row = dict.fromkeys(columns)
-        remaining_columns = iter(label_columns)
-        for value in values.split():
-            for column in remaining_columns:
-                if column == r'% of GrossPool' and not re.fullmatch(r'\d+', value):
-                    continue
-                row[column] = _parse_fcr_value(value, nr_value)
-                break
-        row['Percent Encroached'] = _parse_fcr_value(percent_encroached, nr_value)
-        index.append(label)
-        rows.append([row[column] for column in columns])
-
-    if len(rows) == 0:
-        return table_query
-
-    # object dtype keeps missing values as None, consistent with the other FCR tables
-    return pd.DataFrame(rows, index=pd.Index(index, name='Metric'), columns=columns, dtype=object)
+    df = _parse_fcr_basin_totals(section, nr_value=nr_value,
+                                 percent_encroached=_fcr_labels_percent_encroached(content))
+    if df is None:
+        print(f'WARNING: {basin} basin totals not found in FCR report')
+    return df
 
 
 def get_fcr_data(datetime_structure, nr_value=None):
