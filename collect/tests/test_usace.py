@@ -446,6 +446,20 @@ class TestUSACE(unittest.TestCase):
                     pass  # extract_basin_totals indexes the (empty) report text
                 mock_response.assert_called_once()
 
+    def test_parse_fcr_value(self):
+        """
+        numbers keep their sign, -NR- is `nr_value`, and not-applicable values and unfilled placeholders are None
+        """
+        self.assertEqual(wcds._parse_fcr_value('-1,212,640'), -1212640.0)
+        self.assertEqual(wcds._parse_fcr_value('(  0)'), 0.0)
+        self.assertEqual(wcds._parse_fcr_value('(-142)'), -142.0)
+        self.assertIsNone(wcds._parse_fcr_value('-NR-'))
+        self.assertEqual(wcds._parse_fcr_value('-NR-', nr_value='NR'), 'NR')
+        # not applicable, blank, and unfilled placeholders (codes ending in SP, template variables)
+        for value in ('----', '---', 'N/A', '', None, 'NHSP', 'PFSP', '%NEXTCS', '****'):
+            with self.subTest(value=value):
+                self.assertIsNone(wcds._parse_fcr_value(value, nr_value='NR'))
+
     def test_extract_san_joaquin_valley_fcr_data_cutoff(self):
         """
         the San Joaquin Valley table is unavailable before 2014-05-27 00:00 US/Pacific, the first report with

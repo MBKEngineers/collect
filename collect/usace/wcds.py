@@ -734,7 +734,9 @@ def _parse_fcr_reservoir_table(section, nr_value=None, percent_encroached=True):
 def _parse_fcr_value(value, nr_value=None):
     """
     convert an FCR report value to float, keeping its sign; not reported (-NR-) values are returned as
-    `nr_value`, and not applicable (----), blank, or non-numeric values are returned as None
+    `nr_value`, and not applicable (----, N/A), blank, or non-numeric values are returned as None, including
+    unfilled report placeholders such as codes ending in SP (e.g. "NHSP", "PFSP"), unfilled template
+    variables (e.g. "%NEXTCS"), and "****"
 
     Arguments:
         value (str or number): the raw value text, which may include thousands separators and parentheses,
