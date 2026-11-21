@@ -262,6 +262,8 @@ class TestUSACE(unittest.TestCase):
             ' New Bullards:    966,000   796,000   802,184  83          6,184(  4)  ----      ---',
             ' Indian Valley:   300,600   260,600   235,700  78        -24,900(  0)  ----      ---',
             ' Folsom:          966,823                                                 Forecasted Volumes****',
+            '',
+            ' **  Percent Encroached',
             '                           ---- San Joaquin Valley ----',
         ])
         with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
@@ -374,6 +376,9 @@ class TestUSACE(unittest.TestCase):
             ' Stampede:        226,500      -NR-      -NR-               -NR-(  0)  ----       N/A',
             ' ____________________________________________________________________________________',
             ' BASIN TOTALS     317,800         0         0   0              0(  0)',
+            # the Truckee header omits "( **)"; the report labels percent encroached in its footnotes
+            '',
+            ' **  Percent Encroached',
         ]
         result = self._extract_basin_from_text(wcds.extract_truckee_river_basin_fcr_data, lines, nr_value='NR')
         self.assertEqual(result.index.tolist(), ['Martis Creek', 'Prosser', 'Boca', 'Stampede'])
@@ -429,6 +434,36 @@ class TestUSACE(unittest.TestCase):
             mock_response.return_value.text = ''
             wcds.extract_sac_valley_fcr_data(dt.datetime(2014, 2, 5, tzinfo=ZoneInfo('US/Pacific')))
             mock_response.assert_called_once()
+
+    def test_extract_sac_valley_fcr_data_unlabeled_percent_encroached(self):
+        """
+        parenthesized values are not read as percent encroached when the report does not label them, with
+        the "( **)" header or the "**  Percent Encroached" footnote (report data ending 05 FEB 2014)
+        """
+        report = '\n'.join([
+            '                           ---- Sacramento Valley ----',
+            '                -------------------- Storages -----------------------  Flood Control',
+            '                   Gross    Top of     Actual  % of       Above Top     Parameters',
+            '                   Pool  Conservation   Res    Gross     of Conserv    Rain     Snow',
+            '                   (acft) (acft)***    (acft)  Pool         (acft)     (in)    (acft)',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
+            ' Shasta:        4,552,100 3,909,571 1,653,860  36     -2,255,711 (86)  58463 CFS',
+            ' Black Butte:     136,200    69,800    13,560  10        -56,240 (51)  0.28      ---',
+            '   East Park:      50,900               7,214  14',
+            '   Stony Gorge:    50,000              14,251  29',
+            ' Oroville:      3,538,000 3,163,000      ****               -NR- (89)  0.08      ---',
+            ' New Bullards:    966,000   796,000   402,504  42       -393,496 (82)  ----      ---',
+            ' Indian Valley:   300,600   260,600    13,000   4       -247,600       ----      ---',
+            '*Folsom:          977,000   577,000   162,652  17       -414,348 (59)  0.91      ---',
+            '                           ---- San Joaquin Valley ----',
+        ])
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
+            mock_response.return_value.text = report
+            result = wcds.extract_sac_valley_fcr_data(dt.datetime(2014, 2, 5, tzinfo=ZoneInfo('US/Pacific')))
+        # the row reads "-2,255,711 (86)", which cannot be a percent encroached below top of conservation
+        self.assertEqual(result.loc['Shasta'].tolist(),
+                         [4552100.0, 3909571.0, 1653860.0, 36.0, -2255711.0, None, 58463.0, None])
+        self.assertTrue(all(value is None for value in result[r'% Encroached']))
 
     def test_extract_sac_valley_fcr_data_2014_format(self):
         """

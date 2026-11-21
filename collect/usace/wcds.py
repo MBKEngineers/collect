@@ -389,12 +389,42 @@ def _extract_fcr_section(datetime_structure, heading):
     Returns:
         (str or None): the section text, or None if the section is not in the report
     """
-    content = _get_fcr_report(datetime_structure).replace('\r', '')
+    return _fcr_section(_get_fcr_report(datetime_structure), heading)
+
+
+def _fcr_section(content, heading):
+    """
+    the text of one basin section of the FCR report text, from its heading to the next section heading or the
+    end of the report
+
+    Arguments:
+        content (str): the FCR report text
+        heading (str): the section name, e.g. 'San Joaquin Valley'
+    Returns:
+        (str or None): the section text, or None if the section is not in the report
+    """
     # section headings are centered names between dashes; the space before the closing dashes is not
     # always present (e.g. "---- Russian River Basin----")
     match = re.search(rf'^\s*---- {re.escape(heading)} ?----\s*$([\S\s]*?)(?=^\s*---- [^\n]*?----\s*$|\Z)',
-                      content, re.MULTILINE)
+                      content.replace('\r', ''), re.MULTILINE)
     return None if match is None else match.group(0)
+
+
+def _fcr_labels_percent_encroached(content):
+    """
+    whether the FCR report labels the parenthesized values after the above top of conservation storage as
+    percent encroached, with the "( **)" column header or the "**  Percent Encroached" footnote; earlier
+    reports (e.g. 2014) show parenthesized values there without either label, and their meaning is unknown
+
+    the label is checked for the whole report rather than each section, as the Truckee River Basin header
+    omits "( **)" in reports that otherwise label the column
+
+    Arguments:
+        content (str): the FCR report text
+    Returns:
+        (bool): True if the report labels percent encroached
+    """
+    return bool(re.search(r'\(\s*\*\*\s*\)|^\s*\*\*\s+Percent Encroached', content, re.MULTILINE))
 
 
 def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
@@ -415,7 +445,8 @@ def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
         print(f'WARNING: Sac Valley table unavailable before {last_date:%Y-%m-%d}')
         return None
 
-    section = _extract_fcr_section(datetime_structure, 'Sacramento Valley')
+    content = _get_fcr_report(datetime_structure)
+    section = _fcr_section(content, 'Sacramento Valley')
     if section is None:
         print(f'WARNING: Sacramento Valley section not found in FCR report')
         return None
@@ -427,7 +458,8 @@ def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
         print(f'WARNING: FCR data format not supported')
         return None
 
-    df = _parse_fcr_reservoir_table('\n'.join(lines[:folsom + 1]), nr_value=nr_value)
+    df = _parse_fcr_reservoir_table('\n'.join(lines[:folsom + 1]), nr_value=nr_value,
+                                    percent_encroached=_fcr_labels_percent_encroached(content))
     if df is None:
         return None
 
@@ -590,18 +622,20 @@ def _extract_basin_reservoir_data(datetime_structure, heading, nr_value=None):
         df (pandas.DataFrame): storage and flood control parameters by reservoir; None if the section is not
             in the report or its table format is not supported
     """
-    section = _extract_fcr_section(datetime_structure, heading)
+    content = _get_fcr_report(datetime_structure)
+    section = _fcr_section(content, heading)
     if section is None:
         print(f'WARNING: {heading} section not found in FCR report')
         return None
-    return _parse_fcr_reservoir_table(section, nr_value=nr_value)
+    return _parse_fcr_reservoir_table(section, nr_value=nr_value,
+                                      percent_encroached=_fcr_labels_percent_encroached(content))
 
 
 # a parenthesized percent encroached, e.g. "(  0)" or "(-142)", or any other value, which ends before a "("
 _FCR_VALUE_PATTERN = re.compile(r'\(\s*-?\d+\s*\)|[^\s(]+')
 
 
-def _parse_fcr_reservoir_table(section, nr_value=None):
+def _parse_fcr_reservoir_table(section, nr_value=None, percent_encroached=True):
     """
     parse the reservoir storages and flood control parameters table of an FCR report basin section, from
     the rule line of dashes under the column headers to the line of underscores above the basin totals
@@ -614,10 +648,13 @@ def _parse_fcr_reservoir_table(section, nr_value=None):
     Arguments:
         section (str): the basin section text
         nr_value (optional): value returned for not-reported (-NR-) entries
+        percent_encroached (bool): whether to read the parenthesized value after the above top of
+            conservation storage as the percent encroached; if False, the % Encroached column is None
     Returns:
         df (pandas.DataFrame): storage and flood control parameters by reservoir; None if the table format
             is not supported
     """
+    read_percent_encroached = percent_encroached
     lines = section.replace('\r', '').splitlines()
     start = next((i for i, line in enumerate(lines) if re.match(r'^\s*-{10,}\s+-{5,}', line)), None)
     end = next((i for i, line in enumerate(lines) if line.startswith(' ___')), len(lines))
@@ -642,7 +679,7 @@ def _parse_fcr_reservoir_table(section, nr_value=None):
             if token.group(0).startswith('('):
                 # the percent encroached follows the above top of conservation value; a parenthesized value
                 # elsewhere in the row (e.g. after Del Valle's % of gross pool) is not a table column
-                if token.end() > above_start:
+                if read_percent_encroached and token.end() > above_start:
                     percent_encroached = token.group(0)
                 continue
             column = next((i for i, edge in enumerate(right_edges) if token.end() <= edge), None)
