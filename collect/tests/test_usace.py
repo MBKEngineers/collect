@@ -5,6 +5,7 @@ initial test suite for collect.usace data access and utility functions; note: th
 """
 import datetime as dt
 import unittest
+from unittest import mock
 from zoneinfo import ZoneInfo
 from collect.usace import wcds
 
@@ -64,19 +65,49 @@ class TestUSACE(unittest.TestCase):
         result = wcds.extract_basin_totals(dt.datetime(2015, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
         self.assertTrue(isinstance(result, str))
 
+    def test_extract_fcr_text_unavailable_date(self):
+        """
+        FCR reports are only published for completed days (Pacific), so requests for today or a future
+        date raise ValueError without querying WCDS; yesterday is the most recent valid request
+        """
+        pacific = ZoneInfo('US/Pacific')
+        today = dt.datetime.now(tz=pacific).replace(hour=0, minute=0, second=0, microsecond=0)
+
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
+            mock_response.return_value.text = 'Sacramento Valley\nreport text\nSan Joaquin Valley'
+
+            # today (start and end of day) and tomorrow are unavailable
+            for requested in (today,
+                              today.replace(hour=23, minute=59),
+                              today + dt.timedelta(days=1)):
+                with self.subTest(requested=requested):
+                    with self.assertRaisesRegex(ValueError, f'FCR report unavailable for {requested:%Y-%m-%d}'):
+                        wcds.extract_fcr_text(requested)
+
+            # today in Pacific is unavailable even when requested in another timezone
+            with self.assertRaises(ValueError):
+                wcds.extract_fcr_text(today.replace(hour=12).astimezone(ZoneInfo('UTC')))
+
+            mock_response.assert_not_called()
+
+            # yesterday is available and requests the most recent report (days=0)
+            wcds.extract_fcr_text(today - dt.timedelta(days=1))
+            mock_response.assert_called_once()
+            self.assertIn('days=0&', mock_response.call_args.args[0])
+
     def test_extract_sac_valley_fcr_data(self):
         """
         Grabs this date of the report:
 
         Corps of Engineers Flood Control Requirements for California Reservoirs
-        Data Ending 2400 hours   30 DEC 2024
-        Report Generated 31 DEC 2024 @ 2300
+        Data Ending 2400 hours   01 JAN 2025
+        Report Generated 02 JAN 2025 @ 2300
 
 
-        Assertion should then use: 11.57 and 966823
+        Assertion should then use: 10.89 and 966823
         """
         result = wcds.extract_sac_valley_fcr_data(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
-        self.assertEqual(float(result.loc['Oroville', 'Flood Control Parameters (Rain in.)']), 11.57)
+        self.assertEqual(float(result.loc['Oroville', 'Flood Control Parameters (Rain in.)']), 10.89)
         self.assertEqual(float(result.loc['Folsom', 'Gross Pool (acft)']), 966823)
 
     def test_extract_folsom_fcr_data(self):

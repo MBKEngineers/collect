@@ -331,16 +331,18 @@ def extract_fcr_text(datetime_structure):
     # data on WCDS is in Pacific
     datetime_structure_pacific = datetime_structure.astimezone(utils.tz_function('US/Pacific'))
 
-    # get today's date in pacific time for 0000 Pacific
-    today_pacific = dt.datetime.now(tz=datetime_structure_pacific.tzinfo).replace(hour=0)
+    # get today's date in pacific time
+    today_pacific = dt.datetime.now(tz=datetime_structure_pacific.tzinfo).date()
 
-    # compute the days between today and the datetime
-    days = (today_pacific - datetime_structure_pacific).days
+    # compute the whole calendar days between today and the requested date
+    days = (today_pacific - datetime_structure_pacific.date()).days
 
-    if days <= 0:
-        raise NotImplementedError(f'Date unavailable: {datetime_structure_pacific:%Y-%m-%d}')
+    # the most recent available report is for yesterday's data
+    if days < 1:
+        raise ValueError(f'FCR report unavailable for {datetime_structure_pacific:%Y-%m-%d}; latest available date is yesterday (Pacific)')
 
-    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days+1}&report=FCR&textonly=true'
+    # midnight.py `days=N` returns the report with data ending on (today - N - 1), so offset by one
+    url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'
     content = utils.get_session_response(url).text
     # get the list of text between Sacramento Valley and San Joaquin Valley
     return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
