@@ -196,6 +196,38 @@ class TestUSACE(unittest.TestCase):
             """)
         self.assertIsNone(result)
 
+    def test_extract_sac_valley_fcr_data_signs_and_not_reported(self):
+        """
+        values below top of conservation keep their sign, and not-reported (-NR-) and not-applicable (----)
+        values are None, and a blank Top of Conservation does not shift later columns (report data ending
+        24 JAN 2026; Stony Gorge row from an earlier report)
+        """
+        report = '\n'.join([
+            '                           ---- Sacramento Valley ----',
+            ' -------------- --------- --------- --------- -------- -------------- ---------------',
+            ' Shasta:        4,552,100 3,516,536 3,655,497  80        138,961( 13) 304146 CFS',
+            ' Black Butte:     136,200    39,374    27,189  20        -12,185(  0)  3.30      ---',
+            '   East Park:      50,900                -NR-',
+            '   Stony Gorge:    50,000              38,311  77',
+            ' Oroville:      3,425,000      -NR- 2,780,358  81           -NR-(  0)  -NR-      ---',
+            ' New Bullards:    966,000   796,000   802,184  83          6,184(  4)  ----      ---',
+            ' Indian Valley:   300,600   260,600   235,700  78        -24,900(  0)  ----      ---',
+            ' Folsom:          966,823                                                 Forecasted Volumes****',
+            '                           ---- San Joaquin Valley ----',
+        ])
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
+            mock_response.return_value.text = report
+            result = wcds.extract_sac_valley_fcr_data(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
+
+        above = 'Above top of Conservation (acft)'
+        self.assertEqual(result.loc['Indian Valley', above], -24900.0)
+        self.assertEqual(result.loc['Black Butte', above], -12185.0)
+        self.assertEqual(result.loc['Shasta', above], 138961.0)
+        self.assertEqual(result.loc['Oroville'].tolist(), [3425000.0, None, 2780358.0, 81.0, None, 0.0, None, None])
+        self.assertEqual(result.loc['East Park'].tolist(), [50900.0] + [None] * 7)
+        self.assertEqual(result.loc['Stony Gorge'].tolist(), [50000.0, None, 38311.0, 77.0] + [None] * 4)
+        self.assertEqual(result.loc['Folsom', 'Gross Pool (acft)'], 966823.0)
+
     def test_get_fcr_data_table_failure(self):
         """
         a table that fails to parse is returned as None without discarding the other tables

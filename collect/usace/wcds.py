@@ -400,20 +400,10 @@ def extract_sac_valley_fcr_data(datetime_structure):
     # Combine other resevoirs with Folsom row
     df = pd.concat((df, fol_row), axis=0)
 
-    # remove characters from text; opt in to the pandas>=2.2 behavior of not silently
-    # downcasting object columns during replace, then downcast explicitly so columns
-    # cleared of their last non-numeric entry still become numeric
-    with pd.option_context('future.no_silent_downcasting', True):
-        df = (df
-             ).replace(',', '', regex=True
-             ).replace('-', '', regex=True
-             ).replace('', None, regex=True
-             ).replace('NR', None, regex=True
-             ).replace(r'\(', '', regex=True
-             ).replace(r'\)', '', regex=True
-             ).infer_objects(copy=False)
-
+    # convert values to numbers, keeping negative signs; not reported (-NR-) and not applicable (----)
+    # values become None
     df[0] = df[0].str.replace(':', '')
+    df[df.columns[1:]] = df[df.columns[1:]].map(_parse_fcr_value).astype(object)
 
     if len(df.columns) != 9:
         print(f'WARNING: FCR data format not supported')
@@ -492,18 +482,21 @@ def extract_folsom_fcr_data(datetime_structure):
     return pd.DataFrame(rows, index=index, columns=columns, dtype=object)
 
 
-def _parse_fcr_value(text):
+def _parse_fcr_value(value):
     """
-    convert an FCR report value to float; not reported (-NR-), not applicable (----), and blank or
-    non-numeric values are returned as None
+    convert an FCR report value to float, keeping its sign; not reported (-NR-), not applicable (----),
+    and blank or non-numeric values are returned as None
 
     Arguments:
-        text (str): the raw value text
+        value (str or number): the raw value text, which may include thousands separators and parentheses,
+            or a value already read as a number
     Returns:
         (float or None): the numeric value
     """
+    if isinstance(value, (int, float, np.number)):
+        return None if pd.isna(value) else float(value)
     try:
-        return float(text.replace(',', ''))
+        return float(value.replace(',', '').strip('() '))
     except (AttributeError, ValueError):
         return None
 
