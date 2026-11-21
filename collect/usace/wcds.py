@@ -482,6 +482,71 @@ def extract_folsom_fcr_data(datetime_structure):
     return pd.DataFrame(rows, index=index, columns=columns, dtype=object)
 
 
+def extract_san_joaquin_valley_fcr_data(datetime_structure):
+    """
+    get the San Joaquin Valley Flood Control Requirements report
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
+            specific to San Joaquin Valley
+    """
+    return None
+
+
+def extract_tulare_lake_basin_fcr_data(datetime_structure):
+    """
+    get the Tulare Lake Basin Flood Control Requirements report
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
+            specific to Tulare Lake Basin
+    """
+    return None
+
+
+def extract_truckee_river_basin_fcr_data(datetime_structure):
+    """
+    get the Truckee River Basin Flood Control Requirements report
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
+            specific to Truckee River Basin
+    """
+    return None
+
+
+def extract_russian_river_basin_fcr_data(datetime_structure):
+    """
+    get the Russian River Basin Flood Control Requirements report
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
+            specific to Russian River Basin
+    """
+    return None
+
+
+def extract_so_san_francisco_bay_basin_fcr_data(datetime_structure):
+    """
+    get the So. San Francisco Bay Basin Flood Control Requirements report
+
+    Arguments:
+        datetime_structure (datetime): datetime object
+    Returns:
+        df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
+            specific to So. San Francisco Bay Basin
+    """
+    return None
+
+
 def _parse_fcr_value(value):
     """
     convert an FCR report value to float, keeping its sign; not reported (-NR-), not applicable (----),
