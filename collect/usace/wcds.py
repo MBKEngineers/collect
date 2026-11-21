@@ -317,6 +317,27 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     return result
 
 
+# the first FCR report with valid values for most of the expected tables (data ending 2400 hours 5 FEB 2014);
+# earlier reports are mostly placeholders
+_FCR_START = dt.datetime(2014, 2, 5, 0, tzinfo=utils.tz_function('US/Pacific'))
+
+
+def _fcr_available(datetime_structure, table):
+    """
+    whether FCR report tables are parsed for the requested date; prints a warning if not
+
+    Arguments:
+        datetime_structure (datetime.datetime): timezone-aware datetime object
+        table (str): the table name for the warning, e.g. 'Sac Valley'
+    Returns:
+        (bool): False if the requested date is before the first supported report (5 FEB 2014, US/Pacific)
+    """
+    if datetime_structure < _FCR_START:
+        print(f'WARNING: {table} table unavailable before {_FCR_START:%Y-%m-%d}')
+        return False
+    return True
+
+
 def _fcr_days_ago(datetime_structure):
     """
     the number of whole calendar days (Pacific) between today and the requested FCR report date
@@ -440,9 +461,7 @@ def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Sacramento Valley
     """
-    last_date = dt.datetime(2014, 2, 5, 0, tzinfo=utils.tz_function('US/Pacific'))
-    if datetime_structure < last_date:
-        print(f'WARNING: Sac Valley table unavailable before {last_date:%Y-%m-%d}')
+    if not _fcr_available(datetime_structure, 'Sac Valley'):
         return None
 
     content = _get_fcr_report(datetime_structure)
@@ -622,6 +641,9 @@ def _extract_basin_reservoir_data(datetime_structure, heading, nr_value=None):
         df (pandas.DataFrame): storage and flood control parameters by reservoir; None if the section is not
             in the report or its table format is not supported
     """
+    if not _fcr_available(datetime_structure, heading):
+        return None
+
     content = _get_fcr_report(datetime_structure)
     section = _fcr_section(content, heading)
     if section is None:
@@ -740,7 +762,12 @@ def extract_basin_totals(datetime_structure, nr_value=None):
         df (pandas.DataFrame): the USACE SPK total Sacramento Valley basin FCR values
         OR
         table_query (str): raw text for basin totals
+        OR
+        None: if the requested date is before the first supported report (5 FEB 2014, US/Pacific)
     """
+    if not _fcr_available(datetime_structure, 'Sacramento Valley basin totals'):
+        return None
+
     query = extract_fcr_text(datetime_structure)[0]
 
     # try reading data in one of two formats
