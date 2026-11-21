@@ -27,7 +27,7 @@ def rank_by_peak_average_flow(df, horizon, exceedences):
     avg = pd.DataFrame.rolling(df[::-1], window=horizon, min_periods=0).mean()[::-1][start:end]
 
     # dictionary of ens. member id to max x-day avg flow in horizon
-    peaks = [(k, round(max(v), 2)) for (k, v) in avg.iteritems()]
+    peaks = [(k, round(max(v), 2)) for (k, v) in avg.items()]
 
     return peaks
 

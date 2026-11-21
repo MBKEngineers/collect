@@ -280,8 +280,7 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
                      skiprows=[1,],
                      parse_dates=True,
                      index_col=0,
-                     float_precision='high',
-                     dtype={'GMT': str})
+                     float_precision='high')
 
     # filter watershed for single forecast point ensemble, if provided
     if cnrfc_id is not None:
@@ -382,7 +381,7 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
                      parse_dates=True, 
                      index_col=0, 
                      float_precision='high', 
-                     dtype={'GMT': str, cnrfc_id: float})
+                     dtype={cnrfc_id: float})
 
     # rename columns for ensemble member IDs starting at 1
     df.columns = [str(x) for x in range(1, 1 + len(df.columns))]
@@ -459,8 +458,7 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
                      skiprows=[1,],
                      parse_dates=True,
                      index_col=0,
-                     float_precision='high',
-                     dtype={'GMT': str})
+                     float_precision='high')
 
     # filter watershed for single forecast point ensemble, if provided
     if cnrfc_id is not None:
@@ -683,7 +681,7 @@ def get_ensemble_first_forecast_ordinate(url=None, df=None):
                          parse_dates=[0], 
                          index_col=0, 
                          float_precision='high',
-                         dtype={'GMT': str, 'FOLC1': float})
+                         dtype={'FOLC1': float})
 
     return df.index.tolist()[0].to_pydatetime()
 
@@ -1114,10 +1112,13 @@ def _parse_blue_table(table_soup):
         if len(data_cells) > 1:
             row = []
             for td in data_cells:
+                text = td.text.strip()
                 try:
-                    row.append(float(td.text.strip()))
+                    row.append(float(text))
                 except ValueError:
-                    row.append(td.text.strip())
+                    # '--' is CNRFC's missing-data marker; convert at parse time so
+                    # numeric columns are inferred as float rather than object
+                    row.append(float('nan') if text == '--' else text)
             rows.append(row)
         else:
             try:
@@ -1126,5 +1127,5 @@ def _parse_blue_table(table_soup):
                 pass
 
     # format as dataframe
-    df = pd.DataFrame(rows, columns=columns).replace({'--': float('nan')})
+    df = pd.DataFrame(rows, columns=columns)
     return df, notes

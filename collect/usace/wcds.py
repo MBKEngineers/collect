@@ -12,7 +12,6 @@ import textwrap
 import numpy as np
 import pandas as pd
 import requests
-import ssl
 
 from collect import utils
 
@@ -37,7 +36,7 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.plot'
 
     # Read url data
-    response = requests.get(url, verify=ssl.CERT_NONE).content
+    response = requests.get(url).content
     df = pd.read_csv(io.StringIO(response.decode('utf-8')), header=0, na_values=['-', 'M'])
 
     # Check that user chosen water year is within range with data
@@ -60,8 +59,12 @@ def get_water_year_data(reservoir, water_year, interval='d'):
     # Convert to date time object
     df.set_index('ISO 8601 Date Time', inplace=True)
 
-    # add a day to timesteps where 24T is in the index (TODO: when numpy <1.26 include format='mixed')
-    new_index = pd.Series(pd.to_datetime(df.index.str.replace('T24:', ' ')), index=df.index)
+    # WCDS marks end-of-day as hour 24, which pandas/datetime cannot represent, so rewrite it
+    # as hour 00 and add a day below. Rewriting to 'T00:' (rather than stripping the field)
+    # keeps every row in one 'YYYY-MM-DDTHH:MM:SS±ZZ:ZZ' shape for the ISO8601 parser.
+    # utc=True normalizes the mixed PST/PDT offsets to instants (index is converted below).
+    new_index = pd.Series(pd.to_datetime(df.index.str.replace('T24:', 'T00:'), format='ISO8601', utc=True),
+                          index=df.index)
     mask = df.index.str.contains('T24:')
     new_index[mask] += pd.Timedelta(days=1)
 
@@ -97,7 +100,8 @@ def get_data(reservoir, start_time, end_time, interval='d', clean_column_headers
     earliest_time = dt.datetime.strptime('1994-10-01', '%Y-%m-%d')
 
     if start_time.tzname() in ['US/Pacific', 'PST', 'PDT']:
-        earliest_time = start_time.tzinfo.localize(earliest_time)
+        # supports either pytz or zoneinfo tzinfo objects on start_time
+        earliest_time = utils.get_localized_datetime(earliest_time, 'US/Pacific')
 
     if start_time < earliest_time:
         print(f'No data for selected start date. Earliest possible start date selected instead: {earliest_time}')
@@ -234,7 +238,7 @@ def get_release_report(reservoir):
     url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/release.py?project={reservoir}&textonly=true'
 
     # request data from url
-    response = requests.get(url, verify=ssl.CERT_NONE).content
+    response = requests.get(url).content
     raw = response.decode('utf-8')
 
     # check for header matching pattern with pipe delimiters
@@ -293,7 +297,7 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     url = f'https://www.spk-wc.usace.army.mil/plots/csv/{reservoir}{interval}_{water_year}.meta'
     
     # read data from url using requests session with retries
-    response = requests.get(url, verify=ssl.CERT_NONE)
+    response = requests.get(url)
 
     # complete metadata dictionary
     metadata_dict = response.json()
@@ -339,7 +343,7 @@ def extract_fcr_text(datetime_structure):
         raise NotImplementedError(f'Date unavailable: {datetime_structure_pacific:%Y-%m-%d}')
 
     url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days+1}&report=FCR&textonly=true'
-    content = utils.get_session_response(url, verify=ssl.CERT_NONE).text
+    content = utils.get_session_response(url).text
     # get the list of text between Sacramento Valley and San Joaquin Valley
     return re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', content)
 
@@ -380,15 +384,18 @@ def extract_sac_valley_fcr_data(datetime_structure):
     # Combine other resevoirs with Folsom row
     df = pd.concat((df, fol_row), axis=0)
 
-    # remove characters from text
-    df = (df
-         ).replace(',', '', regex=True
-         ).replace('-', '', regex=True
-         ).replace('', None, regex=True
-         ).replace('NR', None, regex=True
-         ).replace(r'\(', '', regex=True
-         ).replace(r'\)', '', regex=True
-         )
+    # remove characters from text; opt in to the pandas>=2.2 behavior of not silently
+    # downcasting object columns during replace, then downcast explicitly so columns
+    # cleared of their last non-numeric entry still become numeric
+    with pd.option_context('future.no_silent_downcasting', True):
+        df = (df
+             ).replace(',', '', regex=True
+             ).replace('-', '', regex=True
+             ).replace('', None, regex=True
+             ).replace('NR', None, regex=True
+             ).replace(r'\(', '', regex=True
+             ).replace(r'\)', '', regex=True
+             ).infer_objects(copy=False)
 
     df[0] = df[0].str.replace(':', '')
 
@@ -490,8 +497,8 @@ def extract_basin_totals(datetime_structure):
                             ]
                         )
 
-        df['Above Top of Conservation (acft)'] = df['Above Top of Conservation(acft)'].str.replace('(', '', regex=True)
-        df['Percent Encroached'] = df['Percent Encroached'].str.replace(')', '', regex=True) 
+        df['Above Top of Conservation (acft)'] = df['Above Top of Conservation(acft)'].str.replace('(', '', regex=False)
+        df['Percent Encroached'] = df['Percent Encroached'].str.replace(')', '', regex=False)
 
         # remove commas from values in dataframe
         df = df.replace(',', '', regex=True)

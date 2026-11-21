@@ -182,10 +182,11 @@ class TestNID(unittest.TestCase):
     def test_serialize(self):
         df = pd.DataFrame(index=pd.date_range('2020-12-01', '2020-12-03', freq='D'),
                           data={'VALUE': [42] * 3})
-        self.assertEqual(nid.serialize(df.copy(), day_format='%Y-%m-%d'),
+        # default is zero-padded, portable across macOS/Linux/Windows
+        self.assertEqual(nid.serialize(df.copy()),
                         {'VALUE': {'2020-12-01 00:00': 42, '2020-12-02 00:00': 42, '2020-12-03 00:00': 42}})
-        self.assertEqual(nid.serialize(df.copy(), day_format='%Y-%-m-%-d'),
-                        {'VALUE': {'2020-12-1 00:00': 42, '2020-12-2 00:00': 42, '2020-12-3 00:00': 42}})
+        self.assertEqual(nid.serialize(df.copy(), day_format='%Y/%m/%d'),
+                        {'VALUE': {'2020/12/01 00:00': 42, '2020/12/02 00:00': 42, '2020/12/03 00:00': 42}})
 
 
 if __name__ == '__main__':

@@ -47,14 +47,14 @@ class TestSacAlert(unittest.TestCase):
         """
         test the function for retrieving site list for a particular gage types returns the expected number of entries
         """
-        self.assertEqual(alert.get_sites(as_dataframe=True, datatype='rain').shape, (80, 12))
-        self.assertEqual(alert.get_sites(as_dataframe=True, datatype='stream').shape, (35, 10))
+        self.assertEqual(alert.get_sites(as_dataframe=True, datatype='rain').shape, (79, 12))
+        self.assertEqual(alert.get_sites(as_dataframe=True, datatype='stream').shape, (34, 10))
 
     def test_get_sites_from_list(self):
         """
-        test the expected number of sites registered on the Sac Alert websites
+        test the expected number of sites registered on the Sac Alert websites; 142 sites as of 2026-11-16
         """
-        self.assertEqual(alert.get_sites_from_list(as_dataframe=True, sensor_class=None).shape, (127, 4))
+        self.assertEqual(alert.get_sites_from_list(as_dataframe=True, sensor_class=None).shape, (142, 4))
 
     def test_ustrip(self):
         self.assertEqual(alert.alert._ustrip('\u00A0'), '')

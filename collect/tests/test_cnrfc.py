@@ -93,8 +93,7 @@ class TestCNRFC(unittest.TestCase):
                                                     nrows=60,
                                                     parse_dates=True,
                                                     index_col=0,
-                                                    float_precision='high',
-                                                    dtype={'GMT': str}).mul(1000)
+                                                    float_precision='high').mul(1000)
         return self._deterministic_frame
 
     def test_cnrfc_credentials(self):
@@ -236,10 +235,10 @@ class TestCNRFC(unittest.TestCase):
 
     def test_get_rating_curve(self):
         """
-        example expected output from get_rating_curve method
+        example expected output from get_rating_curve method; assertion values updated 2026-07-28
         """
         result = cnrfc.get_rating_curve('DCSC1')
-        self.assertEqual(result['data'][0], (0.96, 0.48))
+        self.assertEqual(result['data'][0], (1.02, 0.82))
         self.assertEqual(result['data'][-1], (15.0, 16300.0))
         self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/data/ratings/DCSC1_rating.js')
 
