@@ -410,8 +410,8 @@ def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Sacramento Valley
     """
-    last_date = dt.datetime(2014, 2, 5, 12, tzinfo=utils.tz_function('UTC'))
-    if datetime_structure.astimezone(utils.tz_function('UTC')) < last_date:
+    last_date = dt.datetime(2014, 2, 5, 0, tzinfo=utils.tz_function('US/Pacific'))
+    if datetime_structure < last_date:
         print(f'WARNING: Sac Valley table unavailable before {last_date:%Y-%m-%d}')
         return None
 

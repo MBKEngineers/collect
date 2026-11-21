@@ -410,6 +410,26 @@ class TestUSACE(unittest.TestCase):
         self.assertIsNone(result)
         self.assertIn('Tulare Lake Basin section not found', mock_print.call_args.args[0])
 
+    def test_extract_sac_valley_fcr_data_cutoff(self):
+        """
+        the Sacramento Valley table is unavailable before 2014-02-05 00:00 US/Pacific: earlier requests return
+        None without querying WCDS
+        """
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response, \
+             mock.patch('builtins.print') as mock_print:
+            for before in (dt.datetime(2014, 2, 4, 23, 59, tzinfo=ZoneInfo('US/Pacific')),
+                           # 2014-02-05 07:59 UTC is still 2014-02-04 in US/Pacific
+                           dt.datetime(2014, 2, 5, 7, 59, tzinfo=ZoneInfo('UTC'))):
+                with self.subTest(before=before):
+                    self.assertIsNone(wcds.extract_sac_valley_fcr_data(before))
+                    self.assertIn('Sac Valley table unavailable before 2014-02-05', mock_print.call_args.args[0])
+            mock_response.assert_not_called()
+
+            # midnight on the cutoff date in US/Pacific queries the report
+            mock_response.return_value.text = ''
+            wcds.extract_sac_valley_fcr_data(dt.datetime(2014, 2, 5, tzinfo=ZoneInfo('US/Pacific')))
+            mock_response.assert_called_once()
+
     def test_extract_sac_valley_fcr_data_2014_format(self):
         """
         the earlier report format, with -NR- values without percent encroached and a full Folsom row
