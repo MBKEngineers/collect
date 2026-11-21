@@ -24,7 +24,6 @@ def get_water_year_data(reservoir, water_year, interval='d'):
         reservoir (str): three-letter reservoir code; i.e. 'fol'
         water_year (int): the water year
         interval (str): data interval; i.e. 'd' 
-
     Returns:
         result (dict): query result dictionary with 'data' and 'info' keys
     """
@@ -527,6 +526,7 @@ def extract_basin_totals(datetime_structure):
 
     except (KeyError, ValueError, AttributeError):
         return table_query
+
 
 def get_fcr_data(datetime_structure):
     """
