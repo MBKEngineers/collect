@@ -321,10 +321,13 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
 # earlier reports are mostly placeholders
 _FCR_START = dt.datetime(2014, 2, 5, 0, tzinfo=utils.tz_function('US/Pacific'))
 
-# basin sections whose values are valid from a later report than _FCR_START
+# basin sections whose values are valid from a later report than _FCR_START (Sacramento Valley, Tulare Lake
+# Basin, and Truckee River Basin start at _FCR_START)
 _FCR_SECTION_START = {
     # data ending 2400 hours 27 MAY 2014
     'San Joaquin Valley': dt.datetime(2014, 5, 27, 0, tzinfo=utils.tz_function('US/Pacific')),
+    'Russian River Basin': dt.datetime(2014, 5, 27, 0, tzinfo=utils.tz_function('US/Pacific')),
+    'So. San Francisco Bay Basin': dt.datetime(2014, 5, 27, 0, tzinfo=utils.tz_function('US/Pacific')),
 }
 
 
