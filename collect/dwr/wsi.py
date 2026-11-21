@@ -3,7 +3,6 @@ collect.dwr.wsi
 ============================================================
 access DWR water supply index data
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 from bs4 import BeautifulSoup
 import pandas as pd
@@ -40,9 +39,8 @@ def get_wsi_data():
     table = soup.find('pre').text
 
     # three tables on this page
-    wyi_table, eight_river_runoff_table, official_year_class_table = table.strip().rstrip('.END').strip().split('\n\n\n')
-    official_year_class_table, abbreviations_and_notes = official_year_class_table.split('Abbreviations')
-    abbreviations_and_notes = 'Abbreviations' + abbreviations_and_notes
+    wyi_table, eight_river_runoff_table, official_year_class_table = table.strip().removesuffix('.END').strip().split('\n\n\n')
+    official_year_class_table = official_year_class_table.split('Abbreviations')[0]
 
     # parse content of reconstructed Sac and SJ Valley Water Year Hydrologic Classification Indices
     wyi_data = clean_fwf_df(wyi_table, 

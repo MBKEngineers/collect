@@ -3,7 +3,6 @@ collect.tests.test_dwr
 ============================================================
 initial test suite for collect.dwr data access and utility functions; note: these tests require internet connection
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import io
 import os

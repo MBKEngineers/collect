@@ -3,7 +3,6 @@ collect.utils.utils
 ============================================================
 The utilities module of MBK Engineers' collect project
 """
-# -*- coding: utf-8 -*-
 import urllib3
 # disable warnings in crontab logs
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

@@ -3,7 +3,6 @@ collect.tests.test_cnrfc
 ============================================================
 initial test suite for collect.cnrfc data access and utility functions; note: these tests require internet connection
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import io
 import os

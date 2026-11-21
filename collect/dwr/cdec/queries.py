@@ -3,13 +3,11 @@ collect.dwr.cdec.queries
 ============================================================
 access CDEC gage data
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import json
 from bs4 import BeautifulSoup
 import pandas as pd
 import requests
-from six import string_types
 from collect.utils import get_web_status
 
 
@@ -34,7 +32,7 @@ def get_station_url(station, start, end, data_format='CSV', sensors=[], duration
     """
 
     # validate station(s)
-    if isinstance(station, string_types): # (str for Python3 or basestring for Python2)
+    if isinstance(station, str):
         if not all(len(x) == 3 for x in station.split(',')):
             raise ValueError('station code must be comma-separated `str` of 3-character CDEC station codes (i.e. \'FOL,SHA\').')
 
@@ -69,23 +67,20 @@ def get_station_url(station, start, end, data_format='CSV', sensors=[], duration
     #         end = end + dt.timedelta(days=1)
 
     # construct URL
-    url_base = 'https://cdec.water.ca.gov/dynamicapp/req/{data_format}DataServlet'
-    url_args = ['Stations={station}', 'Start={start:%Y-%m-%d}', 'End={end:%Y-%m-%d}']
+    url_base = f'https://cdec.water.ca.gov/dynamicapp/req/{data_format.upper()}DataServlet'
+    url_args = [f'Stations={station.upper()}', f'Start={start:%Y-%m-%d}', f'End={end:%Y-%m-%d}']
 
     # optional sensors filter
     if bool(sensors):
-        url_args.insert(1, 'SensorNums={0}'.format(','.join([str(x) for x in sensors])))
+        comma_delimited_sensors = ','.join([str(x) for x in sensors])
+        url_args.insert(1, f'SensorNums={comma_delimited_sensors}')
 
     # optional duration filter
     if bool(duration):
-        url_args.insert(1, 'dur_code={0}'.format(duration))
+        url_args.insert(1, f'dur_code={duration}')
 
     # construct CDEC url with query parameters
-    url = '?'.join([url_base, 
-                    '&'.join(url_args)]).format(data_format=data_format.upper(),
-                                                station=station.upper(), 
-                                                start=start, 
-                                                end=end)
+    url = '?'.join([url_base, '&'.join(url_args)])
     return url
 
 
@@ -209,7 +204,7 @@ def get_sensor_frame(station, start, end, sensor=None, duration=''):
     elif bool(sensor):
         df = raw.loc[raw['SENSOR_TYPE']==sensor]
     else:
-        raise ValueError('sensor `{}` is not valid for station `{}`'.format(sensor, station))
+        raise ValueError(f'sensor `{sensor}` is not valid for station `{station}`')
     return df
 
 
@@ -224,7 +219,7 @@ def get_station_metadata(station, as_geojson=False):
     """
 
     # construct URL
-    url = 'https://cdec.water.ca.gov/dynamicapp/staMeta?station_id={station}'.format(station=station)
+    url = f'https://cdec.water.ca.gov/dynamicapp/staMeta?station_id={station}'
 
     # request info page
     soup = BeautifulSoup(requests.get(url).content, 'html.parser')
@@ -278,7 +273,7 @@ def get_dam_metadata(station):
     Returns:
         info (dict): the CDEC station metadata, stored as key, value pairs
     """
-    url = 'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=dam'.format(station=station)
+    url = f'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=dam'
 
     # interrupt if URL is invalid
     if not get_web_status(url):
@@ -307,7 +302,7 @@ def get_reservoir_metadata(station):
     Returns:
         info (dict): the CDEC station metadata, stored as key, value pairs
     """
-    url = 'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=res'.format(station=station)
+    url = f'https://cdec.water.ca.gov/dynamicapp/profile?s={station}&type=res'
 
     # interrupt if URL is invalid
     if not get_web_status(url):

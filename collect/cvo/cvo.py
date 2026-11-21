@@ -3,7 +3,6 @@ collect.cvo.cvo
 ==========================================================================
 functions to support retrieving tabular data from CVO monthly report PDFs
 """
-# -*- coding: utf-8 -*-
 import calendar
 import datetime as dt
 import os

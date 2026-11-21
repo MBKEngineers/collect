@@ -3,7 +3,6 @@ collect.usgs.usgs
 ============================================================
 USGS National Water Information System (NWIS)
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 from bs4 import BeautifulSoup
 # import dateutil.parser
@@ -129,8 +128,7 @@ def get_peak_streamflow(station_id):
     """
 
     # construct query url
-    url = '?'.join(['https://nwis.waterdata.usgs.gov/nwis/peak', 
-                    'site_no={station_id}&agency_cd=USGS&format=rdb']).format(station_id=station_id)
+    url = f'https://nwis.waterdata.usgs.gov/nwis/peak?site_no={station_id}&agency_cd=USGS&format=rdb'
 
     def leap_filter(x):
         if x.split('-', 1)[-1] == '03-00':
@@ -147,7 +145,7 @@ def get_peak_streamflow(station_id):
     frame.index = pd.to_datetime(frame['peak_dt'].apply(leap_filter))
 
     # load USGS site information
-    result = BeautifulSoup(requests.get(url.rstrip('rdb')).content, 'html.parser')
+    result = BeautifulSoup(requests.get(url.removesuffix('rdb')).content, 'html.parser')
     info = {'site number': station_id, 'site name': result.find('h2').text}
     meta = result.findAll('div', {'class': 'leftsidetext'})[0]
     for div in meta.findChildren('div', {'align': 'left'}):
@@ -156,8 +154,8 @@ def get_peak_streamflow(station_id):
         elif 'unit code' in div.text.lower():
             info['hydrologic unit code'] = div.text.split('Code ')
         elif 'latitude' in div.text.lower():
-            info['latitude'] = div.text.split(', ')[0].lstrip('Latitude').replace('\xa0', '').strip()
-            info['longitude'] = div.text.split(', ')[1].lstrip('Longitude').replace('\xa0', '').split('\n')[0]
+            info['latitude'] = div.text.split(', ')[0].removeprefix('Latitude').replace('\xa0', '').strip()
+            info['longitude'] = div.text.split(', ')[1].removeprefix('Longitude').replace('\xa0', '').split('\n')[0]
             info['datum'] = div.text.split('\n')[-1].strip().replace('\xa0', '')
         elif 'drainage' in div.text.lower():
             info['drainage area'] = div.text.split('area ')[1].replace('\xa0', ' ')

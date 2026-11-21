@@ -11,7 +11,6 @@ TODO - check updated homepage for bulletin 120 for new links
     https://cdec.water.ca.gov/snow/bulletin120/index2.html
     tie validation of dates to https://cdec.water.ca.gov/prev_b120.html and https://cdec.water.ca.gov/prev_b120up.html
 """
-# -*- coding: utf-8 -*-
 import datetime as dt
 import io
 import re
@@ -39,7 +38,7 @@ def get_b120_data(date_suffix=''):
     if validate_date_suffix(date_suffix, min_year=2017):
 
         # main B120 page (new DWR format)
-        url = 'https://cdec.water.ca.gov/b120{}.html'.format(date_suffix)
+        url = f'https://cdec.water.ca.gov/b120{date_suffix}.html'
 
         # parse HTML file structure; AJ forecast table
         soup = BeautifulSoup(requests.get(url).content, 'html.parser')
@@ -79,7 +78,7 @@ def get_b120_data(date_suffix=''):
             'type': 'B120 Forecast',
             'title': soup.find('div', {'class': 'fts-doc-title'}).text, 
             'caption': soup.find('div', {'class': 'doc-table-caption'}).text.replace('FORECASTOF', 'FORECAST OF'),
-            'notes': soup.find('div', {'class': 'doc-fcast-notes'}).text.replace(u'\xa0', ' ').split('\n'),
+            'notes': soup.find('div', {'class': 'doc-fcast-notes'}).text.replace('\xa0', ' ').split('\n'),
             'units': 'TAF',
             'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M'),
         }
@@ -184,7 +183,7 @@ def get_b120_update_data(date_suffix=''):
     # dataframe storing Apr-Jul forecast table
     columns = ['Hydrologic Region', 'Average', 'Percentile']
     for date in forecast_dates:
-        columns += ['{} AJ Vol'.format(date), '{} % Avg'.format(date)]
+        columns += [f'{date} AJ Vol', f'{date} % Avg']
 
     df = pd.DataFrame(aj_list, columns=columns)
 
@@ -269,10 +268,10 @@ def get_120_archived_reports(year, month):
 
     # notes
     notes = []
-    for line in result.split('Notes:')[1].split('For more information')[0].replace(u'\xa0', ' ').split('\r\n')[1:]:
+    for line in result.split('Notes:')[1].split('For more information')[0].replace('\xa0', ' ').split('\r\n')[1:]:
         if bool(line.strip()):
             notes.append(line.strip())
-    notes = [x + '.' for x in ''.join(notes).split('.')]
+    notes = [f'{x}.' for x in ''.join(notes).split('.')]
 
     info = {
         'url': url,

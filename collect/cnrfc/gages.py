@@ -3,7 +3,6 @@ collect.cnrfc.gages
 ============================================================
 gages and watershed info for CNRFC forecast points
 """
-# -*- coding: utf-8 -*-
 KLAMATH_GAGES = ['KEOO3L', 'BOYO3L', 'IRGC1L', 'BTYO3', 'SCNO3', 'CHSO3', 'WKAO3', 
                  'WMSO3', 'KEOO3', 'BOYO3', 'IRGC1', 'YREC1', 'FTJC1', 'SEIC1', 
                  'SBRC1', 'HAPC1', 'ONSC1', 'CEGC1', 'TRJC1', 'BURC1', 'HYMC1', 

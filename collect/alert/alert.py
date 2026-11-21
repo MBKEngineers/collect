@@ -3,7 +3,6 @@ collect.alert.alert
 ============================================================
 query system for Sacramento County Alert website
 """
-# -*- coding: utf-8 -*-
 import io
 import re
 import unicodedata
@@ -89,7 +88,7 @@ def get_sites_from_list(as_dataframe=True, sensor_class=None):
     """
     url = 'https://www.sacflood.org/list/'
     if sensor_class:
-        url += '?&sensor_class={}'.format(sensor_class)
+        url += f'?&sensor_class={sensor_class}'
     soup = BeautifulSoup(requests.get(url).text, 'html.parser')
 
     entries = []
@@ -100,7 +99,7 @@ def get_sites_from_list(as_dataframe=True, sensor_class=None):
         entries.append({'title': x.text, 
                         'site_id': site_id, 
                         'site_slug': site_slug, 
-                        'href': 'https://www.sacflood.org' + href})
+                        'href': f'https://www.sacflood.org{href}'})
 
     df = pd.DataFrame(entries)
     if as_dataframe:
