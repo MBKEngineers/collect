@@ -317,14 +317,16 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
     return result
 
 
-def extract_fcr_text(datetime_structure):
+def _fcr_days_ago(datetime_structure):
     """
-    read the text in the Sacramento Valley section of the USACE SPK FCR report
+    the number of whole calendar days (Pacific) between today and the requested FCR report date
 
     Arguments:
-        datetime_structure (datetime.datetime): datetime object
+        datetime_structure (datetime.datetime): timezone-aware datetime object
     Returns:
-        (list): list of text from the FCR report
+        days (int): days before today; at least 1
+    Raises:
+        ValueError: if the requested date is today or later, as the report is not yet available
     """
     assert datetime_structure.tzinfo is not None, '`datetime_structure` must be timezone aware'
 
@@ -340,6 +342,20 @@ def extract_fcr_text(datetime_structure):
     # the most recent available report is for yesterday's data
     if days < 1:
         raise ValueError(f'FCR report unavailable for {datetime_structure_pacific:%Y-%m-%d}; latest available date is yesterday (Pacific)')
+
+    return days
+
+
+def extract_fcr_text(datetime_structure):
+    """
+    read the text in the Sacramento Valley section of the USACE SPK FCR report
+
+    Arguments:
+        datetime_structure (datetime.datetime): datetime object
+    Returns:
+        (list): list of text from the FCR report
+    """
+    days = _fcr_days_ago(datetime_structure)
 
     # midnight.py `days=N` returns the report with data ending on (today - N - 1), so offset by one
     url = f'https://www.spk-wc.usace.army.mil/fcgi-bin/midnight.py?days={days-1}&report=FCR&textonly=true'
@@ -436,35 +452,60 @@ def extract_folsom_fcr_data(datetime_structure):
 
     query = extract_fcr_text(datetime_structure)[0]
     table_query = re.findall(r'(?=Forecasted Volumes)[\S\s]*(?=BASIN TOTALS)', query)[0].split('Forecasted Volumes****')[1]
-    for symbol in ['-', '(', ')', ';', ',']:
-        table_query = table_query.replace(symbol, '')
 
-    # remove No Forecast rows or blank rows if in table
-    table_query = table_query.split('No Forecast')[0].split('______')[0]
+    # parse each forecast row independently so a single malformed, truncated, or not-reported (-NR-) row
+    # does not invalidate the table; separator, "No Forecast", and blank rows do not match and are skipped
+    row_pattern = re.compile(r'^\s*(\d{2}[A-Z]{3}\d{4})\s+(\d{1,2})\s(.*)$')
 
-    df = pd.read_fwf(io.StringIO(table_query), header=None)
+    columns = ['Top of Conservation (acft)',
+               'Actual Res (acft)',
+               r'% of GrossPool',
+               'Above Top of Conservation(acft)',
+               'Percent Encroached',
+               '1-Day Forecasted Volume',
+               '2-Day Forecasted Volume',
+               '3-Day Forecasted Volume',
+               '5-Day Forecasted Volume']
 
-    if len(df.columns) != 11:
-        print(f'WARNING: Folsom data format not supported')
+    # rows are kept as a list because observed and forecast rows can share a timestamp
+    index, rows = [], []
+    for line in table_query.splitlines():
+        match = row_pattern.match(line)
+        if match is None:
+            continue
+        forecast_date, forecast_time, values = match.groups()
+
+        # storages precede the percent encroached in parentheses; forecasted volumes follow, separated by ';'
+        storages, _, remainder = values.partition('(')
+        percent_encroached, _, forecasts = remainder.partition(')')
+        storages = (storages.split() + [None] * 4)[:4]
+        forecasts = (forecasts.split(';') + [None] * 4)[:4]
+
+        index.append(f'{forecast_date} {forecast_time}z')
+        rows.append([_parse_fcr_value(x) for x in storages + [percent_encroached] + forecasts])
+
+    if len(rows) == 0:
+        print(f'WARNING: Folsom forecast data not reported or format not supported')
         return None
 
-    df.columns = ['Forecasted Date',
-                  'Forecasted Time',
-                  'Top of Conservation (acft)',
-                  'Actual Res (acft)',
-                  r'% of GrossPool',
-                  'Above Top of Conservation(acft)',
-                  'Percent Encroached',
-                  '1-Day Forecasted Volume',
-                  '2-Day Forecasted Volume',
-                  '3-Day Forecasted Volume',
-                  '5-Day Forecasted Volume'
-                  ]
+    # object dtype keeps missing values as None, consistent with the other FCR tables
+    return pd.DataFrame(rows, index=index, columns=columns, dtype=object)
 
-    df.index = df.apply(lambda x: f"{x['Forecasted Date']} {x['Forecasted Time']}z", axis=1) 
-    df = df.drop(columns=['Forecasted Date', 'Forecasted Time'])
 
-    return df.dropna(how='all').astype(float, errors='ignore').replace(np.nan, None)
+def _parse_fcr_value(text):
+    """
+    convert an FCR report value to float; not reported (-NR-), not applicable (----), and blank or
+    non-numeric values are returned as None
+
+    Arguments:
+        text (str): the raw value text
+    Returns:
+        (float or None): the numeric value
+    """
+    try:
+        return float(text.replace(',', ''))
+    except (AttributeError, ValueError):
+        return None
 
 
 def extract_basin_totals(datetime_structure):
@@ -537,9 +578,22 @@ def get_fcr_data(datetime_structure):
     Arguments:
         datetime_structure (datetime): datetime object
     Returns:
-        (dict): dictionary containing each dataframe for all FCR, Folsom specific metrics, and basin totals
+        (dict): dictionary containing each dataframe for all FCR, Folsom specific metrics, and basin totals;
+            a table that fails to parse is None so the remaining tables are still returned
+    Raises:
+        ValueError: if the requested date is today or later, as the report is not yet available
     """
-    return {'date': f'{datetime_structure:%Y-%m-%d}',
-            'fcr': extract_sac_valley_fcr_data(datetime_structure),
-            'folsom': extract_folsom_fcr_data(datetime_structure),
-            'totals': extract_basin_totals(datetime_structure)}
+    # raise for unavailable dates up front, rather than reporting each table as failed
+    _fcr_days_ago(datetime_structure)
+
+    result = {'date': f'{datetime_structure:%Y-%m-%d}'}
+    for key, extract in (('fcr', extract_sac_valley_fcr_data),
+                         ('folsom', extract_folsom_fcr_data),
+                         ('totals', extract_basin_totals)):
+        try:
+            result[key] = extract(datetime_structure)
+        except Exception as error:
+            print(f'WARNING: FCR `{key}` table could not be parsed for '
+                  f'{datetime_structure:%Y-%m-%d}: {type(error).__name__}: {error}')
+            result[key] = None
+    return result
