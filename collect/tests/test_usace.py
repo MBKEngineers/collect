@@ -418,11 +418,10 @@ class TestUSACE(unittest.TestCase):
     def test_extract_fcr_data_cutoff(self):
         """
         FCR tables are unavailable before 2014-02-05 00:00 US/Pacific: earlier requests return None without
-        querying WCDS
+        querying WCDS (San Joaquin Valley starts later; see test_extract_san_joaquin_valley_fcr_data_cutoff)
         """
         functions = {'Sac Valley': wcds.extract_sac_valley_fcr_data,
                      'Sacramento Valley basin totals': wcds.extract_basin_totals,
-                     'San Joaquin Valley': wcds.extract_san_joaquin_valley_fcr_data,
                      'Tulare Lake Basin': wcds.extract_tulare_lake_basin_fcr_data,
                      'Truckee River Basin': wcds.extract_truckee_river_basin_fcr_data,
                      'Russian River Basin': wcds.extract_russian_river_basin_fcr_data,
@@ -446,6 +445,23 @@ class TestUSACE(unittest.TestCase):
                 except IndexError:
                     pass  # extract_basin_totals indexes the (empty) report text
                 mock_response.assert_called_once()
+
+    def test_extract_san_joaquin_valley_fcr_data_cutoff(self):
+        """
+        the San Joaquin Valley table is unavailable before 2014-05-27 00:00 US/Pacific, the first report with
+        valid values for most of the table (data ending 2400 hours 27 MAY 2014)
+        """
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response, \
+             mock.patch('builtins.print') as mock_print:
+            self.assertIsNone(wcds.extract_san_joaquin_valley_fcr_data(
+                dt.datetime(2014, 5, 26, 23, 59, tzinfo=ZoneInfo('US/Pacific'))))
+            self.assertEqual(mock_print.call_args.args[0],
+                             'WARNING: San Joaquin Valley table unavailable before 2014-05-27')
+            mock_response.assert_not_called()
+
+            mock_response.return_value.text = ''
+            wcds.extract_san_joaquin_valley_fcr_data(dt.datetime(2014, 5, 27, tzinfo=ZoneInfo('US/Pacific')))
+            mock_response.assert_called_once()
 
     def test_extract_sac_valley_fcr_data_unlabeled_percent_encroached(self):
         """

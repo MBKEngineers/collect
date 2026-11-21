@@ -321,19 +321,26 @@ def get_reservoir_metadata(reservoir, water_year, interval='d'):
 # earlier reports are mostly placeholders
 _FCR_START = dt.datetime(2014, 2, 5, 0, tzinfo=utils.tz_function('US/Pacific'))
 
+# basin sections whose values are valid from a later report than _FCR_START
+_FCR_SECTION_START = {
+    # data ending 2400 hours 27 MAY 2014
+    'San Joaquin Valley': dt.datetime(2014, 5, 27, 0, tzinfo=utils.tz_function('US/Pacific')),
+}
 
-def _fcr_available(datetime_structure, table):
+
+def _fcr_available(datetime_structure, table, start=_FCR_START):
     """
     whether FCR report tables are parsed for the requested date; prints a warning if not
 
     Arguments:
         datetime_structure (datetime.datetime): timezone-aware datetime object
         table (str): the table name for the warning, e.g. 'Sac Valley'
+        start (datetime.datetime): the first supported report date; defaults to 5 FEB 2014, US/Pacific
     Returns:
-        (bool): False if the requested date is before the first supported report (5 FEB 2014, US/Pacific)
+        (bool): False if the requested date is before the first supported report
     """
-    if datetime_structure < _FCR_START:
-        print(f'WARNING: {table} table unavailable before {_FCR_START:%Y-%m-%d}')
+    if datetime_structure < start:
+        print(f'WARNING: {table} table unavailable before {start:%Y-%m-%d}')
         return False
     return True
 
@@ -641,7 +648,7 @@ def _extract_basin_reservoir_data(datetime_structure, heading, nr_value=None):
         df (pandas.DataFrame): storage and flood control parameters by reservoir; None if the section is not
             in the report or its table format is not supported
     """
-    if not _fcr_available(datetime_structure, heading):
+    if not _fcr_available(datetime_structure, heading, start=_FCR_SECTION_START.get(heading, _FCR_START)):
         return None
 
     content = _get_fcr_report(datetime_structure)
