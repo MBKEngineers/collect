@@ -62,9 +62,48 @@ class TestUSACE(unittest.TestCase):
     def test_extract_basin_totals(self):
         result = wcds.extract_basin_totals(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
         self.assertEqual(float(result.loc['BASIN TOTALS', 'Percent Encroached']), 5.0)
-        # returns string of unformatted data
+        # earlier format without percent encroached or the total flood space encroached row
         result = wcds.extract_basin_totals(dt.datetime(2015, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
-        self.assertTrue(isinstance(result, str))
+        self.assertEqual(result.loc['BASIN TOTALS'].tolist(),
+                         [10469900.0, 7919960.0, 4238480.0, 40.0, -3681480.0, None])
+        self.assertEqual(result.loc['w/US Storages'].tolist(), [11124200.0, None, 4563619.0, 41.0, None, None])
+
+    def _extract_basin_totals_from_text(self, totals_rows):
+        report = '\n'.join([
+            '                           ---- Sacramento Valley ----',
+            *totals_rows,
+            '',
+            ' **  Percent Encroached',
+            '                           ---- San Joaquin Valley ----',
+        ])
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response:
+            mock_response.return_value.text = report
+            return wcds.extract_basin_totals(dt.datetime(2025, 1, 1, tzinfo=ZoneInfo('US/Pacific')))
+
+    def test_extract_basin_totals_not_reported(self):
+        """
+        not-reported (-NR-) totals are None and a missing row is omitted (report data ending 16 NOV 2014)
+        """
+        result = self._extract_basin_totals_from_text([
+            ' BASIN TOTALS  10,469,900      -NR-      -NR-               -NR-       -NR-',
+            ' w/US Storages 11,124,200                -NR-',
+        ])
+        self.assertEqual(result.index.tolist(), ['BASIN TOTALS', 'w/US Storages'])
+        self.assertEqual(result.loc['BASIN TOTALS'].tolist(), [10469900.0] + [None] * 5)
+        self.assertEqual(result.loc['w/US Storages'].tolist(), [11124200.0] + [None] * 5)
+
+    def test_extract_basin_totals_zero(self):
+        """
+        zero totals are parsed as values (report data ending 22 JAN 2026)
+        """
+        result = self._extract_basin_totals_from_text([
+            ' BASIN TOTALS  10,469,900         0         0   0              0(  0)',
+            ' TOTAL FLOOD SPACE ENCROACHED                                  0',
+            ' w/US Storages 11,124,200                   0   0',
+        ])
+        self.assertEqual(result.loc['BASIN TOTALS'].tolist(), [10469900.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.assertEqual(result.loc['TOTAL FLOOD SPACE ENCROACHED'].tolist(), [None, None, None, None, 0.0, None])
+        self.assertEqual(result.loc['w/US Storages'].tolist(), [11124200.0, None, 0.0, 0.0, None, None])
 
     def test_extract_fcr_text_unavailable_date(self):
         """

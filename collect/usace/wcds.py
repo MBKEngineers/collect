@@ -585,48 +585,46 @@ def extract_basin_totals(datetime_structure):
     except IndexError:
         table_query = re.findall(r' BASIN TOTALS[\S\s]*(?=Folsom \(COE\) Diagram not used in Calculations)', query)[0].replace('CFS', '')
 
-    try:
-        # read fixed-width format file into pandas Dataframe
-        df = pd.read_fwf(io.StringIO(table_query),
-                         names=[
-                            'Col0',
-                            'Actual Res (acft)', r'% of GrossPool',
-                            'Above Top of Conservation(acft)',
-                            'Percent Encroached'
-                            ]
-                        )
+    columns = ['Gross Pool (acft)',
+               'Top of Conservation (acft)',
+               'Actual Res (acft)',
+               r'% of GrossPool',
+               'Above Top of Conservation (acft)',
+               'Percent Encroached']
 
-        df['Above Top of Conservation (acft)'] = df['Above Top of Conservation(acft)'].str.replace('(', '', regex=False)
-        df['Percent Encroached'] = df['Percent Encroached'].str.replace(')', '', regex=False)
+    # each row reports a fixed set of columns; parsing rows by label rather than inferring a fixed-width
+    # layout keeps not-reported (-NR-) values and missing rows from invalidating the table
+    row_columns = {'BASIN TOTALS': ['Gross Pool (acft)',
+                                    'Top of Conservation (acft)',
+                                    'Actual Res (acft)',
+                                    r'% of GrossPool',
+                                    'Above Top of Conservation (acft)'],
+                   'TOTAL FLOOD SPACE ENCROACHED': ['Above Top of Conservation (acft)'],
+                   'w/US Storages': ['Gross Pool (acft)',
+                                     'Actual Res (acft)',
+                                     r'% of GrossPool']}
 
-        # remove commas from values in dataframe
-        df = df.replace(',', '', regex=True)
-        
-        df[['Metric', 'Gross Pool (acft)', 'Top of Conservation (acft)']
-            ] = df['Col0'].str.extract(r'([a-zA-Z\s]+)  (\d+) (\d+)')
-        df.loc[1, 'Metric'] = df.loc[1, 'Col0'] 
+    index, rows = [], []
+    for label, label_columns in row_columns.items():
+        match = re.search(rf'^ {re.escape(label)}(.*)$', table_query, re.MULTILINE)
+        if match is None:
+            continue
 
-        rowindexer = df.index == 2
-        df.loc[rowindexer, ['Metric', 'Gross Pool (acft)']
-            ] = df.loc[rowindexer, 'Col0'].str.extract(r'(w/[a-zA-Z\s]+) (\d+)').values
+        # the percent encroached follows in parentheses, e.g. "-2,713,587(  0)"
+        values, _, remainder = match.group(1).partition('(')
+        percent_encroached = remainder.partition(')')[0] if remainder else None
 
-        df = df.drop('Col0', axis=1)
-        df = df[[
-            'Metric',
-            'Gross Pool (acft)',
-            'Top of Conservation (acft)',
-            'Actual Res (acft)',
-            r'% of GrossPool',
-            'Above Top of Conservation (acft)',
-            'Percent Encroached'
-        ]]
-        df = df.set_index('Metric')
-        df = df.replace(',', '', regex=True)
+        row = dict.fromkeys(columns)
+        row.update(zip(label_columns, map(_parse_fcr_value, values.split())))
+        row['Percent Encroached'] = _parse_fcr_value(percent_encroached)
+        index.append(label)
+        rows.append([row[column] for column in columns])
 
-        return df.dropna(how='all').astype(float).replace(np.nan, None)
-
-    except (KeyError, ValueError, AttributeError):
+    if len(rows) == 0:
         return table_query
+
+    # object dtype keeps missing values as None, consistent with the other FCR tables
+    return pd.DataFrame(rows, index=pd.Index(index, name='Metric'), columns=columns, dtype=object)
 
 
 def get_fcr_data(datetime_structure):
