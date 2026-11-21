@@ -620,21 +620,42 @@ class TestUSACE(unittest.TestCase):
 
     def test_get_fcr_data_table_failure(self):
         """
-        a table that fails to parse is returned as None without discarding the other tables
+        a table that fails to parse is returned as None without discarding the other tables; the report is
+        retrieved once and passed to each table
         """
         requested = dt.datetime.now(tz=ZoneInfo('US/Pacific')) - dt.timedelta(days=2)
-        with mock.patch.object(wcds, 'extract_sac_valley_fcr_data', return_value='fcr table'), \
+        basins = ['San Joaquin Valley', 'Tulare Lake Basin', 'Truckee River Basin', 'Russian River Basin',
+                  'So. San Francisco Bay Basin']
+        with mock.patch.object(wcds.utils, 'get_session_response') as mock_response, \
+             mock.patch.object(wcds, 'extract_sac_valley_fcr_data', return_value='fcr table'), \
              mock.patch.object(wcds, 'extract_folsom_fcr_data', side_effect=IndexError('list index out of range')), \
-             mock.patch.object(wcds, 'extract_basin_totals', return_value='totals table') as mock_totals, \
+             mock.patch.object(wcds, 'extract_basin_totals', side_effect=lambda *args, basin='Sacramento Valley', **kwargs:
+                               f'{basin} totals') as mock_totals, \
+             mock.patch.object(wcds, 'extract_san_joaquin_valley_fcr_data', return_value='San Joaquin Valley fcr'), \
+             mock.patch.object(wcds, 'extract_tulare_lake_basin_fcr_data', return_value='Tulare Lake Basin fcr'), \
+             mock.patch.object(wcds, 'extract_truckee_river_basin_fcr_data', side_effect=ValueError('bad row')), \
+             mock.patch.object(wcds, 'extract_russian_river_basin_fcr_data', return_value='Russian River Basin fcr'), \
+             mock.patch.object(wcds, 'extract_so_san_francisco_bay_basin_fcr_data',
+                               return_value='So. San Francisco Bay Basin fcr'), \
              mock.patch('builtins.print') as mock_print:
+            mock_response.return_value.text = 'report text'
             result = wcds.get_fcr_data(requested, nr_value='NR')
 
+        expected_basins = {basin: {'fcr': f'{basin} fcr', 'totals': f'{basin} totals'} for basin in basins}
+        expected_basins['Truckee River Basin']['fcr'] = None
         self.assertEqual(result, {'date': f'{requested:%Y-%m-%d}',
                                   'fcr': 'fcr table',
                                   'folsom': None,
-                                  'totals': 'totals table'})
-        self.assertIn('FCR `folsom` table could not be parsed', mock_print.call_args.args[0])
-        mock_totals.assert_called_once_with(requested, nr_value='NR')
+                                  'totals': 'Sacramento Valley totals',
+                                  'basins': expected_basins})
+        warnings = [call.args[0] for call in mock_print.call_args_list]
+        self.assertTrue(any('FCR `folsom` table could not be parsed' in w for w in warnings))
+        self.assertTrue(any('FCR `Truckee River Basin fcr` table could not be parsed' in w for w in warnings))
+
+        # one request; every table gets the same report text and nr_value
+        mock_response.assert_called_once()
+        mock_totals.assert_any_call(requested, nr_value='NR', report='report text')
+        mock_totals.assert_any_call(requested, nr_value='NR', report='report text', basin='Russian River Basin')
 
     def test_get_fcr_data_unavailable_date(self):
         """

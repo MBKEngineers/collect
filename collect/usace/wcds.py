@@ -392,6 +392,19 @@ def _get_fcr_report(datetime_structure):
     return utils.get_session_response(url).text
 
 
+def _fcr_report(datetime_structure, report=None):
+    """
+    the FCR report text for the requested date: `report` if given, otherwise retrieved from WCDS
+
+    Arguments:
+        datetime_structure (datetime.datetime): timezone-aware datetime object
+        report (str, optional): the report text, if already retrieved
+    Returns:
+        (str): the report text
+    """
+    return _get_fcr_report(datetime_structure) if report is None else report
+
+
 def extract_fcr_text(datetime_structure):
     """
     read the text in the Sacramento Valley section of the USACE SPK FCR report
@@ -455,7 +468,7 @@ def _fcr_labels_percent_encroached(content):
     return bool(re.search(r'\(\s*\*\*\s*\)|^\s*\*\*\s+Percent Encroached', content, re.MULTILINE))
 
 
-def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
+def extract_sac_valley_fcr_data(datetime_structure, nr_value=None, report=None):
     """
     get the Sacramento Valley Storages and Flood Control Parameters from the FCR report
 
@@ -464,6 +477,8 @@ def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
         nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
             string 'NR'); defaults to None, the same as blank and not-applicable (----) entries, so values
             convert to float; pass 'NR' to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Sacramento Valley
@@ -471,7 +486,7 @@ def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
     if not _fcr_available(datetime_structure, 'Sac Valley'):
         return None
 
-    content = _get_fcr_report(datetime_structure)
+    content = _fcr_report(datetime_structure, report)
     section = _fcr_section(content, 'Sacramento Valley')
     if section is None:
         print(f'WARNING: Sacramento Valley section not found in FCR report')
@@ -493,7 +508,7 @@ def extract_sac_valley_fcr_data(datetime_structure, nr_value=None):
     return df.astype(float, errors='ignore').replace(np.nan, None)
 
 
-def extract_folsom_fcr_data(datetime_structure, nr_value=None):
+def extract_folsom_fcr_data(datetime_structure, nr_value=None, report=None):
     """
     get the Folsom Storages, Flood Control Parameters, and Forecasted Volumes from the Sacramento Valley
     section of the FCR report
@@ -503,6 +518,8 @@ def extract_folsom_fcr_data(datetime_structure, nr_value=None):
         nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
             string 'NR'); defaults to None, the same as blank and not-applicable (----) entries, so values
             convert to float; pass 'NR' to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage, flood control parameters, and forecasted volumes,
             specific to Folsom
@@ -512,7 +529,8 @@ def extract_folsom_fcr_data(datetime_structure, nr_value=None):
         print(f'WARNING: Folsom forecasted volumes table unavailable before {last_date:%Y-%m-%d}')
         return None
 
-    query = extract_fcr_text(datetime_structure)[0]
+    # the text between Sacramento Valley and San Joaquin Valley, as returned by extract_fcr_text
+    query = re.findall(r'(?<=Sacramento Valley)[\S\s]*(?=San Joaquin Valley)', _fcr_report(datetime_structure, report))[0]
     table_query = re.findall(r'(?=Forecasted Volumes)[\S\s]*(?=BASIN TOTALS)', query)[0].split('Forecasted Volumes****')[1]
 
     # parse each forecast row independently so a single malformed, truncated, or not-reported (-NR-) row
@@ -554,7 +572,7 @@ def extract_folsom_fcr_data(datetime_structure, nr_value=None):
     return pd.DataFrame(rows, index=index, columns=columns, dtype=object)
 
 
-def extract_san_joaquin_valley_fcr_data(datetime_structure, nr_value=None):
+def extract_san_joaquin_valley_fcr_data(datetime_structure, nr_value=None, report=None):
     """
     get the San Joaquin Valley Flood Control Requirements report
 
@@ -563,15 +581,17 @@ def extract_san_joaquin_valley_fcr_data(datetime_structure, nr_value=None):
         nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
             string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
             values convert to float; pass 'NR' to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to San Joaquin Valley,
             including upstream reservoirs listed under their downstream reservoir
     """
-    return _extract_basin_reservoir_data(datetime_structure, 'San Joaquin Valley', nr_value=nr_value)
+    return _extract_basin_reservoir_data(datetime_structure, 'San Joaquin Valley', nr_value=nr_value, report=report)
 
 
-def extract_tulare_lake_basin_fcr_data(datetime_structure, nr_value=None):
+def extract_tulare_lake_basin_fcr_data(datetime_structure, nr_value=None, report=None):
     """
     get the Tulare Lake Basin Flood Control Requirements report
 
@@ -580,15 +600,17 @@ def extract_tulare_lake_basin_fcr_data(datetime_structure, nr_value=None):
         nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
             string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
             values convert to float; pass 'NR' to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Tulare Lake Basin,
             including upstream reservoirs listed under their downstream reservoir
     """
-    return _extract_basin_reservoir_data(datetime_structure, 'Tulare Lake Basin', nr_value=nr_value)
+    return _extract_basin_reservoir_data(datetime_structure, 'Tulare Lake Basin', nr_value=nr_value, report=report)
 
 
-def extract_truckee_river_basin_fcr_data(datetime_structure, nr_value=None):
+def extract_truckee_river_basin_fcr_data(datetime_structure, nr_value=None, report=None):
     """
     get the Truckee River Basin Flood Control Requirements report
 
@@ -597,14 +619,16 @@ def extract_truckee_river_basin_fcr_data(datetime_structure, nr_value=None):
         nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
             string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
             values convert to float; pass 'NR' to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Truckee River Basin
     """
-    return _extract_basin_reservoir_data(datetime_structure, 'Truckee River Basin', nr_value=nr_value)
+    return _extract_basin_reservoir_data(datetime_structure, 'Truckee River Basin', nr_value=nr_value, report=report)
 
 
-def extract_russian_river_basin_fcr_data(datetime_structure, nr_value=None):
+def extract_russian_river_basin_fcr_data(datetime_structure, nr_value=None, report=None):
     """
     get the Russian River Basin Flood Control Requirements report
 
@@ -613,14 +637,16 @@ def extract_russian_river_basin_fcr_data(datetime_structure, nr_value=None):
         nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
             string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
             values convert to float; pass 'NR' to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to Russian River Basin
     """
-    return _extract_basin_reservoir_data(datetime_structure, 'Russian River Basin', nr_value=nr_value)
+    return _extract_basin_reservoir_data(datetime_structure, 'Russian River Basin', nr_value=nr_value, report=report)
 
 
-def extract_so_san_francisco_bay_basin_fcr_data(datetime_structure, nr_value=None):
+def extract_so_san_francisco_bay_basin_fcr_data(datetime_structure, nr_value=None, report=None):
     """
     get the So. San Francisco Bay Basin Flood Control Requirements report
 
@@ -629,14 +655,16 @@ def extract_so_san_francisco_bay_basin_fcr_data(datetime_structure, nr_value=Non
         nr_value (optional): value returned for not-reported entries, which the report marks as -NR- (the
             string 'NR'); defaults to None, the same as blank and not-applicable (----, N/A) entries, so
             values convert to float; pass 'NR' to keep not-reported entries distinguishable
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
         df (pandas.DataFrame): the USACE SPK station storage and flood control parameters data,
             specific to So. San Francisco Bay Basin
     """
-    return _extract_basin_reservoir_data(datetime_structure, 'So. San Francisco Bay Basin', nr_value=nr_value)
+    return _extract_basin_reservoir_data(datetime_structure, 'So. San Francisco Bay Basin', nr_value=nr_value, report=report)
 
 
-def _extract_basin_reservoir_data(datetime_structure, heading, nr_value=None):
+def _extract_basin_reservoir_data(datetime_structure, heading, nr_value=None, report=None):
     """
     get the reservoir storages and flood control parameters table of one FCR report basin section
 
@@ -644,6 +672,7 @@ def _extract_basin_reservoir_data(datetime_structure, heading, nr_value=None):
         datetime_structure (datetime): datetime object
         heading (str): the section name, e.g. 'San Joaquin Valley'
         nr_value (optional): value returned for not-reported (-NR-) entries
+        report (str, optional): the FCR report text, if already retrieved
     Returns:
         df (pandas.DataFrame): storage and flood control parameters by reservoir; None if the section is not
             in the report or its table format is not supported
@@ -651,7 +680,7 @@ def _extract_basin_reservoir_data(datetime_structure, heading, nr_value=None):
     if not _fcr_available(datetime_structure, heading, start=_FCR_SECTION_START.get(heading, _FCR_START)):
         return None
 
-    content = _get_fcr_report(datetime_structure)
+    content = _fcr_report(datetime_structure, report)
     section = _fcr_section(content, heading)
     if section is None:
         print(f'WARNING: {heading} section not found in FCR report')
@@ -841,7 +870,7 @@ def _parse_fcr_value(value, nr_value=None):
         return None
 
 
-def extract_basin_totals(datetime_structure, nr_value=None, basin='Sacramento Valley'):
+def extract_basin_totals(datetime_structure, nr_value=None, basin='Sacramento Valley', report=None):
     """
     get the basin FCR totals for one basin section of the FCR report
 
@@ -852,6 +881,8 @@ def extract_basin_totals(datetime_structure, nr_value=None, basin='Sacramento Va
             convert to float; pass 'NR' to keep not-reported entries distinguishable
         basin (str): the basin section name; one of 'Sacramento Valley' (default), 'San Joaquin Valley',
             'Tulare Lake Basin', 'Truckee River Basin', or 'Russian River Basin'
+        report (str, optional): the FCR report text for the requested date, if already retrieved (e.g. by
+            `get_fcr_data`); retrieved from WCDS if not given
     Returns:
         df (pandas.DataFrame): the USACE SPK basin totals, with rows BASIN TOTALS, TOTAL FLOOD SPACE ENCROACHED,
             and w/US Storages, as reported for the basin (Truckee River and Russian River report no w/US Storages,
@@ -864,7 +895,7 @@ def extract_basin_totals(datetime_structure, nr_value=None, basin='Sacramento Va
                           start=_FCR_SECTION_START.get(basin, _FCR_START)):
         return None
 
-    content = _get_fcr_report(datetime_structure)
+    content = _fcr_report(datetime_structure, report)
     section = _fcr_section(content, basin)
     if section is None:
         print(f'WARNING: {basin} section not found in FCR report')
@@ -879,7 +910,9 @@ def extract_basin_totals(datetime_structure, nr_value=None, basin='Sacramento Va
 
 def get_fcr_data(datetime_structure, nr_value=None):
     """
-    get all of the FCR date for Sacramento Valley basin
+    get all of the FCR report tables for the requested date: the Sacramento Valley reservoir table, Folsom
+    forecasted volumes, and basin totals, and the reservoir table and basin totals of each other basin section;
+    the report is retrieved once for all tables
 
     Arguments:
         datetime_structure (datetime): datetime object
@@ -887,22 +920,36 @@ def get_fcr_data(datetime_structure, nr_value=None):
             string 'NR'); defaults to None, the same as blank and not-applicable (----) entries, so values
             convert to float; pass 'NR' to keep not-reported entries distinguishable
     Returns:
-        (dict): dictionary containing each dataframe for all FCR, Folsom specific metrics, and basin totals;
-            a table that fails to parse is None so the remaining tables are still returned
+        (dict): 'date'; the Sacramento Valley tables 'fcr' (reservoirs), 'folsom' (Folsom forecasted
+            volumes), and 'totals' (basin totals); and 'basins', a dictionary of the other basin sections, by
+            section name (e.g. 'San Joaquin Valley'), each with 'fcr' (reservoirs) and 'totals' (basin totals);
+            a table that fails to parse or is unavailable for the date is None, so the remaining tables are still
+            returned
     Raises:
         ValueError: if the requested date is today or later, as the report is not yet available
     """
     # raise for unavailable dates up front, rather than reporting each table as failed
     _fcr_days_ago(datetime_structure)
+    report = _get_fcr_report(datetime_structure)
 
-    result = {'date': f'{datetime_structure:%Y-%m-%d}'}
-    for key, extract in (('fcr', extract_sac_valley_fcr_data),
-                         ('folsom', extract_folsom_fcr_data),
-                         ('totals', extract_basin_totals)):
+    def extract(name, function, **kwargs):
         try:
-            result[key] = extract(datetime_structure, nr_value=nr_value)
+            return function(datetime_structure, nr_value=nr_value, report=report, **kwargs)
         except Exception as error:
-            print(f'WARNING: FCR `{key}` table could not be parsed for '
+            print(f'WARNING: FCR `{name}` table could not be parsed for '
                   f'{datetime_structure:%Y-%m-%d}: {type(error).__name__}: {error}')
-            result[key] = None
+            return None
+
+    result = {'date': f'{datetime_structure:%Y-%m-%d}',
+              'fcr': extract('fcr', extract_sac_valley_fcr_data),
+              'folsom': extract('folsom', extract_folsom_fcr_data),
+              'totals': extract('totals', extract_basin_totals),
+              'basins': {}}
+    for basin, function in (('San Joaquin Valley', extract_san_joaquin_valley_fcr_data),
+                            ('Tulare Lake Basin', extract_tulare_lake_basin_fcr_data),
+                            ('Truckee River Basin', extract_truckee_river_basin_fcr_data),
+                            ('Russian River Basin', extract_russian_river_basin_fcr_data),
+                            ('So. San Francisco Bay Basin', extract_so_san_francisco_bay_basin_fcr_data)):
+        result['basins'][basin] = {'fcr': extract(f'{basin} fcr', function),
+                                   'totals': extract(f'{basin} totals', extract_basin_totals, basin=basin)}
     return result
