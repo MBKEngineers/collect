@@ -12,7 +12,6 @@ import unittest
 import unittest.mock
 
 from bs4 import BeautifulSoup
-from dotenv import load_dotenv
 import pandas as pd
 
 from collect import cnrfc, utils
@@ -96,12 +95,13 @@ class TestCNRFC(unittest.TestCase):
                                                     float_precision='high').mul(1000)
         return self._deterministic_frame
 
+    @unittest.mock.patch.dict(os.environ, {'CNRFC_USER': 'mock_user', 'CNRFC_PASSWORD': 'mock_password'}, clear=True)
     def test_cnrfc_credentials(self):
         """
-        load sensitive info from .env file and test CNRFC credentials exist
+        test that CNRFC credentials are read from the CNRFC_USER and CNRFC_PASSWORD environment variables
         """
-        load_dotenv()
-        self.assertTrue(('CNRFC_USER' in os.environ) & ('CNRFC_PASSWORD' in os.environ))
+        auth = cnrfc.cnrfc._get_cnrfc_auth('https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id=FOLC1')
+        self.assertEqual((auth.username, auth.password), ('mock_user', 'mock_password'))
 
     def test_convert_date_columns(self):
         """Ensure datetime data converted to string format"""
@@ -504,25 +504,29 @@ class TestCNRFC(unittest.TestCase):
         self.assertEqual(sample[2], '# Location: American River - Folsom Lake (FOLC1)')
         self.assertTrue(sample[-1].startswith('# Maximum Observed Flow:'))
 
-    def test__get_cnrfc_auth(self):
+    @unittest.mock.patch.dict(os.environ, {}, clear=True)
+    def test__get_cnrfc_auth_without_credentials(self):
         """
-        test that credentials are only attached to (and only required for) restricted site URLs
+        test that credentials are not required for public URLs, but are required for restricted site URLs
         """
-        public_url = 'https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv'
-        restricted_url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id=FOLC1'
-        with unittest.mock.patch.dict(os.environ, {}, clear=True):
-            self.assertIsNone(cnrfc.cnrfc._get_cnrfc_auth(public_url))
-            self.assertRaises(NotImplementedError, cnrfc.cnrfc._get_cnrfc_auth, restricted_url)
-        with unittest.mock.patch.dict(os.environ, {'CNRFC_USER': 'user', 'CNRFC_PASSWORD': 'pass'}):
-            self.assertIsNone(cnrfc.cnrfc._get_cnrfc_auth(public_url))
-            self.assertIsNotNone(cnrfc.cnrfc._get_cnrfc_auth(restricted_url))
+        self.assertIsNone(cnrfc.cnrfc._get_cnrfc_auth('https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv'))
+        self.assertRaises(NotImplementedError,
+                          cnrfc.cnrfc._get_cnrfc_auth,
+                          'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id=FOLC1')
 
+    @unittest.mock.patch.dict(os.environ, {'CNRFC_USER': 'mock_user', 'CNRFC_PASSWORD': 'mock_password'}, clear=True)
+    def test__get_cnrfc_auth_public_url(self):
+        """
+        test that credentials are not attached to public URLs even when available
+        """
+        self.assertIsNone(cnrfc.cnrfc._get_cnrfc_auth('https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv'))
+
+    @unittest.mock.patch.dict(os.environ, {}, clear=True)
     def test__get_forecast_csv_without_credentials(self):
         """
         test that public forecast CSVs can be retrieved without CNRFC credentials
         """
-        with unittest.mock.patch.dict(os.environ, {}, clear=True):
-            result = cnrfc.cnrfc._get_forecast_csv('https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv')
+        result = cnrfc.cnrfc._get_forecast_csv('https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv')
         self.assertTrue(result.readline().decode('utf-8').startswith('GMT,HLEC1'))
 
     def test_get_deterministic_forecast_public(self):

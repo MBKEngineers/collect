@@ -10,15 +10,10 @@ import os
 import zipfile
 from bs4 import BeautifulSoup
 from dateutil import parser
-from dotenv import load_dotenv
 import pandas as pd
 import requests
 from collect.cnrfc.gages import *
 from collect.utils import utils
-
-
-# load credentials
-load_dotenv()
 
 
 def get_seasonal_trend_tabular(cnrfc_id, water_year):
