@@ -22,9 +22,10 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
     Raw Obs Apr-Jul To Date, Raw Avg Apr-Jul To Date, Raw Daily Observation
     adapted from data accessed in py_water_supply_reporter.py
     example url: https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=HLEC1&prodID=7&year=2013
+
     Arguments:
         cnrfc_id (str): forecast point (such as FOLC1)
-        water_year (str/int): water year for forecast
+        water_year (str, int): water year for forecast
     Returns:
         (dict): data and info
     """
@@ -79,13 +80,13 @@ def get_water_year_trend_tabular(cnrfc_id, water_year):
     CNRFC Ensemble Product 9, which includes WY Forecast 90% Exceedance, 75% Exceedance, 50% Exceedance, 25% Exceedance,
     10% Exceedance, Raw WY To Date Observation, Raw WY To Date Average, Raw Daily Observation
     #example url: https://www.cnrfc.noaa.gov/ensembleProductTabular.php?id=FOLC1&prodID=9&year=2022#
+
     Arguments:
         cnrfc_id (str): forecast point (such as FOLC1)
         water_year (str/int): water year for forecast
     Returns:
         (dict): data and info
     """
-
     url = get_ensemble_product_url(product_id=9, cnrfc_id=cnrfc_id, data_format='Tabular')
     url += f'&year={water_year}'
 
@@ -220,7 +221,12 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False, pdt_convert=False, as_pdt=False, cnrfc_id=None):
+def get_deterministic_forecast_watershed(watershed,
+                                         date_string,
+                                         acre_feet=False,
+                                         pdt_convert=False,
+                                         as_pdt=False,
+                                         cnrfc_id=None):
     """
     download the deterministic forecasts for an entire watershed, as linked on
     https://www.cnrfc.noaa.gov/deterministicHourlyProductCSV.php
@@ -291,7 +297,8 @@ def get_deterministic_forecast_watershed(watershed, date_string, acre_feet=False
 
     return {'data': df, 'info': {'url': url,
                                  'type': 'Deterministic Forecast',
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M')
+                                               if time_issued is not None else time_issued,
                                  'watershed': watershed,
                                  'units': units,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
@@ -386,14 +393,22 @@ def get_ensemble_forecast(cnrfc_id, duration, acre_feet=False, pdt_convert=False
     return {'data': df, 'info': {'url': url, 
                                  'watershed': get_watershed(cnrfc_id), 
                                  'type': f'{duration.title()} Ensemble Forecast',
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
-                                 'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M')
+                                               if time_issued is not None else time_issued,
+                                 'first_ordinate': (get_ensemble_first_forecast_ordinate(df=df)
+                                                        .strftime('%Y-%m-%d %H:%M')),
                                  'units': units, 
                                  'duration': duration,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=False, pdt_convert=False, as_pdt=False, cnrfc_id=None):
+def get_ensemble_forecast_watershed(watershed,
+                                    duration,
+                                    date_string,
+                                    acre_feet=False,
+                                    pdt_convert=False,
+                                    as_pdt=False,
+                                    cnrfc_id=None):
     """
     from: get_watershed_ensemble_issue_time
           get_watershed_ensemble_daily
@@ -466,8 +481,10 @@ def get_ensemble_forecast_watershed(watershed, duration, date_string, acre_feet=
 
     return {'data': df, 'info': {'url': url, 
                                  'watershed': watershed, 
-                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M') if time_issued is not None else time_issued,
-                                 'first_ordinate': get_ensemble_first_forecast_ordinate(df=df).strftime('%Y-%m-%d %H:%M'),
+                                 'issue_time': time_issued.strftime('%Y-%m-%d %H:%M')
+                                               if time_issued is not None else time_issued,
+                                 'first_ordinate': (get_ensemble_first_forecast_ordinate(df=df)
+                                                        .strftime('%Y-%m-%d %H:%M')),
                                  'units': units,
                                  'duration': duration,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
@@ -615,6 +632,12 @@ def get_watershed_forecast_issue_time(duration, watershed, date_string=None, det
 def get_watershed(cnrfc_id):
     """
     get associated hydrologic region for CNRFC forecast location
+
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
+        ValueError
     """
     watersheds = {'klamath': KLAMATH_GAGES,
                   'NorthCoast': NORTHCOAST_GAGES,
@@ -642,6 +665,11 @@ def get_watershed(cnrfc_id):
 def get_watershed_formatted(watershed):
     """
     get associated hydrologic region for CNRFC forecast location
+
+    Arguments:
+        watershed (str): 
+    Returns:
+    Raises:
     """
     return {'klamath': 'Klamath',
             'NorthCoast': 'North Coast',
@@ -666,6 +694,12 @@ def get_watershed_formatted(watershed):
 def get_ensemble_first_forecast_ordinate(url=None, df=None):
     """
     return the first date of the forecast (GMT) as datetime object
+
+    Arguments:
+        url (str): forecast point (such as FOLC1)
+        df (pandas.DataFrame): 
+    Returns:
+    Raises:
     """
     if url is not None and df is None:
         df = pd.read_csv(url, 
@@ -683,12 +717,24 @@ def get_ensemble_first_forecast_ordinate(url=None, df=None):
 def get_ensemble_product_url(product_id, cnrfc_id, data_format=''):
     """
     return the URL for the product display
+
+    Arguments:
+        product_id (): 
+        cnrfc_id (str): forecast point (such as FOLC1)
+        data_format (str): 
+    Returns:
+    Raises:
     """
     return f'https://www.cnrfc.noaa.gov/ensembleProduct{data_format}.php?id={cnrfc_id}&prodID={product_id}'
 
 
 def get_ensemble_product_1(cnrfc_id):
     """
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
+        NotImplementedError
     """
     raise NotImplementedError
 
@@ -702,6 +748,11 @@ def get_ensemble_product_2(cnrfc_id):
     http://www.cnrfc.noaa.gov/ensembleProduct.php?id=XXXC1&prodID=2
 
     (alt text source: https://www.cnrfc.noaa.gov/awipsProducts/RNOWRK10D.php)
+
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
     """
     url = get_ensemble_product_url(2, cnrfc_id)
     utils.get_web_status(url)
@@ -728,6 +779,11 @@ def get_ensemble_product_2(cnrfc_id):
 
 def get_ensemble_product_3(cnrfc_id):
     """
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
+        NotImplementedError
     """
     raise NotImplementedError
 
@@ -738,6 +794,11 @@ def get_ensemble_product_3(cnrfc_id):
 
 def get_ensemble_product_5(cnrfc_id):
     """
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
+        NotImplementedError
     """
     raise NotImplementedError
 
@@ -750,6 +811,11 @@ def get_ensemble_product_6(cnrfc_id):
     """
     Monthly exceedance volume data is presented in tabular format or plotted as a barchart at
     the ensemble product page
+
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
     """
     url = get_ensemble_product_url(6, cnrfc_id)
     utils.get_web_status(url)
@@ -782,6 +848,11 @@ def get_ensemble_product_10(cnrfc_id):
     Tabular Monthly Volume Accumulation
 
     @narlesky TO DO - recreate graphic
+
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
     """
     url = get_ensemble_product_url(10, cnrfc_id)
     utils.get_web_status(url)
@@ -805,6 +876,12 @@ def get_ensemble_product_11(cnrfc_id):
     """
     Multi-Year Accumulated Volume Plot - chart data available through highchart download CSV api
     Tabular Monthly Volume Accumulation
+
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
+        NotImplementedError
     """
     raise NotImplementedError
 
@@ -817,6 +894,11 @@ def get_ensemble_product_11(cnrfc_id):
 
 def get_ensemble_product_12(cnrfc_id):
     """
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
+        NotImplementedError
     """
     raise NotImplementedError
 
@@ -829,6 +911,11 @@ def get_ensemble_product_12(cnrfc_id):
 
 def get_ensemble_product_13(cnrfc_id):
     """
+    Arguments:
+        cnrfc_id (str): forecast point (such as FOLC1)
+    Returns:
+    Raises:
+        NotImplementedError
     """
     raise NotImplementedError
 
@@ -840,6 +927,11 @@ def get_ensemble_product_13(cnrfc_id):
 def get_data_report_part_8():
     """
     https://www.wrh.noaa.gov/cnrfc/rsa_getprod.php?prod=RNORR8RSA&wfo=cnrfc&version=0
+
+    Arguments:
+    Returns:
+    Raises:
+        NotImplementedError
     """
     raise NotImplementedError
 
@@ -851,6 +943,12 @@ def get_data_report_part_8():
 
 
 def get_monthly_reservoir_storage_summary():
+    """
+    Arguments:
+    Returns:
+    Raises:
+        NotImplementedError
+    """
     raise NotImplementedError
 
     url = 'https://www.cnrfc.noaa.gov/awipsProducts/RNORR6RSA.php'
@@ -947,7 +1045,11 @@ def get_esp_trace_analysis_url(cnrfc_id,
 
 
 def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
-
+    """
+    Arguments:
+    Returns:
+    Raises:
+    """
     # convert kcfs/day to cfs/day
     df = df * 1000.0
     units = 'cfs'
@@ -994,6 +1096,10 @@ def _get_cnrfc_auth(url):
 def _get_cnrfc_content(url):
     """
     request page from CNRFC site, authenticating only for restricted site URLs
+
+    Arguments:
+    Returns:
+    Raises:
     """
     return utils.get_session_response(url, auth=_get_cnrfc_auth(url)).content
 
@@ -1034,6 +1140,11 @@ def _get_forecast_csv(url):
 
 
 def get_forecast_csvdata(url):
+    """
+    Arguments:
+    Returns:
+    Raises:
+    """
     return _get_forecast_csv(url)
 
 
@@ -1078,6 +1189,11 @@ def get_rating_curve(cnrfc_id):
 def _default_date_string(date_string):
     """
     supply expected latest forecast datestamp or use defined date_string argument
+
+    Arguments:
+    Returns:
+    Raises:
+        ValueError
     """
     if date_string is None:
         now = utils.get_localized_datetime(dt.datetime.now(), 'UTC')
@@ -1091,6 +1207,14 @@ def _default_date_string(date_string):
 
 
 def _validate_duration(duration):
+    """
+    Arguments:
+        duration (str): single character duration code, one of D or H
+    Returns:
+        (str): the duration identifier used by CNRFC: 'daily' or 'hourly'
+    Raises:
+        ValueError: raised for invalid duration codes
+    """
     if duration[0].upper() == 'D':
         return 'daily'
     elif duration[0].upper() == 'H':
@@ -1102,8 +1226,12 @@ def _validate_duration(duration):
 def _parse_blue_table(table_soup):
     """
     many CNRFC ensemble data products are stored in similarly-formatted tables
-    """
 
+    Arguments:
+        table_soup ():
+    Returns:
+        (tuple): tuple of pandas.DataFrame and list of string notes 
+    """
     # parse header names from table
     columns = []
     for td in table_soup.find_all('td', {'class': 'blue-background'}):
