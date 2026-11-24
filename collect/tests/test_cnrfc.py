@@ -9,6 +9,7 @@ import os
 import re
 import textwrap
 import unittest
+import unittest.mock
 
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -492,16 +493,45 @@ class TestCNRFC(unittest.TestCase):
         pattern = r'^(\d{4}-\d{2}-\d{2} \d{2}:00:00),((\d+.\d+,)+)'
         self.assertTrue(len(re.match(pattern, result.readline().decode('utf-8')).groups()) > 2)
 
-    def test__get_cnrfc_restricted_content(self):
+    def test__get_cnrfc_content(self):
         """
         test that restricted content can be accessed through the provided credentials
         """
-        result = cnrfc.cnrfc._get_cnrfc_restricted_content(
+        result = cnrfc.cnrfc._get_cnrfc_content(
             'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_tabular.php?id=FOLC1'
         )
         sample = BeautifulSoup(result, 'html.parser').find('pre').text.splitlines()[:9]
         self.assertEqual(sample[2], '# Location: American River - Folsom Lake (FOLC1)')
         self.assertTrue(sample[-1].startswith('# Maximum Observed Flow:'))
+
+    def test__get_cnrfc_auth(self):
+        """
+        test that credentials are only attached to (and only required for) restricted site URLs
+        """
+        public_url = 'https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv'
+        restricted_url = 'https://www.cnrfc.noaa.gov/restricted/graphicalRVF_csv.php?id=FOLC1'
+        with unittest.mock.patch.dict(os.environ, {}, clear=True):
+            self.assertIsNone(cnrfc.cnrfc._get_cnrfc_auth(public_url))
+            self.assertRaises(NotImplementedError, cnrfc.cnrfc._get_cnrfc_auth, restricted_url)
+        with unittest.mock.patch.dict(os.environ, {'CNRFC_USER': 'user', 'CNRFC_PASSWORD': 'pass'}):
+            self.assertIsNone(cnrfc.cnrfc._get_cnrfc_auth(public_url))
+            self.assertIsNotNone(cnrfc.cnrfc._get_cnrfc_auth(restricted_url))
+
+    def test__get_forecast_csv_without_credentials(self):
+        """
+        test that public forecast CSVs can be retrieved without CNRFC credentials
+        """
+        with unittest.mock.patch.dict(os.environ, {}, clear=True):
+            result = cnrfc.cnrfc._get_forecast_csv('https://www.cnrfc.noaa.gov/csv/HLEC1_hefs_csv_hourly.csv')
+        self.assertTrue(result.readline().decode('utf-8').startswith('GMT,HLEC1'))
+
+    def test_get_deterministic_forecast_public(self):
+        """
+        test deterministic forecast for a location previously served on the restricted site
+        """
+        result = cnrfc.get_deterministic_forecast('NMFC1')
+        self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/graphicalRVF_csv.php?id=NMFC1')
+        self.assertGreater(result['data']['forecast'].dropna().size, 0)
 
     def test_download_watershed_file(self):
         """

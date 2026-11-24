@@ -39,7 +39,7 @@ def get_seasonal_trend_tabular(cnrfc_id, water_year):
     assert int(water_year) >= 2011, "Ensemble Forecast Product 7 not available before 2011"
 
     # retrieve from public CNRFC webpage
-    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser').find('pre').text.replace('#', '')
+    result = BeautifulSoup(_get_cnrfc_content(url), 'html.parser').find('pre').text.replace('#', '')
 
     # in-memory file buffer
     with io.StringIO(result) as buf:
@@ -97,7 +97,7 @@ def get_water_year_trend_tabular(cnrfc_id, water_year):
     assert int(water_year) >= 2013, "Ensemble Forecast Product 9 not available before 2013"
 
     # retrieve from public CNRFC webpage
-    result = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser').find('pre').text.replace('#', '')
+    result = BeautifulSoup(_get_cnrfc_content(url), 'html.parser').find('pre').text.replace('#', '')
 
     # in-memory file buffer
     with io.StringIO(result) as buf:
@@ -171,8 +171,8 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
                         'Threshold Exceedance Status': str,
                         'Observed/Forecast': str}
 
-    # use restricted site url for certain forecast locations
-    if cnrfc_id in RESTRICTED:
+    # use restricted site url for certain forecast locations; release forecasts are served publicly
+    if cnrfc_id in RESTRICTED and not release:
         url = f'https://www.cnrfc.noaa.gov/restricted/graphical{forecast_type}_csv.php?id={cnrfc_id}'
         date_column_header = 'Date/Time (Pacific Time)'
         specified_dtypes = {date_column_header: str,
@@ -316,11 +316,11 @@ def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=Fals
     # defaults
     issue_time, next_issue_time, plot_type = None, None, None
 
-    # request page with CNRFC credentials and parse HTML content
-    pre_graphical = 'restricted/' if cnrfc_id in RESTRICTED else ''
+    # request page (with CNRFC credentials for restricted site) and parse HTML content
+    pre_graphical = 'restricted/' if cnrfc_id in RESTRICTED and not release else ''
     post_graphical = 'Release' if release else 'RVF'
     url = f'https://www.cnrfc.noaa.gov/{pre_graphical}graphical{post_graphical}_tabular.php?id={cnrfc_id}'
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
+    soup = BeautifulSoup(_get_cnrfc_content(url), 'html.parser')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
     for td in soup.find_all('td', {'class': 'smallhead'}):
@@ -712,7 +712,7 @@ def get_ensemble_product_2(cnrfc_id):
     utils.get_web_status(url)
 
     # request Ensemble Product 2 page content
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
+    soup = BeautifulSoup(_get_cnrfc_content(url), 'html.parser')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
@@ -760,7 +760,7 @@ def get_ensemble_product_6(cnrfc_id):
     utils.get_web_status(url)
 
     # request Ensemble Product 6 page content
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
+    soup = BeautifulSoup(_get_cnrfc_content(url), 'html.parser')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Monthly Volume Exceedance Values from table
@@ -792,7 +792,7 @@ def get_ensemble_product_10(cnrfc_id):
     utils.get_web_status(url)
 
     # request Ensemble Product 10 page content
-    soup = BeautifulSoup(_get_cnrfc_restricted_content(url), 'html.parser')
+    soup = BeautifulSoup(_get_cnrfc_content(url), 'html.parser')
     data_table = soup.find_all('table', {'style': 'standardTable'})[0]
 
     # parse Tabular 10-Day Streamflow Volume Accumulation (1000s of Acre-Feet) from table
@@ -975,13 +975,32 @@ def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
     return df, units
 
 
-def _get_cnrfc_restricted_content(url):
+def _get_cnrfc_auth(url):
     """
-    request page from CNRFC restricted site
+    basic auth for CNRFC restricted site URLs; public URLs need no credentials
+
+    Arguments:
+        url (str): the CNRFC URL to be requested
+    Returns:
+        (requests.auth.HTTPBasicAuth or None): credentials for restricted URLs, otherwise None
+    Raises:
+        NotImplementedError: if a restricted URL is requested without CNRFC credentials in the environment
     """
-    basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
-    content = utils.get_session_response(url, auth=basic_auth).content
-    return content
+    if '/restricted/' not in url:
+        return None
+
+    if not os.getenv('CNRFC_USER'):
+        raise NotImplementedError(''.join(['Must specify CNRFC_USER and CNRFC_PASSWORD environment',
+                                           ' variables for access to restricted site.']))
+
+    return requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
+
+
+def _get_cnrfc_content(url):
+    """
+    request page from CNRFC site, authenticating only for restricted site URLs
+    """
+    return utils.get_session_response(url, auth=_get_cnrfc_auth(url)).content
 
 
 def _get_forecast_csv(url):
@@ -995,16 +1014,8 @@ def _get_forecast_csv(url):
     # data source
     filename = url.split('/')[-1]
 
-    # check for credentials
-    if not os.getenv('CNRFC_USER'):
-        raise NotImplementedError(''.join(['Must specify CNRFC_USER and CNRFC_PASSWORD environment',
-                                           ' variables for access to restricted site.']))
-
-    # cnrfc authorization header
-    basic_auth = requests.auth.HTTPBasicAuth(os.getenv('CNRFC_USER'), os.getenv('CNRFC_PASSWORD'))
-
     # initialize requests session with retries
-    content = utils.get_session_response(url, auth=basic_auth).content
+    content = _get_cnrfc_content(url)
 
     # handle zipfiles
     if '.zip' in filename:
