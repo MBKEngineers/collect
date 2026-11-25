@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 include = ["collect*"]
 
 [project]
-version = "0.0.4"
+version = "0.0.5"
 name = "collect"
 description = "Contains various web-scraping utilities used at MBK Engineers"
 readme = "README.md"
