@@ -133,50 +133,63 @@ def get_water_year_trend_tabular(cnrfc_id, water_year):
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=False):
+def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=False, inflow=False, rvf=True):
     """
     Adapted from SAFCA portal project
     ---
-    reads the url and returns a pandas dataframe from a file or the CNRFC url
-    cnrfc_id:  CNRFC station id (5 letter id) (e.g. FOLC1)
-    convert CSV data to DataFrame, separating historical from forecast inflow series
+    reads the url and converts CSV data to DataFrame, separating historical from forecast inflow series
 
     Note: as of March 2022, deterministic forecasts retrieved with the graphicalRVF or
           graphicalRelease URLs return CSVs of 3 different formats with headers that
           may also include stage information
 
     Arguments:
-        cnrfc_id (str): the forecast location ID
+        cnrfc_id:  CNRFC station id (5 letter id) (e.g. FOLC1)
         truncate_historical (bool): flag for whether to trim historical timeseries from record
         release (bool): flag for whether to query deterministic release forecast
+        inflow (bool): flag for whether to query the reservoir inflow forecast
+        rvf (bool): flag for whether to query the river forecast (default); only one of rvf, release, and inflow may
+                    be True, so set rvf=False when requesting a release or inflow forecast
     Returns:
         (dict): dictionary result with dataframe containing forecast data and additional metadata
+    Raises:
+        ValueError: if more or fewer than one of rvf, release, and inflow is True; if CNRFC does not serve the
+                    requested product for the location ("Invalid ID"), returns no rows, or changes the CSV layout
     """
+    # exactly one forecast product
+    _validate_forecast_product(rvf=rvf, release=release, inflow=inflow)
+
     # forecast type
-    forecast_type = 'Release' if release else 'RVF'
     flow_prefix = 'Release ' if release else ''
+    value_column = f'{flow_prefix}Flow (CFS)'
 
-    # default deterministic URL and index name
-    url = f'https://www.cnrfc.noaa.gov/graphical{forecast_type}_csv.php?id={cnrfc_id}'
-    date_column_header = 'Valid Date/Time (Pacific)'
-    specified_dtypes = {date_column_header: str,
-                        'Stage (Feet)': float,
-                        f'{flow_prefix}Flow (CFS)': float,
-                        'Trend': str,
-                        'Issuance Date/Time (Pacific)': str,
-                        'Threshold Exceedance Status': str,
-                        'Observed/Forecast': str}
-
-    # use restricted site url for certain forecast locations; release forecasts are served publicly
-    if cnrfc_id in RESTRICTED and not release:
-        url = f'https://www.cnrfc.noaa.gov/restricted/graphical{forecast_type}_csv.php?id={cnrfc_id}'
+    # deterministic URL and CSV layout for the reservoir release, reservoir inflow, or river forecast
+    if release:
+        url = f'https://www.cnrfc.noaa.gov/graphicalRelease_csv.php?id={cnrfc_id}'
+        date_column_header = 'Date/Time'
+        specified_dtypes = {date_column_header: str,
+                            value_column: float,
+                            'Trend': str}
+    elif inflow:
+        url = f'https://www.cnrfc.noaa.gov/graphicalRVF-inflows_csv.php?id={cnrfc_id}'
         date_column_header = 'Date/Time (Pacific Time)'
         specified_dtypes = {date_column_header: str,
-                            f'{flow_prefix}Flow (CFS)': float,
+                            value_column: float,
                             'Trend': str}
+    else:
+        url = f'https://www.cnrfc.noaa.gov/graphicalRVF_csv.php?id={cnrfc_id}'
+        date_column_header = 'Valid Date/Time (Pacific)'
+        specified_dtypes = {date_column_header: str,
+                            'Stage (Feet)': float,
+                            value_column: float,
+                            'Trend': str,
+                            'Issuance Date/Time (Pacific)': str,
+                            'Threshold Exceedance Status': str,
+                            'Observed/Forecast': str}
 
-    # get forecast file from csv url
+    # get forecast file from csv url; CNRFC answers "Invalid ID" when it doesn't serve this product for the location
     csvdata = _get_forecast_csv(url)
+    _raise_if_invalid_id(cnrfc_id, url, csvdata.getvalue())
 
     # read historical and forecast series from CSV
     df = pd.read_csv(csvdata,
@@ -184,6 +197,16 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
                      parse_dates=True,
                      float_precision='high',
                      dtype=specified_dtypes)
+
+    # confirm the CSV has the expected date, value, and trend columns
+    missing = [x for x in (date_column_header, value_column, 'Trend') if x not in df.columns]
+    if missing:
+        raise ValueError(f'unexpected CSV layout from {url}: missing {missing}; columns are {list(df.columns)}')
+
+    # CNRFC sends column headers without rows for some codes it lists without this product (e.g. FOLC1 on
+    # graphicalRVF_csv.php)
+    if df.empty:
+        raise ValueError(f'CNRFC returned no forecast data for {cnrfc_id} from {url} (column headers only)')
 
     df.set_index(date_column_header, inplace=True)
     df.index = pd.to_datetime(df.index, format='%m/%d/%Y %I %p')
@@ -208,7 +231,9 @@ def get_deterministic_forecast(cnrfc_id, truncate_historical=False, release=Fals
     df['historical'] = df.loc[(df['forecast'].isnull()) & mask][f'{flow_prefix}Flow (CFS)']
 
     # additional issuance, plot-type information
-    time_issued, next_issue_time, title, plot_type = get_forecast_meta_deterministic(cnrfc_id)
+    time_issued, next_issue_time, title, plot_type = get_forecast_meta_deterministic(cnrfc_id,
+                                                                                     release=release,
+                                                                                     inflow=inflow)
 
     return {'data': df, 'info': {'url': url,
                                  'type': f'Deterministic {flow_prefix}Forecast',
@@ -304,25 +329,42 @@ def get_deterministic_forecast_watershed(watershed,
                                  'downloaded': dt.datetime.now().strftime('%Y-%m-%d %H:%M')}}
 
 
-def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=False):
+def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=False, inflow=False):
     """
-    Get issuance time from the deterministic inflow forecast page
-    
+    Get title, plot type, and issuance times from the deterministic forecast product page (graphicalRVF.php,
+    reservoir.php, or reservoirRelease.php)
+
     Arguments:
         cnrfc_id (str): the 5-character CNRFC forecast location code
-        first_ordinate (bool): flag for whether to extract first forecast timestep
+        first_ordinate (bool): flag for whether to also return the first forecast timestep, taken from the
+                               deterministic forecast CSV
         release (bool): flag for whether to query deterministic release forecast
+        inflow (bool): flag for whether to query the reservoir inflow forecast
     Returns:
         (tuple): tuple of forecast issuance time, next issuance time (as datetimes) and plot_type (None)
+    Raises:
+        ValueError: if both release and inflow are True, or CNRFC does not serve the requested product (river by
+                    default) for the location ("Invalid ID")
     """
+    # one forecast product (river unless release or inflow is requested)
+    _validate_forecast_product(rvf=not (release or inflow), release=release, inflow=inflow)
+
     # defaults
     issue_time, next_issue_time, plot_type = None, None, None
 
-    # request page (with CNRFC credentials for restricted site) and parse HTML content
-    pre_graphical = 'restricted/' if cnrfc_id in RESTRICTED and not release else ''
-    post_graphical = 'Release' if release else 'RVF'
-    url = f'https://www.cnrfc.noaa.gov/{pre_graphical}graphical{post_graphical}_tabular.php?id={cnrfc_id}'
-    soup = BeautifulSoup(_get_cnrfc_content(url), 'html.parser')
+    # product page for the river, reservoir inflow, or reservoir release forecast
+    if release:
+        page = 'reservoirRelease.php'
+    elif inflow:
+        page = 'reservoir.php'
+    else:
+        page = 'graphicalRVF.php'
+
+    # request product page and parse HTML content for forecast metadata
+    url = f'https://www.cnrfc.noaa.gov/{page}?id={cnrfc_id}'
+    content = _get_cnrfc_content(url)
+    _raise_if_invalid_id(cnrfc_id, url, content)
+    soup = BeautifulSoup(content, 'html.parser')
     title = soup.find_all('font', {'class': 'head'})[0].text
 
     for td in soup.find_all('td', {'class': 'smallhead'}):
@@ -333,11 +375,15 @@ def get_forecast_meta_deterministic(cnrfc_id, first_ordinate=False, release=Fals
         if 'Plot Type' in td.text:
             plot_type = td.text.split(':')[1].strip()
 
+    # first forecast timestep from the deterministic forecast CSV
     if first_ordinate:
-        data = soup.find('pre').text.split('\n')
-        forecast_start = parser.parse(data[data.index('# FORECAST')+4].strip()[:25])
+        forecast = get_deterministic_forecast(cnrfc_id,
+                                              release=release,
+                                              inflow=inflow,
+                                              rvf=not (release or inflow))['data']['forecast']
+        forecast_start = forecast.first_valid_index().to_pydatetime()
         return issue_time, next_issue_time, title, plot_type, forecast_start
-    
+
     return issue_time, next_issue_time, title, plot_type
 
 
@@ -1070,6 +1116,42 @@ def _apply_conversions(df, duration, acre_feet, pdt_convert, as_pdt):
         df.index.name = 'America/Los_Angeles'
 
     return df, units
+
+
+def _validate_forecast_product(rvf, release, inflow):
+    """
+    check that exactly one deterministic forecast product is requested; whether CNRFC serves that product for a
+    location is determined from its response (see _raise_if_invalid_id), so locations newer than the gage group
+    snapshots in collect.cnrfc.gages can still be requested
+
+    Arguments:
+        rvf (bool): flag for the river forecast
+        release (bool): flag for the reservoir release forecast
+        inflow (bool): flag for the reservoir inflow forecast
+    Raises:
+        ValueError: if more or fewer than one product is requested
+    """
+    if sum([bool(rvf), bool(release), bool(inflow)]) != 1:
+        raise ValueError(f'exactly one of rvf, release, and inflow must be True (got rvf={rvf}, '
+                         f'release={release}, inflow={inflow})')
+
+
+def _raise_if_invalid_id(cnrfc_id, url, content):
+    """
+    raise a ValueError when CNRFC responds that it does not serve the requested product for a location; CNRFC
+    answers "ERROR: Invalid ID Entered" (HTTP 200, or HTTP 400 for graphicalRVF_csv.php) for unknown codes and for
+    codes without that product
+
+    Arguments:
+        cnrfc_id (str): the 5-character CNRFC forecast location code
+        url (str): the requested CNRFC URL
+        content (bytes): the response content
+    Raises:
+        ValueError: if the response is CNRFC's invalid ID message
+    """
+    if b'Invalid ID Entered' in content:
+        raise ValueError(f'CNRFC does not serve this forecast product for {cnrfc_id} ("Invalid ID" from {url}); '
+                         'see collect.cnrfc.gages.get_gage_group for the locations of each product')
 
 
 def _get_cnrfc_auth(url):

@@ -124,26 +124,6 @@ class TestCNRFC(unittest.TestCase):
                           cnrfc.cnrfc._validate_duration,
                           bad_input)
 
-    def test_get_deterministic_forecast(self):
-        """
-        Test that deterministic forecast start from Graphical_RVF page matches
-        CSV start of forecast
-        """
-        cnrfc_id = 'FOLC1'
-        first_ordinate = cnrfc.get_forecast_meta_deterministic(cnrfc_id, first_ordinate=True)[-1]
-        df = cnrfc.get_deterministic_forecast(cnrfc_id, truncate_historical=False)['data']
-        first_forecast_entry = df['forecast'].dropna().index.tolist()[0]
-
-        # check that the date/time representation in the timestamp and datetime.datetime objects are the same
-        self.assertEqual(first_forecast_entry.year, first_ordinate.year)
-        self.assertEqual(first_forecast_entry.month, first_ordinate.month)
-        self.assertEqual(first_forecast_entry.day, first_ordinate.day)
-        self.assertEqual(first_forecast_entry.hour, first_ordinate.hour)
-        self.assertEqual(first_forecast_entry.minute, first_ordinate.minute)
-
-        # for now, strip the local tzinfo from `first_ordinate`
-        self.assertEqual(first_forecast_entry.tzinfo, first_ordinate.replace(tzinfo=None).tzinfo)
-
     def test_get_deterministic_forecast_watershed(self):
         """
         test watershed deterministic forecast download for North San Joaquin on a particular date;
@@ -242,6 +222,53 @@ class TestCNRFC(unittest.TestCase):
         self.assertEqual(result['data'][-1], (15.0, 16300.0))
         self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/data/ratings/DCSC1_rating.js')
 
+    def test_get_gage_group(self):
+        """
+        test that forecast location groups come from the CNRFC map location lists and combine without duplicates
+        """
+        river = cnrfc.gages.get_gage_group(rvf=True, inflow=False, release=False)
+        inflow = cnrfc.gages.get_gage_group(rvf=False, inflow=True, release=False)
+        release = cnrfc.gages.get_gage_group(rvf=False, inflow=False, release=True)
+        ensemble = cnrfc.gages.get_gage_group(rvf=False, inflow=False, release=False, ensemble=True)
+
+        # river-only, inflow-only, and release-only locations, and a location in all three groups
+        self.assertIn('NMFC1', river)
+        self.assertNotIn('NMFC1', inflow)
+        self.assertIn('FOLC1', inflow)
+        self.assertNotIn('FOLC1', river)
+        self.assertIn('HAWC1', release)
+        self.assertNotIn('HAWC1', inflow)
+        for group in (river, inflow, release):
+            self.assertIn('CLKC1', group)
+        self.assertIn('ADLC1', ensemble)
+
+        # default group is the river forecast points
+        self.assertEqual(cnrfc.gages.get_gage_group(), river)
+
+        # multiple groups combine into a sorted union without duplicates
+        combined = cnrfc.gages.get_gage_group(rvf=True, release=True)
+        self.assertEqual(combined, sorted(set(river) | set(release)))
+        self.assertEqual(len(combined), len(set(combined)))
+        self.assertEqual(cnrfc.gages.get_gage_group(rvf=False, release=False), [])
+
+    def test_gage_group_snapshots(self):
+        """
+        test that the static gage group snapshots in collect.cnrfc.gages match the current CNRFC location lists;
+        on failure, refresh the listed constant from get_gage_group
+        """
+        snapshots = {'RIVER_FORECAST': {'rvf': True},
+                     'RESERVOIR_INFLOW': {'inflow': True},
+                     'RESERVOIR_RELEASE': {'release': True},
+                     'ENSEMBLE_FORECAST': {'ensemble': True}}
+        for constant, selected in snapshots.items():
+            with self.subTest(constant=constant):
+                flags = {'rvf': False, 'inflow': False, 'release': False, 'ensemble': False, **selected}
+                live = set(cnrfc.gages.get_gage_group(**flags))
+                static = set(getattr(cnrfc.gages, constant))
+                self.assertEqual(static, live,
+                                 f'{constant} is out of date: added upstream {sorted(live - static)}, '
+                                 f'removed upstream {sorted(static - live)}')
+
     def test_get_watershed(self):
         """
         example usage for looking up watershed group by forecast point ID
@@ -252,11 +279,76 @@ class TestCNRFC(unittest.TestCase):
         """
         test for predicted response with get_forecast_meta_deterministic for Oroville forecast point
         """
-        result = cnrfc.get_forecast_meta_deterministic('ORDC1', first_ordinate=False, release=False)
+        result = cnrfc.get_forecast_meta_deterministic('ORDC1', first_ordinate=False, release=False, inflow=True)
         self.assertIsInstance(result[0], (dt.date, dt.datetime))
         self.assertIsInstance(result[1], (dt.date, dt.datetime))
         self.assertEqual(result[2], 'FEATHER RIVER - LAKE OROVILLE (ORDC1)')
         self.assertEqual(result[3], 'Impaired Inflows')
+
+    @unittest.mock.patch.dict(os.environ, {}, clear=True)
+    def test_get_forecast_meta_deterministic_product_pages(self):
+        """
+        test metadata from the river (graphicalRVF.php), reservoir inflow (reservoir.php), and reservoir release
+        (reservoirRelease.php) product pages
+        """
+        # river and inflow forecasts at the same location have different titles
+        river = cnrfc.get_forecast_meta_deterministic('BDBC1')
+        self.assertEqual(river[2], 'SACRAMENTO RIVER - BEND BRIDGE (BDBC1)')
+        inflow = cnrfc.get_forecast_meta_deterministic('BDBC1', inflow=True)
+        self.assertEqual(inflow[2], 'SACRAMENTO RIVER - BEND BRIDGE LOCAL FLOW (BDBC1)')
+        self.assertEqual(inflow[3], 'Impaired Inflows')
+
+        # release metadata is available from the product page
+        release = cnrfc.get_forecast_meta_deterministic('ORDC1', release=True)
+        self.assertIsInstance(release[0], dt.datetime)
+        self.assertIsInstance(release[1], dt.datetime)
+        self.assertEqual(release[2], 'FEATHER RIVER - LAKE OROVILLE (ORDC1)')
+
+    @staticmethod
+    def _tabular_first_ordinate(route, cnrfc_id):
+        """
+        first forecast timestep listed in a CNRFC tabular data page, e.g. graphicalRVF-inflows_tabular.php
+        """
+        url = f'https://www.cnrfc.noaa.gov/{route}_tabular.php?id={cnrfc_id}'
+        data = BeautifulSoup(utils.get_session_response(url).content, 'html.parser').find('pre').text.split('\n')
+        return dt.datetime.strptime(data[data.index('# FORECAST') + 4].strip()[:16], '%m/%d/%Y %I %p')
+
+    def _assert_first_ordinate_matches(self, route, cnrfc_id, **kwargs):
+        """
+        compare the first forecast timestep from the forecast CSV with the tabular data page
+        """
+        csv_first = cnrfc.get_forecast_meta_deterministic(cnrfc_id, first_ordinate=True, **kwargs)[-1]
+        self.assertEqual(csv_first, self._tabular_first_ordinate(route, cnrfc_id))
+
+    def test_first_ordinate_river(self):
+        """
+        test that the first forecast timestep from the river forecast CSV matches graphicalRVF_tabular.php
+        """
+        for cnrfc_id in ['VWBC1', 'VNSC1', 'TISC1']:
+            with self.subTest(cnrfc_id=cnrfc_id):
+                self._assert_first_ordinate_matches('graphicalRVF', cnrfc_id)
+
+    def test_first_ordinate_inflow(self):
+        """
+        test that the first forecast timestep from the reservoir inflow forecast CSV matches
+        graphicalRVF-inflows_tabular.php
+        """
+        for cnrfc_id in ['ORDC1', 'FOLC1', 'CFWC1']:
+            with self.subTest(cnrfc_id=cnrfc_id):
+                self._assert_first_ordinate_matches('graphicalRVF-inflows', cnrfc_id, inflow=True)
+        with self.subTest(cnrfc_id='BDBC1', inflow=True):
+            self._assert_first_ordinate_matches('graphicalRVF-inflows', 'BDBC1', inflow=True)
+
+    @unittest.expectedFailure
+    def test_first_ordinate_release(self):
+        """
+        test that the first forecast timestep from the reservoir release forecast CSV matches
+        graphicalRelease_tabular.php; expected to fail while graphicalRelease_tabular.php returns HTTP 500 upstream
+        (since at least 2026-11-24) and the release CSV 'Date/Time' header is unsupported
+        """
+        for cnrfc_id in ['COYC1', 'NBBC1', 'ORDC1', 'PFTC1', 'EXQC1']:
+            with self.subTest(cnrfc_id=cnrfc_id):
+                self._assert_first_ordinate_matches('graphicalRelease', cnrfc_id, release=True)
 
     def test_get_ensemble_product_2(self):
         """
@@ -536,6 +628,124 @@ class TestCNRFC(unittest.TestCase):
         result = cnrfc.get_deterministic_forecast('NMFC1')
         self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/graphicalRVF_csv.php?id=NMFC1')
         self.assertGreater(result['data']['forecast'].dropna().size, 0)
+
+    @unittest.mock.patch.dict(os.environ, {}, clear=True)
+    def test_get_deterministic_forecast_inflows(self):
+        """
+        test deterministic forecast for a reservoir inflow location formerly on the restricted site, which is now
+        served on the public "-inflows" route without credentials
+        """
+        result = cnrfc.get_deterministic_forecast('ORDC1', inflow=True, rvf=False)
+        self.assertEqual(result['info']['url'], 'https://www.cnrfc.noaa.gov/graphicalRVF-inflows_csv.php?id=ORDC1')
+        self.assertGreater(result['data']['forecast'].dropna().size, 0)
+        self.assertEqual(result['info']['title'], 'FEATHER RIVER - LAKE OROVILLE (ORDC1)')
+
+    def test__validate_forecast_product(self):
+        """
+        test that exactly one forecast product must be requested
+        """
+        validate = cnrfc.cnrfc._validate_forecast_product
+        for flags in [(True, False, False), (False, True, False), (False, False, True)]:
+            with self.subTest(flags=flags):
+                validate(*flags)
+        for flags in [(False, False, False), (True, True, False), (True, False, True), (True, True, True)]:
+            with self.subTest(flags=flags):
+                self.assertRaises(ValueError, validate, *flags)
+
+    def test__raise_if_invalid_id(self):
+        """
+        test that CNRFC's invalid ID response is reported as a ValueError naming the location and URL
+        """
+        url = 'https://www.cnrfc.noaa.gov/graphicalRelease_csv.php?id=NMFC1'
+        with self.assertRaisesRegex(ValueError, r'CNRFC does not serve this forecast product for NMFC1'):
+            cnrfc.cnrfc._raise_if_invalid_id('NMFC1', url, b'ERROR: Invalid ID Entered (Value Given: NMFC1)')
+        cnrfc.cnrfc._raise_if_invalid_id('ORDC1', url, b'Date/Time,Release Flow (CFS),Trend\n')
+
+    @unittest.mock.patch.dict(os.environ, {}, clear=True)
+    def test_get_deterministic_forecast_unavailable_product(self):
+        """
+        test the messages for the ways CNRFC answers a request for a product it doesn't serve at a location
+        """
+        cases = [
+            # "Invalid ID" with HTTP 200: no inflow forecast at a release-only location
+            ('HAWC1', {'inflow': True, 'rvf': False}, r'does not serve this forecast product for HAWC1'),
+            # "Invalid ID" with HTTP 200: no release forecast at a river-only location
+            ('NMFC1', {'release': True, 'rvf': False}, r'does not serve this forecast product for NMFC1'),
+            # "Invalid ID" with HTTP 400: unknown code on the river forecast route
+            ('ZZZZ1', {}, r'does not serve this forecast product for ZZZZ1'),
+            # column headers without rows: no river forecast at an inflow-only location
+            ('FOLC1', {}, r'no forecast data for FOLC1'),
+        ]
+        for cnrfc_id, flags, message in cases:
+            with self.subTest(cnrfc_id=cnrfc_id, **flags):
+                with self.assertRaisesRegex(ValueError, message):
+                    cnrfc.get_deterministic_forecast(cnrfc_id, **flags)
+
+        # product pages answer "Invalid ID" too
+        with self.assertRaisesRegex(ValueError, r'does not serve this forecast product for FOLC1'):
+            cnrfc.get_forecast_meta_deterministic('FOLC1')
+
+    @unittest.mock.patch.dict(os.environ, {}, clear=True)
+    def test_get_deterministic_forecast_river_and_inflow(self):
+        """
+        test that a location with both river and reservoir inflow forecasts returns the river forecast by default
+        and the inflow forecast on request
+        """
+        river = cnrfc.get_deterministic_forecast('BDBC1')
+        self.assertEqual(river['info']['url'], 'https://www.cnrfc.noaa.gov/graphicalRVF_csv.php?id=BDBC1')
+
+        # river forecast returns both stage and flow series when the CSV provides both
+        for column in ['Stage (Feet)', 'Flow (CFS)']:
+            with self.subTest(column=column):
+                self.assertIn(column, river['data'].columns)
+                self.assertGreater(river['data'][column].dropna().size, 0)
+
+        inflow = cnrfc.get_deterministic_forecast('BDBC1', inflow=True, rvf=False)
+        self.assertEqual(inflow['info']['url'], 'https://www.cnrfc.noaa.gov/graphicalRVF-inflows_csv.php?id=BDBC1')
+        self.assertNotIn('Stage (Feet)', inflow['data'].columns)
+        self.assertGreater(inflow['data']['forecast'].dropna().size, 0)
+
+    @unittest.mock.patch.dict(os.environ, {}, clear=True)
+    def test_get_deterministic_forecast_release(self):
+        """
+        test reservoir release forecasts from graphicalRelease_csv.php ('Date/Time' and 'Release Flow (CFS)' columns)
+        with metadata from reservoirRelease.php
+        """
+        for cnrfc_id in ['COYC1', 'NBBC1', 'ORDC1', 'PFTC1', 'EXQC1']:
+            with self.subTest(cnrfc_id=cnrfc_id):
+                result = cnrfc.get_deterministic_forecast(cnrfc_id, release=True, rvf=False)
+                self.assertEqual(result['info']['url'],
+                                 f'https://www.cnrfc.noaa.gov/graphicalRelease_csv.php?id={cnrfc_id}')
+                self.assertEqual(result['info']['type'], 'Deterministic Release Forecast')
+                self.assertTrue(result['info']['title'].endswith(f'({cnrfc_id})'))
+                self.assertIn('Release Flow (CFS)', result['data'].columns)
+                self.assertGreater(result['data']['forecast'].dropna().size, 0)
+                self.assertGreater(result['data']['historical'].dropna().size, 0)
+
+    @unittest.mock.patch('collect.cnrfc.cnrfc._get_forecast_csv',
+                         return_value=io.BytesIO(b'Timestamp,Release (CFS)\n11/24/2026 02 PM,100\n'))
+    def test_get_deterministic_forecast_unexpected_layout(self, mock_csv):
+        """
+        test that a CSV without the expected date, value, and trend columns raises a ValueError naming the columns
+        """
+        with self.assertRaisesRegex(ValueError, r"missing \['Date/Time', 'Release Flow \(CFS\)', 'Trend'\]"):
+            cnrfc.get_deterministic_forecast('ORDC1', release=True, rvf=False)
+        mock_csv.assert_called_once()
+
+    def test_get_deterministic_forecast_product_flags(self):
+        """
+        test that exactly one of rvf, release, and inflow must be True; checked before any request is made
+        """
+        for flags in [{'release': True},
+                      {'inflow': True},
+                      {'release': True, 'inflow': True, 'rvf': False},
+                      {'rvf': False}]:
+            with self.subTest(**flags):
+                self.assertRaises(ValueError, cnrfc.get_deterministic_forecast, 'ORDC1', **flags)
+
+        # default river forecast is not available for an inflow-only location
+        with self.subTest(cnrfc_id='FOLC1'):
+            self.assertRaises(ValueError, cnrfc.get_deterministic_forecast, 'FOLC1')
 
     def test_download_watershed_file(self):
         """
